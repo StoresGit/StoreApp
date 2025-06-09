@@ -1,38 +1,38 @@
-const Role = require('../models/Currency');
+const Currency = require('../models/Currency');
 
-exports.getRoles = async (req, res) => {
+exports.getCurrencies = async (req, res) => {
   try {
-    const roles = await Role.find();
-    res.status(200).json(roles);
+    const currencies = await Currency.find();
+    res.status(200).json(currencies);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch roles' });
+    res.status(500).json({ error: 'Failed to fetch currencies' });
   }
 };
 
-exports.addRole = async (req, res) => {
+exports.addCurrency = async (req, res) => {
   try {
-    const newRole = new Role({ currencyName: req.body.currencyName, symbol: req.body.symbol });
-    await newRole.save();
-    res.status(201).json(newRole);
+    const newCurrency = new Currency({ currencyName: req.body.currencyName, symbol: req.body.symbol });
+    await newCurrency.save();
+    res.status(201).json(newCurrency);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add role' });
+    res.status(500).json({ error: 'Failed to add currency' });
   }
 };
 
-exports.updateRole = async (req, res) => {
+exports.updateCurrency = async (req, res) => {
   try {
-    const updatedRole = await Role.findByIdAndUpdate(req.params.id, { currencyName: req.body.currencyName, symbol: req.body.symbol }, { new: true });
-    res.status(200).json(updatedRole);
+    const updatedCurrency = await Currency.findByIdAndUpdate(req.params.id, { currencyName: req.body.currencyName, symbol: req.body.symbol }, { new: true });
+    res.status(200).json(updatedCurrency);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update role' });
+    res.status(500).json({ error: 'Failed to update currency' });
   }
 };
 
-exports.deleteRole = async (req, res) => {
+exports.deleteCurrency = async (req, res) => {
   try {
-    await Role.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Role deleted' });
+    await Currency.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Currency deleted' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete role' });
+    res.status(500).json({ error: 'Failed to delete currency' });
   }
 };

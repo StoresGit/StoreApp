@@ -19,7 +19,7 @@ const ItemRoutes = require('./routes/itemRoutes');
 const RecipeExpertRoutes = require('./routes/recipeExpertRoutes');
 const BranchRoutes = require('./routes/branchRoutes');
 const BrandRoutes = require('./routes/brandRoute');
-const CurrencyRoutes = require('./routes/currenxyRoute');
+const CurrencyRoutes = require('./routes/currencyRoute');
 const MenuItemRoutes = require('./routes/MenuItem');
 const TaxRoutes = require('./routes/tax');
 
@@ -39,7 +39,7 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-app.use(limiter);
+// app.use(limiter);
 
 app.use(express.json());
 

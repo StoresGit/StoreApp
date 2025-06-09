@@ -1,5 +1,5 @@
 const Item = require('../models/Item');
-const Category = require('../models/ItemCaategory');
+const Category = require('../models/ItemCategory');
 const Department = require('../models/departments');
 const Unit = require('../models/Units');
 const Image = require('../models/Image');

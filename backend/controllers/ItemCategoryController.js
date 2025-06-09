@@ -1,4 +1,4 @@
-const ItemCategory = require('../models/ItemCaategory'); // correct spelling
+const ItemCategory = require('../models/ItemCategory'); // correct spelling
 let Item;
 
 try {
