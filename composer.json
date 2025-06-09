@@ -12,14 +12,14 @@
     },
     "scripts": {
         "post-install-cmd": [
-            "npm install",
-            "cd frontend && npm install && npm run build",
-            "cd ../backend && npm install"
+            "if [ -f /usr/bin/npm ]; then npm install; fi",
+            "if [ -f /usr/bin/npm ]; then cd frontend && npm install && npm run build; fi",
+            "if [ -f /usr/bin/npm ]; then cd ../backend && npm install; fi"
         ],
         "post-update-cmd": [
-            "npm install",
-            "cd frontend && npm install && npm run build",
-            "cd ../backend && npm install"
+            "if [ -f /usr/bin/npm ]; then npm install; fi",
+            "if [ -f /usr/bin/npm ]; then cd frontend && npm install && npm run build; fi",
+            "if [ -f /usr/bin/npm ]; then cd ../backend && npm install; fi"
         ]
     }
 } 
