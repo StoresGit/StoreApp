@@ -60,6 +60,7 @@ chmod -R 755 public_html/api
 
 # Stop existing PM2 process if it exists
 pm2 delete api || true
+pm2 delete my-backend || true
 pm2 delete restaurant-api || true
 
 # Start the backend server
