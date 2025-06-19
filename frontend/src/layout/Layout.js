@@ -137,7 +137,6 @@ const Sidebar = ({ menuItems, isCollapsed }) => {
 
 // Header Component
 const Header = ({ onMenuToggle, isSidebarCollapsed }) => {
-    const navigate = useNavigate();
     const { user, logout, isMasterAdmin } = useAuth();
     
     const handleLogout = async () => {

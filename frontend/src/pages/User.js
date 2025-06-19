@@ -11,7 +11,7 @@ const User = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { user: currentUser, canCreate, canEdit, canDelete, isMasterAdmin } = useAuth();
+  const { user: currentUser, canEdit, canDelete, isMasterAdmin } = useAuth();
 
   const [formData, setFormData] = useState({
     name: '',
