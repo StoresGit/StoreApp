@@ -39,7 +39,7 @@ async function updateAdminPassword() {
     if (!admin) {
       console.log('Admin user not found. Creating new admin user...');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
+      const hashedPassword = await bcrypt.hash('243Gc794', salt);
       
       const newAdmin = new User({
         name: 'Admin',
@@ -54,7 +54,7 @@ async function updateAdminPassword() {
     } else {
       console.log('Admin user found. Updating password...');
       const salt = await bcrypt.genSalt(10);
-      const hashedPassword = await bcrypt.hash('admin123', salt);
+      const hashedPassword = await bcrypt.hash('243Gc794', salt);
       
       // Update all fields to ensure consistency
       admin.name = 'Admin';

@@ -2,12 +2,12 @@ const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const SECRET_KEY = process.env.JWT_SECRET || 'resturant_website';
 
-// Generate JWT token
+// Generate JWT token with 1 hour expiration
 const generateToken = (user) => {
   return jwt.sign(
     { id: user._id, role: user.role },
     SECRET_KEY,
-    { expiresIn: '1d' }
+    { expiresIn: '1h' }
   );
 };
 
@@ -90,6 +90,8 @@ exports.login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      permissions: user.permissions,
+      isMasterAdmin: user.isMasterAdmin(),
       token
     });
   } catch (error) {
@@ -98,16 +100,41 @@ exports.login = async (req, res) => {
   }
 };
 
-// Get user profile
+// Get user profile with permissions
 exports.getProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json(user);
+    
+    // Include permissions in response
+    const userProfile = {
+      ...user.toObject(),
+      isMasterAdmin: user.isMasterAdmin()
+    };
+    
+    res.json(userProfile);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching profile', error: error.message });
+  }
+};
+
+// Get user permissions
+exports.getUserPermissions = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    res.json({
+      role: user.role,
+      permissions: user.permissions,
+      isMasterAdmin: user.isMasterAdmin()
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching permissions', error: error.message });
   }
 };
 
@@ -215,5 +242,16 @@ exports.deleteUser = async (req, res) => {
     res.sendStatus(204);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// Logout user (blacklist token)
+exports.logout = async (req, res) => {
+  try {
+    // In a production environment, you might want to implement token blacklisting
+    // For now, we'll just return success as the client will remove the token
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error logging out', error: error.message });
   }
 }; 

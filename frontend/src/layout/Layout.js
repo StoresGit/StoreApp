@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import logo from "../assets/desktop-logo.png";
 import logo1 from "../assets/toggle-logo.png";
 
@@ -137,10 +138,12 @@ const Sidebar = ({ menuItems, isCollapsed }) => {
 // Header Component
 const Header = ({ onMenuToggle, isSidebarCollapsed }) => {
     const navigate = useNavigate();
-    const handleLogout = () => {
-        localStorage.clear();
-        navigate('/');
+    const { user, logout, isMasterAdmin } = useAuth();
+    
+    const handleLogout = async () => {
+        await logout();
     };
+    
     return (
         <div className="bg-white shadow-md flex items-center justify-between h-16 px-4 sticky top-0 z-9">
             <div className="flex items-center">
@@ -162,9 +165,15 @@ const Header = ({ onMenuToggle, isSidebarCollapsed }) => {
                 </div>
             </div>
             <div className="flex items-center gap-4">
-                <span className="text-gray-700">Admin</span>
+                <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700">{user?.name || 'User'}</div>
+                    <div className="text-xs text-gray-500 flex items-center gap-1">
+                        <span className="capitalize">{user?.role || 'user'}</span>
+                        {isMasterAdmin() && <span className="text-blue-600">👑</span>}
+                    </div>
+                </div>
                 <button
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors"
                     onClick={handleLogout}
                 >
                     Logout

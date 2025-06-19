@@ -38,12 +38,21 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// Rate limiting
+// General rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
 });
-// app.use(limiter);
+app.use(limiter);
+
+// Specific rate limiting for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 login attempts per windowMs
+  message: { message: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use(express.json());
 
@@ -86,6 +95,9 @@ app.use('/api/menu', MenuItemRoutes)
 app.use('/api/tax', TaxRoutes) 
 app.use('/api/suppliers', SupplierRoutes);
 app.use('/api/package-items', PackageItemRoutes);
+
+// Apply login rate limiting to login route
+app.use('/api/users/login', loginLimiter);
 
 // Start server
 const PORT = process.env.PORT || 5050;

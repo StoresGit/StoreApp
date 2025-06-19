@@ -1,58 +1,56 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import backend_url from '../config/config';
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, user, loading } = useAuth();
+
+  // Redirect if already logged in (for page refresh scenarios)
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     
-    const loginData = { email, password };
-    console.log('Attempting login with:', loginData);
-    console.log('Backend URL:', backend_url);
-
     try {
-      const response = await axios.post(`${backend_url}/users/login`, loginData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        withCredentials: true
-      });
+      const result = await login(email, password);
       
-      console.log('Login response:', response.data);
-
-      const { token, role } = response.data;
-      localStorage.setItem('resturanttoken', token);
-      localStorage.setItem('resturantrole', role);
-
-      if (role === 'admin') {
+      if (result.success) {
         navigate('/dashboard');
       } else {
-        navigate('/user-dashboard');
+        setError(result.message);
       }
     } catch (err) {
-      console.error('Login error details:', {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        headers: err.response?.headers
-      });
-      
-      setError(
-        err.response?.data?.message || 
-        err.message || 
-        'Login failed. Please check your credentials and try again.'
-      );
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Don't show login form if user is already logged in
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -84,6 +82,7 @@ const Login = () => {
             className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             autoComplete="email"
+            disabled={isLoading}
           />
         </div>
 
@@ -101,12 +100,14 @@ const Login = () => {
             className="w-full p-2 border rounded pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
             autoComplete="current-password"
+            disabled={isLoading}
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
             className="absolute right-2 top-8 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
             aria-label={showPassword ? "Hide password" : "Show password"}
+            disabled={isLoading}
           >
             {showPassword ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -124,11 +125,16 @@ const Login = () => {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          className={`w-full py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 ${
+            isLoading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
           name="submit"
           id="submit"
+          disabled={isLoading}
         >
-          Login
+          {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
     </div>
