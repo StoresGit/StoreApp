@@ -22,6 +22,8 @@ const BrandRoutes = require('./routes/brandRoute');
 const CurrencyRoutes = require('./routes/currencyRoute');
 const MenuItemRoutes = require('./routes/MenuItem');
 const TaxRoutes = require('./routes/tax');
+const SupplierRoutes = require('./routes/supplierRoutes');
+const PackageItemRoutes = require('./routes/packageItemRoutes');
 
 const app = express();
 
@@ -82,6 +84,8 @@ app.use('/api/brand', BrandRoutes);
 app.use('/api/currency', CurrencyRoutes);
 app.use('/api/menu', MenuItemRoutes) 
 app.use('/api/tax', TaxRoutes) 
+app.use('/api/suppliers', SupplierRoutes);
+app.use('/api/package-items', PackageItemRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5050;
