@@ -80,14 +80,18 @@ jobs:
           script: |
             cd /root/gnr/backend
             npm install
-            # Stop any existing processes
-            pm2 delete api || true
-            pm2 delete my-backend || true
-            pm2 delete restaurant-api || true
+
+            # Stop PM2 processes only if they exist
+            for PROC in api my-backend restaurant-api; do
+              pm2 describe "$PROC" > /dev/null 2>&1 && pm2 delete "$PROC" --silent || true
+            done
+
             # Run admin setup script
             node update-admin-production.js
+
             # Start the server
             pm2 start server.js --name api
             pm2 save
+
             # Check admin user status
             node check-admin.js
