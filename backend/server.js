@@ -24,6 +24,7 @@ const MenuItemRoutes = require('./routes/MenuItem');
 const TaxRoutes = require('./routes/tax');
 const SupplierRoutes = require('./routes/supplierRoutes');
 const PackageItemRoutes = require('./routes/packageItemRoutes');
+const SubCategoryRoutes = require('./routes/subCategoryRoutes');
 
 const app = express();
 
@@ -95,6 +96,7 @@ app.use('/api/menu', MenuItemRoutes)
 app.use('/api/tax', TaxRoutes) 
 app.use('/api/suppliers', SupplierRoutes);
 app.use('/api/package-items', PackageItemRoutes);
+app.use('/api/sub-categories', SubCategoryRoutes);
 
 // Apply login rate limiting to login route
 app.use('/api/users/login', loginLimiter);

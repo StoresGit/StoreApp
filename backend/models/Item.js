@@ -13,6 +13,7 @@ const itemSchema = new mongoose.Schema({
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
   name: { type: String, required: true },
   unitCount: { type: Number }, // Number of units
+  subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }, // Sub Category
 }, {
   timestamps: true
 });

@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 const Item = () => {
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [units, setUnits] = useState([]);
   const [taxes, setTaxes] = useState([]);
@@ -28,13 +29,15 @@ const Item = () => {
     image: '', // Image
     departments: [], // Keep existing departments
     name: '', // Keep existing name for compatibility
-    unitCount: '' // Number of Units
+    unitCount: '', // Number of Units
+    subCategory: '' // Sub Category
   });
 
   const fetchData = async () => {
-    const [itemRes, catRes, deptRes, unitRes, taxRes, branchRes, brandRes, imgRes] = await Promise.all([
+    const [itemRes, catRes, subCatRes, deptRes, unitRes, taxRes, branchRes, brandRes, imgRes] = await Promise.all([
       axios.get(`${backend_url}/items`),
       axios.get(`${backend_url}/item-categories`),
+      axios.get(`${backend_url}/sub-categories`),
       axios.get(`${backend_url}/departments`),
       axios.get(`${backend_url}/units`),
       axios.get(`${backend_url}/tax`),
@@ -44,6 +47,7 @@ const Item = () => {
     ]);
     setItems(itemRes.data);
     setCategories(catRes.data);
+    setSubCategories(subCatRes.data);
     setDepartments(deptRes.data);
     setUnits(unitRes.data);
     setTaxes(taxRes.data);
@@ -56,9 +60,21 @@ const Item = () => {
     fetchData();
   }, []);
 
+  // Filter sub categories based on selected main category
+  const filteredSubCategories = subCategories.filter(sub => 
+    !formData.category || sub.category?._id === formData.category
+  );
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Reset sub category when main category changes
+      if (name === 'category') {
+        updated.subCategory = '';
+      }
+      return updated;
+    });
   };
 
   const handleDepartmentToggle = (id) => {
@@ -84,6 +100,7 @@ const Item = () => {
       alert('Category is required');
       return;
     }
+    // Note: subCategory is optional since not all categories may have sub categories
 
     try {
       // Set name for compatibility and always send unit as baseUnit
@@ -109,7 +126,8 @@ const Item = () => {
         image: '', 
         departments: [], 
         name: '', 
-        unitCount: '' 
+        unitCount: '',
+        subCategory: ''
       });
       setEditingId(null);
       setShowFormModal(false);
@@ -136,7 +154,8 @@ const Item = () => {
       image: item.image?._id || '',
       departments: item.departments?.map(d => d._id) || [],
       name: item.nameEn || item.name || '',
-      unitCount: item.unitCount || ''
+      unitCount: item.unitCount || '',
+      subCategory: item.subCategory?._id || ''
     });
     setEditingId(item._id);
     setShowFormModal(true);
@@ -170,7 +189,8 @@ const Item = () => {
               image: '', 
               departments: [], 
               name: '', 
-              unitCount: '' 
+              unitCount: '',
+              subCategory: ''
             });
             setEditingId(null);
             setShowFormModal(true);
@@ -188,7 +208,8 @@ const Item = () => {
               <th className="p-2 border">Item Name (Eng)</th>
               <th className="p-2 border">Item Name (Alt)</th>
               <th className="p-2 border">Base Unit</th>
-              <th className="p-2 border">Category</th>
+              <th className="p-2 border">Main Category</th>
+              <th className="p-2 border">Sub Category</th>
               <th className="p-2 border">Tax</th>
               <th className="p-2 border">Assign Branch</th>
               <th className="p-2 border">Assign Brand</th>
@@ -204,10 +225,12 @@ const Item = () => {
                 <td className="p-2 border">{item.nameAlt || 'N/A'}</td>
                 <td className="p-2 border">{item.baseUnit?.name || 'N/A'}</td>
                 <td className="p-2 border">{item.category?.nameEn || 'N/A'}</td>
+                <td className="p-2 border">{item.subCategory?.nameEn || 'N/A'}</td>
                 <td className="p-2 border">{item.tax?.name || 'N/A'}</td>
                 <td className="p-2 border">{item.assignBranch?.name || 'N/A'}</td>
                 <td className="p-2 border">{item.assignBrand?.name || 'N/A'}</td>
                 <td className="p-2 border">{item.unitCount || 'N/A'}</td>
+                <td className="p-2 border">{item.image?.url ? <img src={item.image.url} alt="" className="h-8" /> : 'N/A'}</td>
                 <td className="p-2 border">
                   {item.image?.url ? (
                     <img src={item.image.url} alt="img" className="w-12 h-12 object-cover mx-auto" />
@@ -229,11 +252,11 @@ const Item = () => {
                     Delete
                   </button>
                   <button
-                    className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
-                    onClick={() => navigate(`/items/${item._id}/edit`)}
-                  >
-                    Action1
-                  </button>
+  className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
+  onClick={() => navigate(`/items/${item._id}/edit`)}
+>
+  Action1
+</button>
                 </td>
               </tr>
             ))}
@@ -262,7 +285,8 @@ const Item = () => {
                     image: '', 
                     departments: [], 
                     name: '', 
-                    unitCount: '' 
+                    unitCount: '',
+                    subCategory: ''
                   });
                 }}
               >
@@ -306,7 +330,7 @@ const Item = () => {
                 onChange={handleChange}
                 className="border p-2 rounded"
               >
-                <option value="">Select Category</option>
+                <option value="">Select Main Category</option>
                 {categories.map(cat => (
                   <option key={cat._id} value={cat._id}>{cat.nameEn}</option>
                 ))}
@@ -352,6 +376,13 @@ const Item = () => {
                     </option>
                   ))
                 )}
+              </select>
+
+              <select className="w-full border p-2 rounded" name="subCategory" value={formData.subCategory} onChange={handleChange}>
+                <option value="">Select Sub Category (Optional)</option>
+                {filteredSubCategories.map(sc => (
+                  <option key={sc._id} value={sc._id}>{sc.nameEn}</option>
+                ))}
               </select>
 
               <input

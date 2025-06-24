@@ -12,6 +12,7 @@ exports.getItems = async (req, res) => {
   try {
     const items = await Item.find()
       .populate('category', 'nameEn')
+      .populate('subCategory', 'nameEn')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')
@@ -52,7 +53,8 @@ exports.createItem = async (req, res) => {
       unit, 
       image,
       name, // Keep for compatibility
-      unitCount // Add unitCount
+      unitCount, // Add unitCount
+      subCategory // Add subCategory
     } = req.body;
 
     // Check required fields
@@ -75,7 +77,8 @@ exports.createItem = async (req, res) => {
       unit,
       image,
       name: nameEn,
-      unitCount // Add unitCount
+      unitCount, // Add unitCount
+      subCategory // Add subCategory
     });
 
     const newItem = new Item(itemData);
@@ -90,7 +93,7 @@ exports.createItem = async (req, res) => {
 // UPDATE an existing item
 exports.updateItem = async (req, res) => {
   try {
-    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, departments, unit, image, name, unitCount } = req.body;
+    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, departments, unit, image, name, unitCount, subCategory } = req.body;
     
     // Check required fields
     if (!baseUnit || !category || !unit || !nameEn) {
@@ -112,7 +115,8 @@ exports.updateItem = async (req, res) => {
       unit,
       image,
       name: nameEn,
-      unitCount // Add unitCount
+      unitCount, // Add unitCount
+      subCategory // Add subCategory
     });
 
     const updated = await Item.findByIdAndUpdate(
@@ -151,6 +155,7 @@ exports.getItemById = async (req, res) => {
   try {
     const item = await Item.findById(req.params.id)
       .populate('category', 'nameEn')
+      .populate('subCategory', 'nameEn')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')

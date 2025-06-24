@@ -37,21 +37,21 @@ const User = () => {
     }
   };
 
-  const fetchRolesAndBranches = async () => {
+ const fetchRolesAndBranches = async () => {
     try {
-      const [rolesRes] = await Promise.all([
+  const [rolesRes] = await Promise.all([
         api.get('/roles')
-      ]);
-      setRoles(rolesRes.data);
+  ]);
+  setRoles(rolesRes.data);
     } catch (err) {
       console.error('Error fetching roles:', err);
     }
-  };
+};
 
-  useEffect(() => {
-    fetchUsers();
-    fetchRolesAndBranches();
-  }, []);
+useEffect(() => {
+  fetchUsers();
+  fetchRolesAndBranches();
+}, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,7 +101,7 @@ const User = () => {
     if (confirmDelete) {
       try {
         await api.delete(`/users/${id}`);
-        fetchUsers();
+      fetchUsers();
       } catch (err) {
         alert('Delete User Error: ' + (err.response?.data?.message || err.message));
       }
@@ -178,15 +178,15 @@ const User = () => {
           )}
         </div>
         <CanCreate>
-          <button
+        <button
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2"
-            onClick={openAddModal}
-          >
+          onClick={openAddModal}
+        >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
-            Add User
-          </button>
+          Add User
+        </button>
         </CanCreate>
       </div>
 
@@ -200,7 +200,7 @@ const User = () => {
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
-              <tr>
+          <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
@@ -208,10 +208,10 @@ const User = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biometric ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
+          </tr>
+        </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {users.map((user) => (
+          {users.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -275,11 +275,11 @@ const User = () => {
                     {!canEdit() && !canDelete() && (
                       <span className="text-gray-400 text-xs">View Only</span>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
         </div>
       </div>
 
@@ -293,53 +293,53 @@ const User = () => {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
                   placeholder="Enter name"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Role</option>
-                  {roles.map((role) => (
+              >
+                <option value="">Select Role</option>
+                {roles.map((role) => (
                     <option key={role._id} value={role.name}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                   placeholder="Enter email (e.g. user@gmail.com)"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              />
               </div>
 
               {!editMode && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                  <input
-                    type="password"
-                    name="password"
-                    value={formData.password}
-                    onChange={handleChange}
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
                     placeholder="Enter password"
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -355,7 +355,7 @@ const User = () => {
                   onChange={handleChange}
                   placeholder="Enter biometric ID"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              />
               </div>
             </div>
 

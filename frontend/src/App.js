@@ -29,6 +29,8 @@ import Tax from './pages/Tax';
 import Login from './pages/Login';
 import EditItem from './pages/EditItem';
 import UserManagement from './pages/UserManagement';
+import SubCategoryItems from './pages/SubCategoryItems';
+import SubCategories from './pages/SubCategories';
 
 function App() {
   const menuItems = [
@@ -48,6 +50,7 @@ function App() {
         { label: 'Units', path: '/units' },
         { label: 'Menu Category', path: '/menu' },
         { label: 'Item Category', path: '/item-category' },
+        { label: 'Sub Categories', path: '/sub-categories' },
         // { label: 'Items', path: '/items' },
         { label: 'Departments', path: '/departments' },
         { label: 'Tax', path: '/tax' },
@@ -115,50 +118,52 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public Route */}
-          <Route path="/" element={<Login />} />
+     <Router>
+      <Routes>
+        {/* Public Route */}
+        <Route path="/" element={<Login />} />
 
-          {/* Protected Routes with Layout */}
-          <Route
-            path="/*"
-            element={
+        {/* Protected Routes with Layout */}
+        <Route
+          path="/*"
+          element={
               <ProtectedRoute>
-                <Layout menuItems={menuItems}>
-                  <Routes>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/user-management" element={<UserManagement />} />
-                    <Route path="/user" element={<User />} />
-                    <Route path="/gallery" element={<Gallery />} />
-                    <Route path="/roles" element={<Roles />} />
-                    <Route path="/units" element={<Units />} />
-                    <Route path="/item-category" element={<ItemCategory />} />
-                    <Route path="/items" element={<Items />} />
-                    <Route path="/departments" element={<Departments />} />
-                    <Route path="/recipe-experts" element={<RecipeExperts />} />
-                    <Route path="/suppliers" element={<Suppliers />} />
+            <Layout menuItems={menuItems}>
+              <Routes>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/user-management" element={<UserManagement />} />
+                <Route path="/user" element={<User />} />
+                <Route path="/gallery" element={<Gallery />} />
+                <Route path="/roles" element={<Roles />} />
+                <Route path="/units" element={<Units />} />
+                <Route path="/item-category" element={<ItemCategory />} />
+                <Route path="/items" element={<Items />} />
+                <Route path="/departments" element={<Departments />} />
+                <Route path="/recipe-experts" element={<RecipeExperts />} />
+                <Route path="/suppliers" element={<Suppliers />} />
                     <Route path="/package-items" element={<PackageItems />} />
-                    <Route path="/inventory" element={<Inventory />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/procurements" element={<Procurements />} />
-                    <Route path="/costing" element={<Costing />} />
-                    <Route path="/analytics" element={<Analytics />} />
-                    <Route path="/operations" element={<Operations />} />
-                    <Route path="/production" element={<Production />} />
-                    <Route path="/branches" element={<Branches />} />
-                    <Route path="/brand" element={<Brand />} />
-                    <Route path="/currency" element={<Currency />} />
-                    <Route path="/menu" element={<MenuItems />} />
-                    <Route path="/tax" element={<Tax />} />
-                    <Route path="/items/:id/edit" element={<EditItem />} />
-                  </Routes>
-                </Layout>
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/procurements" element={<Procurements />} />
+                <Route path="/costing" element={<Costing />} />
+                <Route path="/analytics" element={<Analytics />} />
+                <Route path="/operations" element={<Operations />} />
+                <Route path="/production" element={<Production />} />
+                <Route path="/branches" element={<Branches />} />
+                <Route path="/brand" element={<Brand />} />
+                <Route path="/currency" element={<Currency />} />
+                <Route path="/menu" element={<MenuItems />} />
+                <Route path="/tax" element={<Tax />} />
+                <Route path="/items/:id/edit" element={<EditItem />} />
+                <Route path="/sub-category-items" element={<SubCategoryItems />} />
+                <Route path="/sub-categories" element={<SubCategories />} />
+              </Routes>
+            </Layout>
               </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </Router>
+          }
+        />
+      </Routes>
+    </Router>
     </AuthProvider>
   );
 }
