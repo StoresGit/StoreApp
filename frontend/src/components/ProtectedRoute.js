@@ -6,18 +6,6 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-<<<<<<< HEAD
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (requiredRole && user.role !== requiredRole) {
-    return <Navigate to="/unauthorized" replace />;
-=======
   // Show loading while checking authentication
   if (loading) {
     return (
@@ -35,7 +23,6 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   // Check for required role if specified
   if (requiredRole && user.role !== requiredRole) {
     return <Navigate to="/" replace />;
->>>>>>> 9ff61216b4d0ac253b3dd5502f8e1ca4983d5f15
   }
 
   return children;

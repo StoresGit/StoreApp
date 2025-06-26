@@ -87,60 +87,53 @@ const Item = () => {
   };
 
   const handleSubmit = async () => {
-    // Validate required fields
-    if (!formData.nameEn?.trim()) {
-      alert('Item Name (Eng) is required');
-      return;
-    }
-    if (!formData.baseUnit) {
-      alert('Base Unit is required');
-      return;
-    }
-    if (!formData.category) {
-      alert('Category is required');
-      return;
-    }
-    // Note: subCategory is optional since not all categories may have sub categories
+  // Validate required fields
+  if (!formData.nameEn?.trim()) {
+    alert('Item Name (Eng) is required');
+    return;
+  }
+  if (!formData.baseUnit) {
+    alert('Base Unit is required');
+    return;
+  }
+  if (!formData.category) {
+    alert('Category is required');
+    return;
+  }
 
-    try {
-      // Set name for compatibility and always send unit as baseUnit
-      const submitData = {
-        ...formData,
-        unit: formData.baseUnit,
-        name: formData.nameEn
-      };
-      
-      if (editingId) {
-        await axios.put(`${backend_url}/items/${editingId}`, submitData);
-      } else {
-        await axios.post(`${backend_url}/items`, submitData);
-      }
-      setFormData({ 
-        nameEn: '', 
-        nameAlt: '', 
-        baseUnit: '', 
-        category: '', 
-        tax: '', 
-        assignBranch: '', 
-        assignBrand: '', 
-        image: '', 
-        departments: [], 
-        name: '', 
-        unitCount: '',
-        subCategory: ''
-      });
-      setEditingId(null);
-      setShowFormModal(false);
+  try {
+    const submitData = {
+      ...formData,
+      unit: formData.baseUnit,
+      name: formData.nameEn
+    };
+
+    if (editingId) {
+      await axios.put(`${backend_url}/items/${editingId}`, submitData);
       fetchData();
-    } catch (error) {
-      console.error('Error saving item:', error);
-      if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else {
-        alert('Error saving item');
+    } else {
+      const res = await axios.post(`${backend_url}/items`, submitData);
+      const newItemId = res.data?._id;
+      if (newItemId) {
+        navigate(`/items/${newItemId}/edit`);
       }
     }
-  };
+
+    // Reset state
+    setFormData({
+      nameEn: '', nameAlt: '', baseUnit: '', category: '',
+      tax: '', assignBranch: '', assignBrand: '', image: '',
+      departments: [], name: '', unitCount: '', subCategory: ''
+    });
+    setEditingId(null);
+    setShowFormModal(false);
+
+  } catch (error) {
+    console.error('Error saving item:', error);
+    alert(error?.response?.data?.message || 'Error saving item');
+  }
+};
+
 
   const handleEdit = (item) => {
     setFormData({
