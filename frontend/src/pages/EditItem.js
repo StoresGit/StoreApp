@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import HeaderSection from '../components/EditItemPage/HeaderSection';
 import TabNavigation from '../components/EditItemPage/TabNavigation';
-import ItemDetailsForm from '../components/EditItemPage/MainContent/ItemDetailForm';
-import LocationTogglePanel from '../components/EditItemPage/MainContent/LocationTogglePanel';
+// import ItemDetailsForm from '../components/EditItemPage/MainContent/ItemDetailForm';
+// import LocationTogglePanel from '../components/EditItemPage/MainContent/LocationTogglePanel';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import backend_url from '../config/config';

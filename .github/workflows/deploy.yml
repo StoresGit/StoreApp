@@ -1,4 +1,4 @@
-name: Deploy to Hostinger
+name: Deploy to DigitalOcean
 
 on:
   push:
@@ -9,34 +9,88 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      # Setup and install frontend dependencies
+      - name: Setup Node.js for frontend
         uses: actions/setup-node@v3
         with:
           node-version: '16'
           cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install Dependencies
+      - name: Install frontend dependencies
         run: |
+          cd frontend
           npm install
-          cd frontend && npm install
-          cd ../backend && npm install
 
-      - name: Build Frontend
+      - name: Fix react-scripts permissions
+        run: chmod +x ./frontend/node_modules/.bin/react-scripts
+
+      - name: Build frontend
         run: |
           cd frontend
           npm run build
 
-      - name: Deploy to Hostinger
-        uses: SamKirkland/FTP-Deploy-Action@4.3.4
+      # Setup and install backend dependencies
+      - name: Setup Node.js for backend
+        uses: actions/setup-node@v3
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
-          dangerous-clean-slate: true 
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      # Deploy backend folder to server
+      - name: Deploy backend via SSH
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "backend/"
+          target: "/root/gnr/backend"
+          strip_components: 1
+
+      # Deploy frontend build folder to server
+      - name: Deploy frontend build via SSH
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "frontend/build/"
+          target: "/var/www/gnrcontrol"
+          strip_components: 1
+
+      # Setup admin user and start backend server
+      - name: Setup admin and start server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/gnr/backend
+            npm install
+
+            # Stop PM2 processes only if they exist
+            for PROC in api my-backend restaurant-api; do
+              pm2 describe "$PROC" > /dev/null 2>&1 && pm2 delete "$PROC" --silent || true
+            done
+
+            # Run admin setup script
+            node update-admin-production.js
+
+            # Start the server
+            pm2 start server.js --name api
+            pm2 save
+
+            # Check admin user status
+            node check-admin.js

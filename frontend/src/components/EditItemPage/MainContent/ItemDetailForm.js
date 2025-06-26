@@ -45,6 +45,15 @@ export default function ItemDetailsForm({ item }) {
         />
         <input
           className="w-full border p-2 rounded"
+<<<<<<< HEAD
+=======
+          placeholder="Sub Category"
+          defaultValue={item.subCategory || ''}
+          readOnly
+        />
+        <input
+          className="w-full border p-2 rounded"
+>>>>>>> 9ff61216b4d0ac253b3dd5502f8e1ca4983d5f15
           placeholder="Enter Accounting Category"
           defaultValue={item.accountingCategory || ''}
           readOnly
