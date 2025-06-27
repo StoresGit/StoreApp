@@ -56,6 +56,6 @@ export default function ItemDetailsForm({ item }) {
           readOnly
         />
       </div>
-    </div>
+    </div>  
   );
 }

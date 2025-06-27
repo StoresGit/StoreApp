@@ -24,6 +24,7 @@ const MenuItemRoutes = require('./routes/MenuItem');
 const TaxRoutes = require('./routes/tax');
 const SupplierRoutes = require('./routes/supplierRoutes');
 const PackageItemRoutes = require('./routes/packageItemRoutes');
+const packagingRoutes = require('./routes/packagingRoutes');
 const SubCategoryRoutes = require('./routes/subCategoryRoutes');
 
 const app = express();
@@ -85,6 +86,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/packaging', packagingRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/item-categories', ItemCategoryRoutes);
 app.use('/api/items', ItemRoutes); 

@@ -14,6 +14,18 @@ const itemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   unitCount: { type: Number }, // Number of units
   subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }, // Sub Category
+  basePackaging: {
+    amount: Number,
+    unit: String,
+    createdAt: Date
+  },
+  packPackaging: {
+    amount: Number,
+    unit: String,
+    packSize: Number,
+    packUnit: String,
+    createdAt: Date
+  }
 }, {
   timestamps: true
 });
