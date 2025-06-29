@@ -23,16 +23,22 @@ export default function ItemDetailsForm({ item }) {
           <input
             className="w-1/2 border p-2 rounded"
             placeholder="Base Unit *"
-            defaultValue={item.unit?.name || ''}
+            defaultValue={item.baseUnit?.name || item.unit?.name || ''}
             readOnly
           />
           <input
             className="w-1/2 border p-2 rounded"
-            placeholder="Item Code *"
-            defaultValue={item.itemCode || ''}
+            placeholder="Unit Count"
+            defaultValue={item.unitCount || ''}
             readOnly
           />
         </div>
+        <input
+          className="w-full border p-2 rounded"
+          placeholder="Item Code"
+          defaultValue={item.itemCode || ''}
+          readOnly
+        />
       </div>
 
       <h3 className="font-semibold text-md mt-6 mb-2">Category Details</h3>
@@ -46,7 +52,7 @@ export default function ItemDetailsForm({ item }) {
         <input
           className="w-full border p-2 rounded"
           placeholder="Sub Category"
-          defaultValue={item.subCategory || ''}
+          defaultValue={item.subCategory?.nameEn || ''}
           readOnly
         />
         <input

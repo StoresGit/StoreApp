@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Item = require('../models/Item');
 const Category = require('../models/ItemCategory');
 const Department = require('../models/departments');
@@ -6,6 +7,7 @@ const Image = require('../models/Image');
 const Tax = require('../models/Tax');
 const Branch = require('../models/Branch');
 const Brand = require('../models/Brand');
+const Packaging = require('../models/Packaging');
 
 // GET all items with populated references
 exports.getItems = async (req, res) => {
@@ -139,15 +141,41 @@ exports.updateItem = async (req, res) => {
 // DELETE an item
 exports.deleteItem = async (req, res) => {
   try {
-    const deleted = await Item.findByIdAndDelete(req.params.id);
-    if (!deleted) {
+    const itemId = req.params.id;
+    
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ message: "Invalid item ID format" });
+    }
+    
+    // First check if the item exists
+    const item = await Item.findById(itemId);
+    if (!item) {
       return res.status(404).json({ message: "Item not found" });
     }
 
-    res.sendStatus(204);
+    console.log(`Starting deletion process for item: ${item.nameEn || item.name} (ID: ${itemId})`);
+
+    // Delete all associated packaging first (cascade delete)
+    const packagingDeleteResult = await Packaging.deleteMany({ itemId: itemId });
+    console.log(`Deleted ${packagingDeleteResult.deletedCount} packaging items for item ${itemId}`);
+
+    // Then delete the item
+    const deleted = await Item.findByIdAndDelete(itemId);
+    if (!deleted) {
+      return res.status(500).json({ message: "Failed to delete item after packaging cleanup" });
+    }
+
+    console.log(`Successfully deleted item ${itemId} and ${packagingDeleteResult.deletedCount} associated packaging items`);
+
+    res.status(200).json({ 
+      message: "Item and associated packaging deleted successfully",
+      deletedPackagingCount: packagingDeleteResult.deletedCount,
+      itemName: item.nameEn || item.name
+    });
   } catch (error) {
     console.error("Failed to delete item:", error);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import backend_url from '../config/config';
 import { useNavigate } from 'react-router-dom';
+import { fetchMultipleEndpoints } from '../services/api';
 
 const Item = () => {
   const [items, setItems] = useState([]);
@@ -16,6 +17,8 @@ const Item = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Loading items data...');
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -33,27 +36,49 @@ const Item = () => {
     subCategory: '' // Sub Category
   });
 
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
   const fetchData = async () => {
-    const [itemRes, catRes, subCatRes, deptRes, unitRes, taxRes, branchRes, brandRes, imgRes] = await Promise.all([
-      axios.get(`${backend_url}/items`),
-      axios.get(`${backend_url}/item-categories`),
-      axios.get(`${backend_url}/sub-categories`),
-      axios.get(`${backend_url}/departments`),
-      axios.get(`${backend_url}/units`),
-      axios.get(`${backend_url}/tax`),
-      axios.get(`${backend_url}/branch`),
-      axios.get(`${backend_url}/brand`),
-      axios.get(`${backend_url}/gallery`)
-    ]);
-    setItems(itemRes.data);
-    setCategories(catRes.data);
-    setSubCategories(subCatRes.data);
-    setDepartments(deptRes.data);
-    setUnits(unitRes.data);
-    setTaxes(taxRes.data);
-    setBranches(branchRes.data);
-    setBrands(brandRes.data);
-    setImages(imgRes.data);
+    try {
+      setLoading(true);
+      setLoadingMessage('Fetching items data with rate limiting...');
+      console.log('Fetching items data with rate limiting...');
+      
+      const endpoints = [
+        { key: 'items', url: '/items' },
+        { key: 'categories', url: '/item-categories' },
+        { key: 'subCategories', url: '/sub-categories' },
+        { key: 'departments', url: '/departments' },
+        { key: 'units', url: '/units' },
+        { key: 'taxes', url: '/tax' },
+        { key: 'branches', url: '/branch' },
+        { key: 'brands', url: '/brand' },
+        { key: 'images', url: '/gallery' }
+      ];
+
+      setLoadingMessage('Processing data requests...');
+      const data = await fetchMultipleEndpoints(endpoints);
+
+      setLoadingMessage('Setting up data...');
+      // Set all data with fallbacks
+      setItems(data.items || []);
+      setCategories(data.categories || []);
+      setSubCategories(data.subCategories || []);
+      setDepartments(data.departments || []);
+      setUnits(data.units || []);
+      setTaxes(data.taxes || []);
+      setBranches(data.branches || []);
+      setBrands(data.brands || []);
+      setImages(data.images || []);
+
+      console.log('Items data fetched successfully');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in fetchData:', error);
+      setLoadingMessage('Error loading data. Please try refreshing the page.');
+      alert('Some data could not be loaded due to server limitations. Please refresh the page.');
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -155,15 +180,44 @@ const Item = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    if (window.confirm('Are you sure you want to delete this item? This will also delete all associated packaging for this item.')) {
       try {
-        await axios.delete(`${backend_url}/items/${id}`);
+        const response = await axios.delete(`${backend_url}/items/${id}`);
+        
+        // Show success message with packaging deletion info
+        if (response.data && response.data.deletedPackagingCount !== undefined) {
+          const packagingCount = response.data.deletedPackagingCount;
+          const itemName = response.data.itemName || 'Item';
+          if (packagingCount > 0) {
+            alert(`"${itemName}" deleted successfully! Also removed ${packagingCount} associated packaging item${packagingCount !== 1 ? 's' : ''}.`);
+          } else {
+            alert(`"${itemName}" deleted successfully!`);
+          }
+        } else {
+          alert('Item deleted successfully!');
+        }
+        
         fetchData();
       } catch (error) {
         console.error('Error deleting item:', error);
+        alert('Error deleting item. Please try again.');
       }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#735dff] mx-auto mb-4"></div>
+            <p className="text-gray-600">{loadingMessage}</p>
+            <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">

@@ -23,7 +23,6 @@ const CurrencyRoutes = require('./routes/currencyRoute');
 const MenuItemRoutes = require('./routes/MenuItem');
 const TaxRoutes = require('./routes/tax');
 const SupplierRoutes = require('./routes/supplierRoutes');
-const PackageItemRoutes = require('./routes/packageItemRoutes');
 const packagingRoutes = require('./routes/packagingRoutes');
 const SubCategoryRoutes = require('./routes/subCategoryRoutes');
 
@@ -97,7 +96,6 @@ app.use('/api/currency', CurrencyRoutes);
 app.use('/api/menu', MenuItemRoutes) 
 app.use('/api/tax', TaxRoutes) 
 app.use('/api/suppliers', SupplierRoutes);
-app.use('/api/package-items', PackageItemRoutes);
 app.use('/api/sub-categories', SubCategoryRoutes);
 
 // Apply login rate limiting to login route

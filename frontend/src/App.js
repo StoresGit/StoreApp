@@ -15,7 +15,7 @@ import Procurements from './pages/Procurements';
 import Reports from './pages/Reports';
 import Inventory from './pages/Inventory';
 import Suppliers from './pages/Suppliers';
-import PackageItems from './pages/PackageItems';
+import Packaging from './pages/Packaging';
 import RecipeExperts from './pages/RecipeExperts';
 import Departments from './pages/Departments';
 import Items from './pages/Items';
@@ -75,7 +75,7 @@ function App() {
         { label: 'Items', path: '/items' },
         { label: 'Recipe Experts', path: '/recipe-experts' },
         { label: 'Suppliers', path: '/suppliers' },
-        { label: 'Package Items', path: '/package-items' },
+        { label: 'Packaging', path: '/packaging' },
       ],
     },
      {
@@ -141,7 +141,7 @@ function App() {
                 <Route path="/departments" element={<Departments />} />
                 <Route path="/recipe-experts" element={<RecipeExperts />} />
                 <Route path="/suppliers" element={<Suppliers />} />
-                    <Route path="/package-items" element={<PackageItems />} />
+                <Route path="/packaging" element={<Packaging />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/procurements" element={<Procurements />} />

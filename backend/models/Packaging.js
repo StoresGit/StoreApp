@@ -8,7 +8,7 @@ const PackagingSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['base', 'pack'],
+    enum: ['base', 'pack', 'bulk', 'retail', 'wholesale', 'custom'],
     required: true
   },
   amount: {
@@ -19,7 +19,7 @@ const PackagingSchema = new mongoose.Schema({
   unit: {
     type: String,
     required: [true, 'Unit is required'],
-    enum: ['L', 'ml', 'kg', 'g', 'pcs']
+    enum: ['L', 'ml', 'kg', 'g', 'pcs', 'box', 'pack']
   },
   packSize: {
     type: Number,
@@ -27,7 +27,11 @@ const PackagingSchema = new mongoose.Schema({
   },
   packUnit: {
     type: String,
-    enum: ['x', 'per']
+    enum: ['x', 'per', 'of']
+  },
+  description: {
+    type: String,
+    maxlength: [500, 'Description cannot be more than 500 characters']
   },
   isActive: {
     type: Boolean,

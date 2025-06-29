@@ -27,8 +27,8 @@ export default function EditItem() {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <HeaderSection />
-      <TabNavigation />
+      <HeaderSection item={item} />
+      <TabNavigation item={item} />
       <div className="flex gap-6 mt-6">
         {/* <ItemDetailsForm  item={item}/> */}
         {/* <LocationTogglePanel /> */}
