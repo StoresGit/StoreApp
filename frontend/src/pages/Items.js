@@ -36,8 +36,6 @@ const Item = () => {
     subCategory: '' // Sub Category
   });
 
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
   const fetchData = async () => {
     try {
       setLoading(true);
