@@ -50,7 +50,8 @@ router.post("/", authMiddleware, async (req, res) => {
           packagingId = null; // Pack packaging doesn't have a specific ID
         } else if (packagingKey.startsWith('additional_')) {
           packagingType = 'additional';
-          packagingId = packagingKey.split('_')[1]; // Extract index or ID
+          packagingId = packagingKey.split('_')[1]; // Extract packaging ID
+          console.log('Extracted packaging ID:', packagingId, 'from key:', packagingKey);
         } else {
           // Handle format like "base-id" or "pack-id"
           const parts = packagingKey.split('-');
@@ -69,13 +70,19 @@ router.post("/", authMiddleware, async (req, res) => {
           // Only add packaging field if it's a valid ObjectId
           if (packagingId && mongoose.Types.ObjectId.isValid(packagingId)) {
             supplierItemData.packaging = packagingId;
+            console.log('Added packaging ID to supplier item:', packagingId);
+          } else {
+            console.log('No valid packaging ID for:', packagingType, 'key:', packagingKey);
           }
+          
+          console.log('Creating supplier item with data:', supplierItemData);
           
           const supplierItem = new SupplierItem(supplierItemData);
           
           const savedSupplierItem = await supplierItem.save();
           await savedSupplierItem.populate(['supplier', 'item', 'packaging']);
           supplierItems.push(savedSupplierItem);
+          console.log('Saved supplier item:', savedSupplierItem);
         }
       }
     }

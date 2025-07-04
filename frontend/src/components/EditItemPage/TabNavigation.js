@@ -32,11 +32,13 @@ export default function ItemTabs({ item: propItem }) {
   // Load existing supplier-item relationships
   const loadSupplierItemRelationships = useCallback(async () => {
     try {
+      console.log('Loading suppliers for item:', id);
       const token = localStorage.getItem('token');
       const response = await axios.get(`${backend_url}/supplier-items/item/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const supplierItems = response.data;
+      console.log('Loaded supplier items from backend:', supplierItems);
       
       // Convert supplier items to the format expected by selectedSuppliers state
       const suppliersByPackaging = {};
@@ -49,10 +51,15 @@ export default function ItemTabs({ item: propItem }) {
         } else if (supplierItem.packagingType === 'pack') {
           packagingKey = 'pack';
         } else if (supplierItem.packagingType === 'additional') {
-          packagingKey = `additional_${supplierItem.packaging || 0}`;
+          // Handle both populated object and ObjectId string
+          const packagingId = supplierItem.packaging?._id || supplierItem.packaging;
+          packagingKey = `additional_${packagingId}`;
+          console.log('Processing additional packaging:', supplierItem.packaging, 'extracted ID:', packagingId);
         } else {
           packagingKey = `${supplierItem.packagingType}-${supplierItem.packaging || ''}`;
         }
+        
+        console.log(`Mapping supplier ${supplierItem.supplier._id} to packaging key: ${packagingKey}`);
         
         if (!suppliersByPackaging[packagingKey]) {
           suppliersByPackaging[packagingKey] = [];
@@ -60,6 +67,7 @@ export default function ItemTabs({ item: propItem }) {
         suppliersByPackaging[packagingKey].push(supplierItem.supplier._id);
       });
       
+      console.log('Final suppliers by packaging:', suppliersByPackaging);
       setSelectedSuppliers(suppliersByPackaging);
     } catch (error) {
       console.error('Error loading supplier-item relationships:', error);
@@ -134,6 +142,16 @@ export default function ItemTabs({ item: propItem }) {
     fetchBranchesAndBrands();
   }, [id, loadSupplierItemRelationships]);
 
+  // Restore active tab from localStorage when id is available
+  useEffect(() => {
+    if (id) {
+      const savedTab = localStorage.getItem(`activeTab_${id}`);
+      if (savedTab) {
+        setActiveTab(savedTab);
+      }
+    }
+  }, [id]);
+
   // Auto-detect unit from item's base unit when opening form
   useEffect(() => {
     if (showPackagingForm && item?.baseUnit && !packagingData.unit) {
@@ -203,23 +221,29 @@ export default function ItemTabs({ item: propItem }) {
   const handleSupplierSelect = (packagingKey, supplierId, event) => {
     event.stopPropagation(); // Prevent dropdown from closing
     
+    console.log('Selecting supplier:', supplierId, 'for packaging:', packagingKey);
+    
     setSelectedSuppliers(prev => {
       const currentSuppliers = prev[packagingKey] || [];
       const isAlreadySelected = currentSuppliers.includes(supplierId);
       
+      let newState;
       if (isAlreadySelected) {
         // Remove supplier if already selected
-        return {
+        newState = {
           ...prev,
           [packagingKey]: currentSuppliers.filter(id => id !== supplierId)
         };
       } else {
         // Add supplier if not selected
-        return {
+        newState = {
           ...prev,
           [packagingKey]: [...currentSuppliers, supplierId]
         };
       }
+      
+      console.log('Updated selectedSuppliers state:', newState);
+      return newState;
     });
   };
 
@@ -233,9 +257,18 @@ export default function ItemTabs({ item: propItem }) {
     setShowSupplierDropdown(showSupplierDropdown === packagingKey ? null : packagingKey);
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // Save the active tab to localStorage
+    localStorage.setItem(`activeTab_${id}`, tab);
+  };
+
   // Save supplier-item relationships
   const saveSupplierItemRelationships = async () => {
     try {
+      console.log('Saving suppliers for item:', id);
+      console.log('Selected suppliers data:', selectedSuppliers);
+      
       const token = localStorage.getItem('token');
       const response = await axios.post(`${backend_url}/supplier-items`, {
         itemId: id,
@@ -248,6 +281,7 @@ export default function ItemTabs({ item: propItem }) {
       return response.data;
     } catch (error) {
       console.error('Error saving supplier-item relationships:', error);
+      console.error('Error details:', error.response?.data);
       throw error;
     }
   };
@@ -1294,7 +1328,8 @@ export default function ItemTabs({ item: propItem }) {
                   totalUnits = totalUnits * parentMultiplier;
                 }
                 
-                const packagingKey = `additional_${index}`;
+                const packagingKey = `additional_${pkg._id}`;
+                console.log('Generated packaging key:', packagingKey, 'for package:', pkg);
                 
                 return (
                   <React.Fragment key={index}>
@@ -1494,7 +1529,7 @@ export default function ItemTabs({ item: propItem }) {
         {tabs.map((tab) => (
           <div
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => handleTabChange(tab)}
             className={`cursor-pointer pb-2 text-sm font-medium ${
               activeTab === tab
                 ? 'text-[#5B2685] border-b-2 border-[#5B2685]'
