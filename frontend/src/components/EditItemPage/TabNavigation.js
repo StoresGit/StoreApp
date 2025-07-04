@@ -902,12 +902,10 @@ export default function ItemTabs({ item: propItem }) {
                 return packages.map((pkg, index) => {
                   // Determine if this is sub-packaging and find its parent
                   let isSubPackaging = false;
-                  let parentPkg = null;
                   
                   if (index > 0) {
                     // All packages after the first are sub-packaging of the previous one
                     isSubPackaging = true;
-                    parentPkg = packages[index - 1]; // Previous package is the parent
                   }
                   let cumulativeMultiplier = 1;
                   let allParentDescriptions = [];
