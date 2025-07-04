@@ -18,8 +18,7 @@ router.get("/", async (req, res) => {
   try {
     const suppliers = await Supplier.find()
       .populate("image")
-      .populate("assignBranch")
-      .populate("tax");
+      .populate("assignBranch");
     res.json(suppliers);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -31,8 +30,7 @@ router.get("/:id", async (req, res) => {
   try {
     const supplier = await Supplier.findById(req.params.id)
       .populate("image")
-      .populate("assignBranch")
-      .populate("tax");
+      .populate("assignBranch");
     if (!supplier) {
       return res.status(404).json({ message: "Supplier not found" });
     }
@@ -49,7 +47,13 @@ router.post("/", async (req, res) => {
     const supplierData = filterEmptyValues(req.body);
     const supplier = new Supplier(supplierData);
     const newSupplier = await supplier.save();
-    res.status(201).json(newSupplier);
+    
+    // Populate the response
+    const populatedSupplier = await Supplier.findById(newSupplier._id)
+      .populate("image")
+      .populate("assignBranch");
+    
+    res.status(201).json(populatedSupplier);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -60,7 +64,14 @@ router.put("/:id", async (req, res) => {
   try {
     // Filter out empty values
     const updateData = filterEmptyValues(req.body);
-    const supplier = await Supplier.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const supplier = await Supplier.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true }
+    )
+    .populate("image")
+    .populate("assignBranch");
+    
     if (!supplier) {
       return res.status(404).json({ message: "Supplier not found" });
     }

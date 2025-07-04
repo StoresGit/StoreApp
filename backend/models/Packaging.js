@@ -8,8 +8,8 @@ const PackagingSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['base', 'pack', 'bulk', 'retail', 'wholesale', 'custom'],
-    required: true
+    required: true,
+    default: 'base'
   },
   amount: {
     type: Number,
@@ -18,8 +18,7 @@ const PackagingSchema = new mongoose.Schema({
   },
   unit: {
     type: String,
-    required: [true, 'Unit is required'],
-    enum: ['L', 'ml', 'kg', 'g', 'pcs', 'box', 'pack']
+    required: [true, 'Unit is required']
   },
   packSize: {
     type: Number,
@@ -33,6 +32,14 @@ const PackagingSchema = new mongoose.Schema({
     type: String,
     maxlength: [500, 'Description cannot be more than 500 characters']
   },
+  branches: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
+  }],
+  brands: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Brand'
+  }],
   isActive: {
     type: Boolean,
     default: true

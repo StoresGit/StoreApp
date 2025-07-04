@@ -19,12 +19,28 @@ exports.getUnit = async (req, res) => {
 // -------------------------
 exports.addUnit = async (req, res) => {
   try {
-    const { name, unitType, symbol } = req.body;
-    if (!name || !unitType || !symbol) {
-      return res.status(400).json({ error: "name, unitType & symbol are required" });
+    const { name, baseUnit, standardUnit, symbol } = req.body;
+    
+    if (!name || !baseUnit || !symbol) {
+      return res.status(400).json({ error: "name, baseUnit & symbol are required" });
     }
 
-    const unit = await Unit.create({ name, unitType, Symbol: symbol });
+    // Validate baseUnit is one of the allowed values
+    const allowedBaseUnits = ['kg', 'liter', 'pieces'];
+    if (!allowedBaseUnits.includes(baseUnit)) {
+      return res.status(400).json({ error: "baseUnit must be one of: kg, liter, pieces" });
+    }
+
+    const unitData = {
+      name,
+      baseUnit,
+      symbol: symbol,
+    };
+
+    // Add optional fields if provided
+    if (standardUnit) unitData.standardUnit = standardUnit;
+
+    const unit = await Unit.create(unitData);
     return res.status(201).json(unit);
   } catch (err) {
     console.error(err);
@@ -37,14 +53,30 @@ exports.addUnit = async (req, res) => {
 // -------------------------
 exports.updateUnit = async (req, res) => {
   try {
-    const { name, unitType, symbol } = req.body;
-    if (!name || !unitType || !symbol) {
-      return res.status(400).json({ error: "name, unitType & symbol are required" });
+    const { name, baseUnit, standardUnit, symbol } = req.body;
+    
+    if (!name || !baseUnit || !symbol) {
+      return res.status(400).json({ error: "name, baseUnit & symbol are required" });
     }
+
+    // Validate baseUnit is one of the allowed values
+    const allowedBaseUnits = ['kg', 'liter', 'pieces'];
+    if (!allowedBaseUnits.includes(baseUnit)) {
+      return res.status(400).json({ error: "baseUnit must be one of: kg, liter, pieces" });
+    }
+
+    const updateData = {
+      name,
+      baseUnit,
+      symbol: symbol,
+    };
+
+    // Add optional fields if provided
+    if (standardUnit) updateData.standardUnit = standardUnit;
 
     const updated = await Unit.findByIdAndUpdate(
       req.params.id,
-      { name, unitType, Symbol: symbol },
+      updateData,
       { new: true, runValidators: true }
     );
 

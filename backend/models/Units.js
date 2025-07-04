@@ -5,11 +5,16 @@ const UnitSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  unitType: {
+  baseUnit: {
     type: String,
+    enum: ['kg', 'liter', 'pieces'],
     required: true,
   },
-   Symbol: {
+  standardUnit: {
+    type: String,
+    required: false, // Making this optional as requested
+  },
+  symbol: {
     type: String,
     required: true,
   },

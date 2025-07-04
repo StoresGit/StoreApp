@@ -4,37 +4,49 @@ import backend_url from '../config/config';
 
 const Suppliers = () => {
   const [suppliers, setSuppliers] = useState([]);
-  const [taxes, setTaxes] = useState([]);
   const [branches, setBranches] = useState([]);
   const [images, setImages] = useState([]);
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [supplierMode, setSupplierMode] = useState('standalone'); // Only standalone mode now
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
-    legalName: '', // Supplier Legal Name
-    shortName: '', // Short Name
-    taxRegistrationNo: '', // Tax Registration No
-    googleLocation: '', // Google Location
-    repName: '', // Rep. Name
-    mobileCall: '', // Mobile No - Call
-    mobileWhatsapp: '', // Mobile No - Whatsapp
-    image: '', // Image
-    assignBranch: '', // Assign Branch
-    tax: '' // Tax
+    // Basic Supplier Information
+    legalName: '',
+    shortName: '',
+    taxRegistrationNo: '',
+    googleLocation: '',
+    repName: '',
+    mobileCall: '',
+    mobileWhatsapp: '',
+    image: '',
+    assignBranch: '',
   });
 
   const fetchData = async () => {
-    const [supplierRes, taxRes, branchRes, imgRes] = await Promise.all([
-      axios.get(`${backend_url}/suppliers`),
-      axios.get(`${backend_url}/tax`),
-      axios.get(`${backend_url}/branch`),
-      axios.get(`${backend_url}/gallery`)
-    ]);
-    setSuppliers(supplierRes.data);
-    setTaxes(taxRes.data);
-    setBranches(branchRes.data);
-    setImages(imgRes.data);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const [supplierRes, branchRes, imgRes] = await Promise.all([
+        axios.get(`${backend_url}/suppliers`).catch(() => ({ data: [] })),
+        axios.get(`${backend_url}/branch`).catch(() => ({ data: [] })),
+        axios.get(`${backend_url}/gallery`).catch(() => ({ data: [] }))
+      ]);
+      
+      setSuppliers(supplierRes.data || []);
+      setBranches(branchRes.data || []);
+      setImages(imgRes.data || []);
+      
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to load data. Please refresh the page.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -42,34 +54,36 @@ const Suppliers = () => {
   }, []);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
   const handleSubmit = async () => {
     try {
-      if (editingId) {
-        await axios.put(`${backend_url}/suppliers/${editingId}`, formData);
-      } else {
-        await axios.post(`${backend_url}/suppliers`, formData);
+      // Validate required fields
+      if (!formData.legalName?.trim()) {
+        alert('Legal Name is required');
+        return;
       }
-      setFormData({ 
-        legalName: '', 
-        shortName: '', 
-        taxRegistrationNo: '', 
-        googleLocation: '', 
-        repName: '', 
-        mobileCall: '', 
-        mobileWhatsapp: '', 
-        image: '', 
-        assignBranch: '', 
-        tax: '' 
-      });
-      setEditingId(null);
-      setShowFormModal(false);
+
+      const submitData = { ...formData };
+
+      if (editingId) {
+        await axios.put(`${backend_url}/suppliers/${editingId}`, submitData);
+        alert('Supplier updated successfully!');
+      } else {
+        await axios.post(`${backend_url}/suppliers`, submitData);
+        alert('Supplier added successfully!');
+      }
+      
+      resetForm();
       fetchData();
     } catch (error) {
       console.error('Error saving supplier:', error);
+      alert('Error saving supplier. Please try again.');
     }
   };
 
@@ -84,8 +98,10 @@ const Suppliers = () => {
       mobileWhatsapp: supplier.mobileWhatsapp || '',
       image: supplier.image?._id || '',
       assignBranch: supplier.assignBranch?._id || '',
-      tax: supplier.tax?._id || ''
     });
+    
+    // Always use standalone mode
+    setSupplierMode('standalone');
     setEditingId(supplier._id);
     setShowFormModal(true);
   };
@@ -94,32 +110,68 @@ const Suppliers = () => {
     if (window.confirm('Are you sure you want to delete this supplier?')) {
       try {
         await axios.delete(`${backend_url}/suppliers/${id}`);
+        alert('Supplier deleted successfully!');
         fetchData();
       } catch (error) {
         console.error('Error deleting supplier:', error);
+        alert('Error deleting supplier. Please try again.');
       }
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      legalName: '',
+      shortName: '',
+      taxRegistrationNo: '',
+      googleLocation: '',
+      repName: '',
+      mobileCall: '',
+      mobileWhatsapp: '',
+      image: '',
+      assignBranch: '',
+    });
+    setEditingId(null);
+    setSupplierMode('standalone');
+    setShowFormModal(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#735dff] mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading suppliers...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <div className="text-center py-8">
+          <div className="text-red-600 mb-4">{error}</div>
+          <button 
+            onClick={fetchData}
+            className="bg-[#735dff] text-white px-4 py-2 rounded"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Suppliers</h2>
+        <h2 className="text-xl font-bold">Suppliers Management</h2>
         <button
           onClick={() => {
-            setFormData({ 
-              legalName: '', 
-              shortName: '', 
-              taxRegistrationNo: '', 
-              googleLocation: '', 
-              repName: '', 
-              mobileCall: '', 
-              mobileWhatsapp: '', 
-              image: '', 
-              assignBranch: '', 
-              tax: '' 
-            });
-            setEditingId(null);
+            resetForm();
             setShowFormModal(true);
           }}
           className="bg-[#735dff] text-white px-4 py-2 rounded"
@@ -134,33 +186,25 @@ const Suppliers = () => {
             <tr>
               <th className="p-2 border">Legal Name</th>
               <th className="p-2 border">Short Name</th>
-              <th className="p-2 border">Tax Registration No</th>
               <th className="p-2 border">Rep. Name</th>
               <th className="p-2 border">Mobile Call</th>
-              <th className="p-2 border">Mobile Whatsapp</th>
-              <th className="p-2 border">Assign Branch</th>
-              <th className="p-2 border">Tax</th>
-              <th className="p-2 border">Image</th>
+              <th className="p-2 border">Branch</th>
+              <th className="p-2 border">Status</th>
               <th className="p-2 border">Actions</th>
             </tr>
           </thead>
           <tbody>
             {suppliers.map(supplier => (
               <tr key={supplier._id} className="text-center">
-                <td className="p-2 border">{supplier.legalName}</td>
-                <td className="p-2 border">{supplier.shortName}</td>
-                <td className="p-2 border">{supplier.taxRegistrationNo || 'N/A'}</td>
-                <td className="p-2 border">{supplier.repName}</td>
-                <td className="p-2 border">{supplier.mobileCall}</td>
-                <td className="p-2 border">{supplier.mobileWhatsapp || 'N/A'}</td>
+                <td className="p-2 border font-medium">{supplier.legalName || 'N/A'}</td>
+                <td className="p-2 border">{supplier.shortName || 'N/A'}</td>
+                <td className="p-2 border">{supplier.repName || 'N/A'}</td>
+                <td className="p-2 border">{supplier.mobileCall || 'N/A'}</td>
                 <td className="p-2 border">{supplier.assignBranch?.name || 'N/A'}</td>
-                <td className="p-2 border">{supplier.tax?.name || 'N/A'}</td>
                 <td className="p-2 border">
-                  {supplier.image?.url ? (
-                    <img src={supplier.image.url} alt="img" className="w-12 h-12 object-cover mx-auto" />
-                  ) : (
-                    'No image'
-                  )}
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                    Active
+                  </span>
                 </td>
                 <td className="p-2 border space-x-2">
                   <button
@@ -178,6 +222,13 @@ const Suppliers = () => {
                 </td>
               </tr>
             ))}
+            {suppliers.length === 0 && (
+              <tr>
+                <td colSpan="7" className="p-4 text-center text-gray-500">
+                  No suppliers found. Add your first supplier to get started.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -187,137 +238,111 @@ const Suppliers = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
           <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between mb-4">
-              <h3 className="text-lg font-bold">{editingId ? 'Edit Supplier' : 'Add Supplier'}</h3>
-              <button
-                onClick={() => {
-                  setShowFormModal(false);
-                  setEditingId(null);
-                  setFormData({ 
-                    legalName: '', 
-                    shortName: '', 
-                    taxRegistrationNo: '', 
-                    googleLocation: '', 
-                    repName: '', 
-                    mobileCall: '', 
-                    mobileWhatsapp: '', 
-                    image: '', 
-                    assignBranch: '', 
-                    tax: '' 
-                  });
-                }}
+              <h3 className="text-lg font-bold">
+                {editingId ? 'Edit Supplier' : 'Add Supplier'}
+              </h3>
+              <button 
+                onClick={resetForm}
+                className="text-gray-500 hover:text-gray-700"
               >
-                Close
+                ✕
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                name="legalName"
-                value={formData.legalName}
-                onChange={handleChange}
-                placeholder="Supplier Legal Name"
-                className="border p-2 rounded"
-              />
 
-              <input
-                type="text"
-                name="shortName"
-                value={formData.shortName}
-                onChange={handleChange}
-                placeholder="Short Name"
-                className="border p-2 rounded"
-              />
 
-              <input
-                type="text"
-                name="taxRegistrationNo"
-                value={formData.taxRegistrationNo}
-                onChange={handleChange}
-                placeholder="Tax Registration No"
-                className="border p-2 rounded"
-              />
 
-              <input
-                type="text"
-                name="googleLocation"
-                value={formData.googleLocation}
-                onChange={handleChange}
-                placeholder="Google Location"
-                className="border p-2 rounded"
-              />
-
-              <input
-                type="text"
-                name="repName"
-                value={formData.repName}
-                onChange={handleChange}
-                placeholder="Rep. Name"
-                className="border p-2 rounded"
-              />
-
-              <input
-                type="text"
-                name="mobileCall"
-                value={formData.mobileCall}
-                onChange={handleChange}
-                placeholder="Mobile No - Call"
-                className="border p-2 rounded"
-              />
-
-              <input
-                type="text"
-                name="mobileWhatsapp"
-                value={formData.mobileWhatsapp}
-                onChange={handleChange}
-                placeholder="Mobile No - Whatsapp"
-                className="border p-2 rounded"
-              />
-
-              <select
-                name="assignBranch"
-                value={formData.assignBranch}
-                onChange={handleChange}
-                className="border p-2 rounded"
-              >
-                <option value="">Select Branch</option>
-                {branches.map(branch => (
-                  <option key={branch._id} value={branch._id}>{branch.name}</option>
-                ))}
-              </select>
-
-              <select
-                name="tax"
-                value={formData.tax}
-                onChange={handleChange}
-                className="border p-2 rounded"
-              >
-                <option value="">Select Tax</option>
-                {taxes.map(tax => (
-                  <option key={tax._id} value={tax._id}>{tax.name}</option>
-                ))}
-              </select>
-
-              <div className="col-span-2">
-                <label className="block font-medium mb-1">Image</label>
-                <div
-                  className="w-32 h-32 border rounded flex items-center justify-center cursor-pointer overflow-hidden"
-                  onClick={() => setShowImageModal(true)}
+            {/* Basic Supplier Information */}
+            <div className="mb-6">
+              <h4 className="font-medium mb-3 text-[#735dff] border-b pb-2">Supplier Information</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="legalName"
+                  value={formData.legalName}
+                  onChange={handleChange}
+                  placeholder="Legal Name *"
+                  className="border p-2 rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  name="shortName"
+                  value={formData.shortName}
+                  onChange={handleChange}
+                  placeholder="Short Name"
+                  className="border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="taxRegistrationNo"
+                  value={formData.taxRegistrationNo}
+                  onChange={handleChange}
+                  placeholder="Tax Registration No"
+                  className="border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="googleLocation"
+                  value={formData.googleLocation}
+                  onChange={handleChange}
+                  placeholder="Google Location"
+                  className="border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="repName"
+                  value={formData.repName}
+                  onChange={handleChange}
+                  placeholder="Representative Name"
+                  className="border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="mobileCall"
+                  value={formData.mobileCall}
+                  onChange={handleChange}
+                  placeholder="Mobile No - Call"
+                  className="border p-2 rounded"
+                />
+                <input
+                  type="text"
+                  name="mobileWhatsapp"
+                  value={formData.mobileWhatsapp}
+                  onChange={handleChange}
+                  placeholder="Mobile No - WhatsApp"
+                  className="border p-2 rounded"
+                />
+                <select
+                  name="assignBranch"
+                  value={formData.assignBranch}
+                  onChange={handleChange}
+                  className="border p-2 rounded"
                 >
-                  {formData.image ? (
-                    <img src={formData.image.url} alt="Selected" className="object-cover w-full h-full" />
-                  ) : (
-                    <span>Select Image</span>
-                  )}
-                </div>
+                  <option value="">Select Branch</option>
+                  {branches.map(branch => (
+                    <option key={branch._id} value={branch._id}>{branch.name}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              className="bg-[#735dff] text-white px-4 py-2 rounded"
-            >
-              {editingId ? 'Update Supplier' : 'Add Supplier'}
-            </button>
+
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="text-gray-500 px-4 py-2 hover:underline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="bg-[#735dff] text-white px-4 py-2 rounded hover:bg-[#5a4bcc]"
+              >
+                {editingId ? 'Update Supplier' : 'Add Supplier'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -328,15 +353,20 @@ const Suppliers = () => {
           <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between mb-4">
               <h3 className="text-lg font-bold">Select Image</h3>
-              <button onClick={() => setShowImageModal(false)}>Close</button>
+              <button 
+                onClick={() => setShowImageModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
             </div>
             <div className="grid grid-cols-4 gap-4">
               {images.map(img => (
                 <div
                   key={img._id}
-                  className="cursor-pointer border rounded p-2"
+                  className="cursor-pointer border rounded p-2 hover:bg-gray-50"
                   onClick={() => {
-                    setFormData(prev => ({ ...prev, image: img }));
+                    setFormData(prev => ({ ...prev, image: img._id }));
                     setShowImageModal(false);
                   }}
                 >

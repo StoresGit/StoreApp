@@ -27,54 +27,49 @@ const Item = () => {
     baseUnit: '', // Base Unit
     category: '', // Item Category
     tax: '', // Tax
-    assignBranch: '', // Assign Branch
-    assignBrand: '', // Assign Brand
     image: '', // Image
     departments: [], // Keep existing departments
     name: '', // Keep existing name for compatibility
-    unitCount: '', // Number of Units
-    subCategory: '' // Sub Category
+    subCategory: '', // Sub Category - now required
+    // Pricing fields
+    unitPrice: '',
+    priceIncludesVAT: true
   });
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      setLoadingMessage('Fetching items data with rate limiting...');
-      console.log('Fetching items data with rate limiting...');
+      setLoadingMessage('Loading items data...');
       
       const endpoints = [
-        { key: 'items', url: '/items' },
-        { key: 'categories', url: '/item-categories' },
-        { key: 'subCategories', url: '/sub-categories' },
-        { key: 'departments', url: '/departments' },
-        { key: 'units', url: '/units' },
-        { key: 'taxes', url: '/tax' },
-        { key: 'branches', url: '/branch' },
-        { key: 'brands', url: '/brand' },
-        { key: 'images', url: '/gallery' }
+        { url: '/items', key: 'items' },
+        { url: '/item-categories', key: 'categories' },
+        { url: '/sub-categories', key: 'subCategories' },
+        { url: '/departments', key: 'departments' },
+        { url: '/units', key: 'units' },
+        { url: '/tax', key: 'taxes' },
+        { url: '/branch', key: 'branches' },
+        { url: '/brand', key: 'brands' },
+        { url: '/gallery', key: 'images' }
       ];
-
-      setLoadingMessage('Processing data requests...');
-      const data = await fetchMultipleEndpoints(endpoints);
-
-      setLoadingMessage('Setting up data...');
-      // Set all data with fallbacks
-      setItems(data.items || []);
-      setCategories(data.categories || []);
-      setSubCategories(data.subCategories || []);
-      setDepartments(data.departments || []);
-      setUnits(data.units || []);
-      setTaxes(data.taxes || []);
-      setBranches(data.branches || []);
-      setBrands(data.brands || []);
-      setImages(data.images || []);
-
-      console.log('Items data fetched successfully');
-      setLoading(false);
+      
+      const results = await fetchMultipleEndpoints(endpoints);
+      
+      setItems(results.items || []);
+      setCategories(results.categories || []);
+      setSubCategories(results.subCategories || []);
+      setDepartments(results.departments || []);
+      // All units are now base units
+      setUnits(results.units || []);
+      setTaxes(results.taxes || []);
+      setBranches(results.branches || []);
+      setBrands(results.brands || []);
+      setImages(results.images || []);
+      
     } catch (error) {
-      console.error('Error in fetchData:', error);
-      setLoadingMessage('Error loading data. Please try refreshing the page.');
-      alert('Some data could not be loaded due to server limitations. Please refresh the page.');
+      console.error('Error fetching data:', error);
+      setLoadingMessage('Error loading data. Please refresh the page.');
+    } finally {
       setLoading(false);
     }
   };
@@ -123,6 +118,10 @@ const Item = () => {
     alert('Category is required');
     return;
   }
+  if (!formData.subCategory) {
+    alert('Sub Category is required');
+    return;
+  }
 
   try {
     const submitData = {
@@ -145,8 +144,9 @@ const Item = () => {
     // Reset state
     setFormData({
       nameEn: '', nameAlt: '', baseUnit: '', category: '',
-      tax: '', assignBranch: '', assignBrand: '', image: '',
-      departments: [], name: '', unitCount: '', subCategory: ''
+      tax: '', image: '',
+      departments: [], name: '', subCategory: '',
+      unitPrice: '', priceIncludesVAT: true
     });
     setEditingId(null);
     setShowFormModal(false);
@@ -165,13 +165,12 @@ const Item = () => {
       baseUnit: item.baseUnit?._id || '',
       category: item.category?._id || '',
       tax: item.tax?._id || '',
-      assignBranch: item.assignBranch?._id || '',
-      assignBrand: item.assignBrand?._id || '',
       image: item.image?._id || '',
       departments: item.departments?.map(d => d._id) || [],
       name: item.nameEn || item.name || '',
-      unitCount: item.unitCount || '',
-      subCategory: item.subCategory?._id || ''
+      subCategory: item.subCategory?._id || '',
+      unitPrice: item.unitPrice || '',
+      priceIncludesVAT: item.priceIncludesVAT !== undefined ? item.priceIncludesVAT : true
     });
     setEditingId(item._id);
     setShowFormModal(true);
@@ -229,13 +228,12 @@ const Item = () => {
               baseUnit: '', 
               category: '', 
               tax: '', 
-              assignBranch: '', 
-              assignBrand: '', 
               image: '', 
               departments: [], 
               name: '', 
-              unitCount: '',
-              subCategory: ''
+              subCategory: '',
+              unitPrice: '',
+              priceIncludesVAT: true
             });
             setEditingId(null);
             setShowFormModal(true);
@@ -253,12 +251,10 @@ const Item = () => {
               <th className="p-2 border">Item Name (Eng)</th>
               <th className="p-2 border">Item Name (Alt)</th>
               <th className="p-2 border">Base Unit</th>
+              <th className="p-2 border">Unit Price</th>
               <th className="p-2 border">Main Category</th>
               <th className="p-2 border">Sub Category</th>
               <th className="p-2 border">Tax</th>
-              <th className="p-2 border">Assign Branch</th>
-              <th className="p-2 border">Assign Brand</th>
-              <th className="p-2 border">Number of Units</th>
               <th className="p-2 border">Image</th>
               <th className="p-2 border">Actions</th>
             </tr>
@@ -268,14 +264,26 @@ const Item = () => {
               <tr key={item._id} className="text-center">
                 <td className="p-2 border">{item.nameEn || item.name}</td>
                 <td className="p-2 border">{item.nameAlt || 'N/A'}</td>
-                <td className="p-2 border">{item.baseUnit?.name || 'N/A'}</td>
+                <td className="p-2 border">
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                    {item.baseUnit?.name || 'N/A'}
+                  </span>
+                </td>
+                <td className="p-2 border">
+                  {item.unitPrice ? (
+                    <div className="text-center">
+                      <div className="font-medium">{item.unitPrice}</div>
+                      <div className="text-xs text-gray-500">
+                        {item.priceIncludesVAT ? 'Incl. VAT' : 'Excl. VAT'}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">No price</span>
+                  )}
+                </td>
                 <td className="p-2 border">{item.category?.nameEn || 'N/A'}</td>
                 <td className="p-2 border">{item.subCategory?.nameEn || 'N/A'}</td>
                 <td className="p-2 border">{item.tax?.name || 'N/A'}</td>
-                <td className="p-2 border">{item.assignBranch?.name || 'N/A'}</td>
-                <td className="p-2 border">{item.assignBrand?.name || 'N/A'}</td>
-                <td className="p-2 border">{item.unitCount || 'N/A'}</td>
-                <td className="p-2 border">{item.image?.url ? <img src={item.image.url} alt="" className="h-8" /> : 'N/A'}</td>
                 <td className="p-2 border">
                   {item.image?.url ? (
                     <img src={item.image.url} alt="img" className="w-12 h-12 object-cover mx-auto" />
@@ -297,11 +305,11 @@ const Item = () => {
                     Delete
                   </button>
                   <button
-  className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
-  onClick={() => navigate(`/items/${item._id}/edit`)}
->
-  Action1
-</button>
+                    className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
+                    onClick={() => navigate(`/items/${item._id}/edit`)}
+                  >
+                    Details
+                  </button>
                 </td>
               </tr>
             ))}
@@ -325,26 +333,27 @@ const Item = () => {
                     baseUnit: '', 
                     category: '', 
                     tax: '', 
-                    assignBranch: '', 
-                    assignBrand: '', 
                     image: '', 
                     departments: [], 
                     name: '', 
-                    unitCount: '',
-                    subCategory: ''
+                    subCategory: '',
+                    unitPrice: '',
+                    priceIncludesVAT: true
                   });
                 }}
+                className="text-gray-500 hover:text-gray-700"
               >
-                Close
+                ✕
               </button>
             </div>
+            
             <div className="grid grid-cols-2 gap-4 mb-4">
               <input
                 type="text"
                 name="nameEn"
                 value={formData.nameEn}
                 onChange={handleChange}
-                placeholder="Item Name (Eng)"
+                placeholder="Item Name (Eng) *"
                 className="border p-2 rounded"
               />
 
@@ -363,23 +372,57 @@ const Item = () => {
                 onChange={handleChange}
                 className="border p-2 rounded"
               >
-                <option value="">Select Base Unit</option>
+                <option value="">Select Base Unit *</option>
                 {units.map(unit => (
-                  <option key={unit._id} value={unit._id}>{unit.name}</option>
+                  <option key={unit._id} value={unit._id}>
+                    {unit.name} ({unit.symbol || unit.Symbol})
+                  </option>
                 ))}
               </select>
 
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="border p-2 rounded"
-              >
-                <option value="">Select Main Category</option>
-                {categories.map(cat => (
-                  <option key={cat._id} value={cat._id}>{cat.nameEn}</option>
-                ))}
-              </select>
+              <div className="flex gap-2">
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="border p-2 rounded flex-1"
+                >
+                  <option value="">Select Main Category *</option>
+                  {categories.map(cat => (
+                    <option key={cat._id} value={cat._id}>{cat.nameEn}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => window.open('/item-category', '_blank')}
+                  className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
+                  title="Create new main category"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="flex gap-2">
+                <select 
+                  className="border p-2 rounded flex-1" 
+                  name="subCategory" 
+                  value={formData.subCategory} 
+                  onChange={handleChange}
+                >
+                  <option value="">Select Sub Category *</option>
+                  {filteredSubCategories.map(sc => (
+                    <option key={sc._id} value={sc._id}>{sc.nameEn}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => window.open('/sub-categories', '_blank')}
+                  className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
+                  title="Create new sub category"
+                >
+                  +
+                </button>
+              </div>
 
               <select
                 name="tax"
@@ -393,52 +436,42 @@ const Item = () => {
                 ))}
               </select>
 
-              <select
-                name="assignBranch"
-                value={formData.assignBranch}
-                onChange={handleChange}
-                className="border p-2 rounded"
-              >
-                <option value="">Select Branch</option>
-                {branches.map(branch => (
-                  <option key={branch._id} value={branch._id}>{branch.name}</option>
-                ))}
-              </select>
-
-              <select
-                name="assignBrand"
-                value={formData.assignBrand}
-                onChange={handleChange}
-                className="border p-2 rounded"
-              >
-                <option value="">Select Brand</option>
-                {brands.length === 0 ? (
-                  <option value="" disabled>No brands found. Please add a brand.</option>
-                ) : (
-                  brands.map(brand => (
-                    <option key={brand._id} value={brand._id}>
-                      {brand.nameEn} {brand.nameAr ? `(${brand.nameAr})` : ''}
-                    </option>
-                  ))
-                )}
-              </select>
-
-              <select className="w-full border p-2 rounded" name="subCategory" value={formData.subCategory} onChange={handleChange}>
-                <option value="">Select Sub Category (Optional)</option>
-                {filteredSubCategories.map(sc => (
-                  <option key={sc._id} value={sc._id}>{sc.nameEn}</option>
-                ))}
-              </select>
-
-              <input
-                type="number"
-                name="unitCount"
-                value={formData.unitCount}
-                onChange={handleChange}
-                placeholder="Number of Units"
-                className="border p-2 rounded"
-                min="0"
-              />
+              {/* Pricing Section */}
+              <div className="col-span-2">
+                <h4 className="font-medium mb-3 text-[#735dff] border-b pb-2">Pricing Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Unit Price</label>
+                    <input
+                      type="number"
+                      name="unitPrice"
+                      value={formData.unitPrice}
+                      onChange={handleChange}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      className="w-full border p-2 rounded"
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        name="priceIncludesVAT"
+                        checked={formData.priceIncludesVAT}
+                        onChange={(e) => setFormData(prev => ({ ...prev, priceIncludesVAT: e.target.checked }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm">Price includes VAT</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="mt-3 p-3 bg-blue-50 rounded-md">
+                  <div className="text-sm text-blue-800">
+                    <strong>Note:</strong> VAT calculations and supplier pricing will be handled in the Suppliers section for each item.
+                  </div>
+                </div>
+              </div>
 
               <div className="col-span-2">
                 <label className="block font-medium mb-1">Image</label>
@@ -449,34 +482,60 @@ const Item = () => {
                   {formData.image ? (
                     <img src={formData.image.url} alt="Selected" className="object-cover w-full h-full" />
                   ) : (
-                    <span>Select Image</span>
+                    <span className="text-gray-500">Select Image</span>
                   )}
                 </div>
               </div>
 
               <div className="col-span-2">
                 <label className="block font-medium mb-1">Departments</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {departments.map(dept => (
                     <label key={dept._id} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
                         checked={formData.departments.includes(dept._id)}
                         onChange={() => handleDepartmentToggle(dept._id)}
+                        className="rounded"
                       />
-                      <span>{dept.name}</span>
+                      <span className="text-sm">{dept.name}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={handleSubmit}
-              className="bg-[#735dff] text-white px-4 py-2 rounded"
-            >
-              {editingId ? 'Update Item' : 'Add Item'}
-            </button>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFormModal(false);
+                  setEditingId(null);
+                  setFormData({ 
+                    nameEn: '', 
+                    nameAlt: '', 
+                    baseUnit: '', 
+                    category: '', 
+                    tax: '', 
+                    image: '', 
+                    departments: [], 
+                    name: '', 
+                    subCategory: '',
+                    unitPrice: '',
+                    priceIncludesVAT: true
+                  });
+                }}
+                className="text-gray-500 px-4 py-2 hover:underline"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                className="bg-[#735dff] text-white px-4 py-2 rounded hover:bg-[#5a4bcc]"
+              >
+                {editingId ? 'Update Item' : 'Add Item'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -487,13 +546,18 @@ const Item = () => {
           <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between mb-4">
               <h3 className="text-lg font-bold">Select Image</h3>
-              <button onClick={() => setShowImageModal(false)}>Close</button>
+              <button 
+                onClick={() => setShowImageModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
             </div>
             <div className="grid grid-cols-4 gap-4">
               {images.map(img => (
                 <div
                   key={img._id}
-                  className="cursor-pointer border rounded p-2"
+                  className="cursor-pointer border rounded p-2 hover:bg-gray-50"
                   onClick={() => {
                     setFormData(prev => ({ ...prev, image: img }));
                     setShowImageModal(false);

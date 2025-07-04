@@ -12,8 +12,19 @@ const itemSchema = new mongoose.Schema({
   departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "departments" }],
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
   name: { type: String, required: true },
-  unitCount: { type: Number }, // Number of units
-  subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory" }, // Sub Category
+  subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "SubCategory", required: true }, // Sub Category
+  
+  // Pricing fields
+  unitPrice: { 
+    type: Number, 
+    min: 0,
+    default: 0
+  },
+  priceIncludesVAT: { 
+    type: Boolean, 
+    default: true 
+  },
+  
   basePackaging: {
     amount: Number,
     unit: String,

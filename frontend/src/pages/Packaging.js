@@ -5,6 +5,8 @@ import backend_url from '../config/config';
 const Packaging = () => {
   const [packagingItems, setPackagingItems] = useState([]);
   const [items, setItems] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [brands, setBrands] = useState([]);
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,21 +16,27 @@ const Packaging = () => {
     itemId: '',
     type: 'base',
     amount: '',
-    unit: 'pcs',
+    unit: '', // Will be auto-detected from item
     packSize: '',
     packUnit: 'x',
-    description: ''
+    description: '',
+    branches: [], // Multiple branches
+    brands: [] // Multiple brands
   });
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [packagingRes, itemsRes] = await Promise.all([
+      const [packagingRes, itemsRes, branchesRes, brandsRes] = await Promise.all([
         axios.get(`${backend_url}/packaging`),
-        axios.get(`${backend_url}/items`)
+        axios.get(`${backend_url}/items`),
+        axios.get(`${backend_url}/branch`),
+        axios.get(`${backend_url}/brand`)
       ]);
       setPackagingItems(packagingRes.data);
       setItems(itemsRes.data);
+      setBranches(branchesRes.data);
+      setBrands(brandsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -65,6 +73,30 @@ const Packaging = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleItemChange = (e) => {
+    const itemId = e.target.value;
+    const selectedItem = items.find(item => item._id === itemId);
+    
+    setFormData(prev => ({
+      ...prev,
+      itemId,
+      // Auto-detect unit from selected item
+      unit: selectedItem ? selectedItem.baseUnit?.Symbol || selectedItem.unit?.Symbol || '' : ''
+    }));
+  };
+
+  const handleMultiSelectChange = (e, field) => {
+    const value = e.target.value;
+    const isChecked = e.target.checked;
+    
+    setFormData(prev => ({
+      ...prev,
+      [field]: isChecked 
+        ? [...prev[field], value]
+        : prev[field].filter(item => item !== value)
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!formData.itemId || !formData.amount || !formData.unit) {
       alert('Please fill in all required fields');
@@ -97,10 +129,12 @@ const Packaging = () => {
       itemId: packaging.itemId?._id || '',
       type: packaging.type || 'base',
       amount: packaging.amount || '',
-      unit: packaging.unit || 'pcs',
+      unit: packaging.unit || '',
       packSize: packaging.packSize || '',
       packUnit: packaging.packUnit || 'x',
-      description: packaging.description || ''
+      description: packaging.description || '',
+      branches: packaging.branches?.map(b => b._id || b) || [],
+      brands: packaging.brands?.map(b => b._id || b) || []
     });
     setEditingId(packaging._id);
     setShowFormModal(true);
@@ -142,10 +176,12 @@ const Packaging = () => {
       itemId: '',
       type: 'base',
       amount: '',
-      unit: 'pcs',
+      unit: '',
       packSize: '',
       packUnit: 'x',
-      description: ''
+      description: '',
+      branches: [],
+      brands: []
     });
     setEditingId(null);
     setShowFormModal(false);
@@ -170,207 +206,155 @@ const Packaging = () => {
   const grouped = groupedPackaging();
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-[#5B2685]">Packaging Management</h2>
-        <div className="flex gap-3">
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Packaging Management</h2>
+        <div className="flex gap-2">
           <button
             onClick={() => setGroupByItem(!groupByItem)}
-            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
+            className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
           >
             {groupByItem ? 'Show All' : 'Group by Item'}
           </button>
           <button
             onClick={handleCleanupOrphaned}
-            className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors"
-            title="Remove packaging records for deleted items"
+            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600"
           >
-            Cleanup
+            Cleanup Orphaned
           </button>
           <button
             onClick={() => setShowFormModal(true)}
-            className="bg-[#5B2685] text-white px-4 py-2 rounded-md hover:bg-[#4A1F6F] transition-colors"
+            className="bg-[#735dff] text-white px-4 py-2 rounded hover:bg-[#5a4bcc]"
           >
             Add Packaging
           </button>
         </div>
       </div>
 
+      {/* Display logic for grouped vs all items */}
       {groupByItem ? (
-        // Grouped View
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(grouped).map(([key, group]) => (
-            <div key={key} className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
+            <div key={key} className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-[#5B2685]">
                   {group.itemName}
-                  <span className="ml-2 text-sm text-gray-500">
-                    ({group.packaging.length} packaging{group.packaging.length !== 1 ? 's' : ''})
-                  </span>
                 </h3>
+                <span className="text-sm text-gray-600">
+                  {group.packaging.length} packaging type{group.packaging.length !== 1 ? 's' : ''}
+                </span>
               </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Amount & Unit
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Pack Details
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Description
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {group.packaging.map((packaging, index) => (
-                      <tr key={packaging._id} className={`hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-25'}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(packaging.type)}`}>
-                            {packaging.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {packaging.amount} {packaging.unit}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {packaging.packSize ? `${packaging.packSize} ${packaging.packUnit}` : 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {packaging.description || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(packaging.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                          <button
-                            onClick={() => handleEdit(packaging)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(packaging._id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {group.packaging.map(packaging => (
+                  <div key={packaging._id} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(packaging.type)}`}>
+                        {packaging.type}
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleEdit(packaging)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(packaging._id)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-700">
+                      <div>Amount: {packaging.amount} {packaging.unit}</div>
+                      {packaging.packSize && (
+                        <div>Pack Size: {packaging.packSize} {packaging.packUnit}</div>
+                      )}
+                      {packaging.description && (
+                        <div className="mt-1 text-gray-600">{packaging.description}</div>
+                      )}
+                      {packaging.branches && packaging.branches.length > 0 && (
+                        <div className="mt-1">
+                          <span className="font-medium">Branches:</span> 
+                          {packaging.branches.map(branch => branch.name || branch).join(', ')}
+                        </div>
+                      )}
+                      {packaging.brands && packaging.brands.length > 0 && (
+                        <div className="mt-1">
+                          <span className="font-medium">Brands:</span> 
+                          {packaging.brands.map(brand => brand.nameEn || brand).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
-          
-          {Object.keys(grouped).length === 0 && (
-            <div className="text-center py-8 text-gray-500 bg-white rounded-lg shadow-sm">
-              No packaging items found. Click "Add Packaging" to create one.
-            </div>
-          )}
         </div>
       ) : (
-        // Traditional Table View
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Item Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount & Unit
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Pack Details
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {packagingItems.map((packaging) => (
-                  <tr key={packaging._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {packaging.itemId?.nameEn || packaging.itemId?.name || 'Unknown Item'}
-                      </div>
-                      {!packaging.itemId && (
-                        <div className="text-xs text-red-500">⚠️ Missing item reference</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(packaging.type)}`}>
-                        {packaging.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {packaging.amount} {packaging.unit}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {packaging.packSize ? `${packaging.packSize} ${packaging.packUnit}` : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {packaging.description || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(packaging.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+        <div className="overflow-x-auto">
+          <table className="w-full border border-gray-300 bg-white">
+            <thead className="bg-gray-100">
+              <tr>
+                <th className="p-2 border text-left">Item</th>
+                <th className="p-2 border text-left">Type</th>
+                <th className="p-2 border text-left">Amount</th>
+                <th className="p-2 border text-left">Unit</th>
+                <th className="p-2 border text-left">Pack Size</th>
+                <th className="p-2 border text-left">Branches</th>
+                <th className="p-2 border text-left">Brands</th>
+                <th className="p-2 border text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {packagingItems.map(packaging => (
+                <tr key={packaging._id} className="hover:bg-gray-50">
+                  <td className="p-2 border">{packaging.itemId?.nameEn || packaging.itemId?.name || 'Unknown'}</td>
+                  <td className="p-2 border">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeColor(packaging.type)}`}>
+                      {packaging.type}
+                    </span>
+                  </td>
+                  <td className="p-2 border">{packaging.amount}</td>
+                  <td className="p-2 border">{packaging.unit}</td>
+                  <td className="p-2 border">
+                    {packaging.packSize ? `${packaging.packSize} ${packaging.packUnit}` : '-'}
+                  </td>
+                  <td className="p-2 border">
+                    {packaging.branches?.map(branch => branch.name || branch).join(', ') || '-'}
+                  </td>
+                  <td className="p-2 border">
+                    {packaging.brands?.map(brand => brand.nameEn || brand).join(', ') || '-'}
+                  </td>
+                  <td className="p-2 border">
+                    <div className="flex gap-1">
                       <button
                         onClick={() => handleEdit(packaging)}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-blue-600 hover:text-blue-800 text-sm"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(packaging._id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 hover:text-red-800 text-sm"
                       >
                         Delete
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {packagingItems.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No packaging items found. Click "Add Packaging" to create one.
-            </div>
-          )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Add/Edit Modal */}
+      {/* Modal for Add/Edit Packaging */}
       {showFormModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-[#5B2685]">
                 {editingId ? 'Edit Packaging' : 'Add Packaging'}
@@ -391,7 +375,7 @@ const Packaging = () => {
                 <select
                   name="itemId"
                   value={formData.itemId}
-                  onChange={handleChange}
+                  onChange={handleItemChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
                   required
                 >
@@ -406,21 +390,17 @@ const Packaging = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Type
+                  Packaging Type *
                 </label>
-                <select
+                <input
+                  type="text"
                   name="type"
                   value={formData.type}
                   onChange={handleChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                >
-                  <option value="base">Base</option>
-                  <option value="pack">Pack</option>
-                  <option value="bulk">Bulk</option>
-                  <option value="retail">Retail</option>
-                  <option value="wholesale">Wholesale</option>
-                  <option value="custom">Custom</option>
-                </select>
+                  placeholder="e.g., base, pack, bulk, retail, wholesale, custom"
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -441,22 +421,17 @@ const Packaging = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unit *
+                    Unit * (Auto-detected)
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="unit"
                     value={formData.unit}
                     onChange={handleChange}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                  >
-                    <option value="pcs">pcs</option>
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                    <option value="L">L</option>
-                    <option value="ml">ml</option>
-                    <option value="box">box</option>
-                    <option value="pack">pack</option>
-                  </select>
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent bg-gray-50"
+                    placeholder="Auto-detected from item"
+                    required
+                  />
                 </div>
               </div>
 
@@ -493,6 +468,46 @@ const Packaging = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Branches
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                  {branches.map(branch => (
+                    <label key={branch._id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        value={branch._id}
+                        checked={formData.branches.includes(branch._id)}
+                        onChange={(e) => handleMultiSelectChange(e, 'branches')}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{branch.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Brands
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded-md p-2">
+                  {brands.map(brand => (
+                    <label key={brand._id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        value={brand._id}
+                        checked={formData.brands.includes(brand._id)}
+                        onChange={(e) => handleMultiSelectChange(e, 'brands')}
+                        className="rounded"
+                      />
+                      <span className="text-sm">{brand.nameEn}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Description
                 </label>
                 <textarea
@@ -506,16 +521,16 @@ const Packaging = () => {
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex justify-end gap-2 mt-6">
               <button
                 onClick={resetForm}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
-                className="flex-1 px-4 py-2 bg-[#5B2685] text-white rounded-md hover:bg-[#4A1F6F] transition-colors"
+                className="px-4 py-2 bg-[#5B2685] text-white rounded-md hover:bg-[#4A1F6F] transition-colors"
               >
                 {editingId ? 'Update' : 'Add'} Packaging
               </button>

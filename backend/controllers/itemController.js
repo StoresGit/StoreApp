@@ -55,14 +55,15 @@ exports.createItem = async (req, res) => {
       unit, 
       image,
       name, // Keep for compatibility
-      unitCount, // Add unitCount
-      subCategory // Add subCategory
+      subCategory, // Now required
+      unitPrice,
+      priceIncludesVAT
     } = req.body;
 
     // Check required fields
-    if (!baseUnit || !category || !unit || !nameEn) {
+    if (!baseUnit || !category || !unit || !nameEn || !subCategory) {
       return res.status(400).json({ 
-        message: "Base Unit, Category, Unit, and Name (Eng) are required fields" 
+        message: "Base Unit, Category, Unit, Name (Eng), and Sub Category are required fields" 
       });
     }
 
@@ -79,8 +80,9 @@ exports.createItem = async (req, res) => {
       unit,
       image,
       name: nameEn,
-      unitCount, // Add unitCount
-      subCategory // Add subCategory
+      subCategory,
+      unitPrice,
+      priceIncludesVAT
     });
 
     const newItem = new Item(itemData);
@@ -95,7 +97,7 @@ exports.createItem = async (req, res) => {
 // UPDATE an existing item
 exports.updateItem = async (req, res) => {
   try {
-    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, departments, unit, image, name, unitCount, subCategory } = req.body;
+    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, departments, unit, image, name, unitCount, subCategory, unitPrice, priceIncludesVAT } = req.body;
     
     // Check required fields
     if (!baseUnit || !category || !unit || !nameEn) {
@@ -118,7 +120,9 @@ exports.updateItem = async (req, res) => {
       image,
       name: nameEn,
       unitCount, // Add unitCount
-      subCategory // Add subCategory
+      subCategory, // Add subCategory
+      unitPrice,
+      priceIncludesVAT
     });
 
     const updated = await Item.findByIdAndUpdate(

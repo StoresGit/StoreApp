@@ -6,22 +6,14 @@ const Packaging = require('../models/Packaging');
 // @access  Public
 exports.getAllPackaging = async (req, res) => {
   try {
-    const packaging = await Packaging.find({ isActive: true })
+    const packaging = await Packaging.find()
       .populate('itemId', 'nameEn name')
+      .populate('branches', 'name')
+      .populate('brands', 'nameEn nameAr')
       .sort({ createdAt: -1 });
-    
-    // Filter out packaging with null/missing itemId (orphaned records)
-    const validPackaging = packaging.filter(pkg => pkg.itemId !== null);
-    
-    // Log orphaned records for cleanup
-    const orphanedCount = packaging.length - validPackaging.length;
-    if (orphanedCount > 0) {
-      console.log(`Found ${orphanedCount} orphaned packaging records`);
-    }
-    
-    res.json(validPackaging);
-  } catch (err) {
-    console.error('Error fetching all packaging:', err);
+    res.json(packaging);
+  } catch (error) {
+    console.error('Error fetching packaging:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -31,44 +23,36 @@ exports.getAllPackaging = async (req, res) => {
 // @access  Private
 exports.cleanupOrphanedPackaging = async (req, res) => {
   try {
-    // Find packaging records where itemId doesn't exist in Items collection
-    const allPackaging = await Packaging.find({ isActive: true });
-    const orphanedPackaging = [];
+    // Find all packaging items
+    const allPackaging = await Packaging.find();
     
+    // Find packaging items with invalid item references
+    const orphanedPackaging = [];
     for (const pkg of allPackaging) {
-      const itemExists = await Item.findById(pkg.itemId);
-      if (!itemExists) {
+      if (!pkg.itemId) {
+        orphanedPackaging.push(pkg._id);
+        continue;
+      }
+      
+      const item = await Item.findById(pkg.itemId);
+      if (!item) {
         orphanedPackaging.push(pkg._id);
       }
     }
-    
+
+    // Delete orphaned packaging
     if (orphanedPackaging.length > 0) {
-      // Soft delete orphaned records
-      const result = await Packaging.updateMany(
-        { _id: { $in: orphanedPackaging } },
-        { isActive: false }
-      );
-      
-      console.log(`Cleaned up ${result.modifiedCount} orphaned packaging records`);
-      
-      res.json({
-        success: true,
-        message: `Cleaned up ${result.modifiedCount} orphaned packaging records`,
-        cleanedCount: result.modifiedCount
-      });
-    } else {
-      res.json({
-        success: true,
-        message: 'No orphaned packaging records found',
-        cleanedCount: 0
-      });
+      await Packaging.deleteMany({ _id: { $in: orphanedPackaging } });
     }
+
+    res.json({
+      success: true,
+      message: `Cleanup completed. Removed ${orphanedPackaging.length} orphaned packaging records.`,
+      cleanedCount: orphanedPackaging.length
+    });
   } catch (error) {
     console.error('Error cleaning up orphaned packaging:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during cleanup'
-    });
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -77,53 +61,40 @@ exports.cleanupOrphanedPackaging = async (req, res) => {
 // @access  Private
 exports.createPackaging = async (req, res) => {
   try {
-    const { itemId, type, amount, unit, packSize, packUnit, description } = req.body;
-
-    // Validate required fields
+    const { itemId, type, amount, unit, packSize, packUnit, description, branches, brands } = req.body;
+    
     if (!itemId || !type || !amount || !unit) {
-      return res.status(400).json({
-        success: false,
-        message: 'ItemId, type, amount, and unit are required'
-      });
+      return res.status(400).json({ message: 'itemId, type, amount, and unit are required' });
     }
 
-    // Check if item exists
+    // Verify item exists
     const item = await Item.findById(itemId);
     if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found'
-      });
+      return res.status(404).json({ message: 'Item not found' });
     }
 
-    // Create packaging record
-    const packagingData = {
+    const packaging = new Packaging({
       itemId,
       type,
-      amount: parseFloat(amount),
+      amount,
       unit,
-      description: description || ''
-    };
-
-    if (packSize) {
-      packagingData.packSize = parseInt(packSize);
-      packagingData.packUnit = packUnit || 'x';
-    }
-
-    const packaging = await Packaging.create(packagingData);
-    await packaging.populate('itemId', 'nameEn name');
-
-    res.status(201).json({
-      success: true,
-      message: 'Packaging created successfully',
-      data: packaging
+      packSize,
+      packUnit,
+      description,
+      branches: branches || [],
+      brands: brands || []
     });
+
+    const savedPackaging = await packaging.save();
+    const populatedPackaging = await Packaging.findById(savedPackaging._id)
+      .populate('itemId', 'nameEn name')
+      .populate('branches', 'name')
+      .populate('brands', 'nameEn nameAr');
+    
+    res.status(201).json(populatedPackaging);
   } catch (error) {
-    console.error('Create packaging error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    console.error('Error creating packaging:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -133,68 +104,43 @@ exports.createPackaging = async (req, res) => {
 exports.updatePackagingItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { itemId, type, amount, unit, packSize, packUnit, description } = req.body;
+    const { itemId, type, amount, unit, packSize, packUnit, description, branches, brands } = req.body;
 
-    // Validate required fields
     if (!itemId || !type || !amount || !unit) {
-      return res.status(400).json({
-        success: false,
-        message: 'ItemId, type, amount, and unit are required'
-      });
+      return res.status(400).json({ message: 'itemId, type, amount, and unit are required' });
     }
 
-    // Check if packaging exists
     const packaging = await Packaging.findById(id);
     if (!packaging) {
-      return res.status(404).json({
-        success: false,
-        message: 'Packaging not found'
-      });
+      return res.status(404).json({ message: 'Packaging not found' });
     }
 
-    // Check if item exists
+    // Verify item exists
     const item = await Item.findById(itemId);
     if (!item) {
-      return res.status(404).json({
-        success: false,
-        message: 'Item not found'
-      });
+      return res.status(404).json({ message: 'Item not found' });
     }
 
-    // Update packaging data
-    const updateData = {
-      itemId,
-      type,
-      amount: parseFloat(amount),
-      unit,
-      description: description || ''
-    };
+    packaging.itemId = itemId;
+    packaging.type = type;
+    packaging.amount = amount;
+    packaging.unit = unit;
+    packaging.packSize = packSize;
+    packaging.packUnit = packUnit;
+    packaging.description = description;
+    packaging.branches = branches || [];
+    packaging.brands = brands || [];
 
-    if (packSize) {
-      updateData.packSize = parseInt(packSize);
-      updateData.packUnit = packUnit || 'x';
-    } else {
-      updateData.packSize = undefined;
-      updateData.packUnit = undefined;
-    }
-
-    const updatedPackaging = await Packaging.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('itemId', 'nameEn name');
-
-    res.json({
-      success: true,
-      message: 'Packaging updated successfully',
-      data: updatedPackaging
-    });
+    const savedPackaging = await packaging.save();
+    const populatedPackaging = await Packaging.findById(savedPackaging._id)
+      .populate('itemId', 'nameEn name')
+      .populate('branches', 'name')
+      .populate('brands', 'nameEn nameAr');
+    
+    res.json(populatedPackaging);
   } catch (error) {
-    console.error('Update packaging error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    console.error('Error updating packaging:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -204,28 +150,17 @@ exports.updatePackagingItem = async (req, res) => {
 exports.deletePackagingItem = async (req, res) => {
   try {
     const { id } = req.params;
-
+    
     const packaging = await Packaging.findById(id);
     if (!packaging) {
-      return res.status(404).json({
-        success: false,
-        message: 'Packaging not found'
-      });
+      return res.status(404).json({ message: 'Packaging not found' });
     }
 
-    // Soft delete by setting isActive to false
-    await Packaging.findByIdAndUpdate(id, { isActive: false });
-
-    res.json({
-      success: true,
-      message: 'Packaging deleted successfully'
-    });
+    await Packaging.findByIdAndDelete(id);
+    res.json({ message: 'Packaging deleted successfully' });
   } catch (error) {
-    console.error('Delete packaging error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error'
-    });
+    console.error('Error deleting packaging:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -295,11 +230,14 @@ exports.addPackaging = async (req, res, next) => {
 // @access  Public
 exports.getPackagingByItemId = async (req, res) => {
   try {
-    const { id } = req.params;
-    const packaging = await Packaging.find({ itemId: id });
+    const { itemId } = req.params;
+    const packaging = await Packaging.find({ itemId })
+      .populate('branches', 'name')
+      .populate('brands', 'nameEn nameAr')
+      .sort({ createdAt: -1 });
     res.json(packaging);
-  } catch (err) {
-    console.error('Error fetching packaging:', err);
+  } catch (error) {
+    console.error('Error fetching packaging by item ID:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
