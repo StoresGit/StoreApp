@@ -40,6 +40,15 @@ const PackagingSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Brand'
   }],
+  // Parent packaging for sub-packaging hierarchy
+  parentPackaging: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Packaging'
+  },
+  parentType: {
+    type: String,
+    enum: ['base', 'pack', 'additional']
+  },
   isActive: {
     type: Boolean,
     default: true

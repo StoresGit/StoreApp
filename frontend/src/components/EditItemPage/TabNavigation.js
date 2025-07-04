@@ -87,17 +87,17 @@ export default function ItemTabs({ item: propItem }) {
             })
           ]);
           
-          const packagingArr = packagingRes.data;
-          const basePackaging = packagingArr.find(p => p.type === 'base');
-          const packPackaging = packagingArr.find(p => p.type === 'pack');
+        const packagingArr = packagingRes.data;
+        const basePackaging = packagingArr.find(p => p.type === 'base');
+        const packPackaging = packagingArr.find(p => p.type === 'pack');
           
-          setItem({
+        setItem({
             ...propItem,
-            basePackaging,
+          basePackaging,
             packPackaging,
             additionalPackaging: additionalPackagingRes
-          });
-        } catch (err) {
+        });
+      } catch (err) {
           console.error('Error fetching packaging:', err);
           // If packaging fetch fails, still use the propItem
           setItem({
@@ -274,7 +274,7 @@ export default function ItemTabs({ item: propItem }) {
       setPackagingType('bulk'); // Default to bulk for new packaging
       packagingTypeValue = 'bulk';
     } else {
-      setPackagingType(type);
+    setPackagingType(type);
       packagingTypeValue = type;
     }
     setShowPackagingForm(true);
@@ -451,19 +451,19 @@ export default function ItemTabs({ item: propItem }) {
     try {
       if (packagingType === 'base' || packagingType === 'pack') {
         // Handle existing base/pack packaging (item-specific)
-        const payload = {
-          itemId: id,
-          type: packagingType,
-          amount: packagingData.amount,
-          unit: packagingData.unit,
+      const payload = {
+  itemId: id,
+  type: packagingType,
+  amount: packagingData.amount,
+  unit: packagingData.unit,
           ...(packagingType === 'pack' && packagingData.packSize && {
             packSize: packagingData.packSize
-          })
-        };
+  })
+};
 
         console.log('Submitting base/pack packaging:', payload);
-        await axios.post(`${backend_url}/packaging/${id}`, payload);
-        
+      await axios.post(`${backend_url}/packaging/${id}`, payload);
+      
         // Refresh packaging data
         const packagingRes = await axios.get(`${backend_url}/packaging/${id}`);
         const packagingArr = packagingRes.data;
@@ -590,7 +590,7 @@ export default function ItemTabs({ item: propItem }) {
 
           {/* Packaging Type - Always editable */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
               Packaging Type *
             </label>
             <input
@@ -634,27 +634,27 @@ export default function ItemTabs({ item: propItem }) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
               Pack Size *
-            </label>
-            <input
-              type="number"
-              value={packagingData.packSize}
+                </label>
+                <input
+                  type="number"
+                  value={packagingData.packSize}
               onChange={(e) => setPackagingData(prev => ({...prev, packSize: e.target.value}))}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-              placeholder="10"
-              required
-            />
-          </div>
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
+                  placeholder="10"
+                  required
+                />
+              </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
               Description (Optional)
-            </label>
+                </label>
             <textarea
               value={packagingData.description}
               onChange={(e) => setPackagingData(prev => ({...prev, description: e.target.value}))}
-              className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
               rows="2"
               placeholder="Add packaging description..."
             />
@@ -799,7 +799,7 @@ export default function ItemTabs({ item: propItem }) {
         return (
           <div className="mt-6 space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-[#5B2685]">Packaging</h2>
+            <h2 className="text-xl font-semibold text-[#5B2685]">Packaging</h2>
               <button
                 onClick={() => handleAddPackaging('new')}
                 className="bg-[#5B2685] text-white px-4 py-2 rounded-md hover:bg-[#4A1F6F] transition-colors"
@@ -812,11 +812,11 @@ export default function ItemTabs({ item: propItem }) {
             <div className="space-y-4">
               {/* Base packaging from unitCount */}
               {item?.unitCount && item?.baseUnit && (
-                <div className="border border-[#D9D9D9] rounded-lg p-4 bg-white shadow-sm">
+              <div className="border border-[#D9D9D9] rounded-lg p-4 bg-white shadow-sm">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-sm text-[#5B2685] font-bold mb-1">Base (From Item Creation)</h3>
-                      <p className="text-sm text-gray-800">
+                <p className="text-sm text-gray-800">
                         {item.unitCount} x {item.baseUnit.name} of {item.nameEn || item.name}
                       </p>
                     </div>
@@ -838,8 +838,8 @@ export default function ItemTabs({ item: propItem }) {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleAddPackaging('base')}
+                <button 
+                  onClick={() => handleAddPackaging('base')}
                         className="text-sm text-[#5B2685] hover:underline"
                       >
                         Edit
@@ -855,24 +855,24 @@ export default function ItemTabs({ item: propItem }) {
                         className="text-sm text-red-600 hover:underline"
                       >
                         Delete
-                      </button>
-                    </div>
+                </button>
+              </div>
                   </div>
                 </div>
               )}
 
               {item?.packPackaging && (
-                <div className="border border-[#3F88C5] rounded-lg p-4 bg-white shadow-sm">
+              <div className="border border-[#3F88C5] rounded-lg p-4 bg-white shadow-sm">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-sm text-[#3F88C5] font-bold mb-1">Pack</h3>
-                      <p className="text-sm text-gray-800">
+                <h3 className="text-sm text-[#3F88C5] font-bold mb-1">Pack</h3>
+                <p className="text-sm text-gray-800">
                         {item.nameEn || item.name} {item.packPackaging.packSize} x {item.packPackaging.amount}{item.packPackaging.unit}
-                      </p>
+                </p>
                     </div>
                     <div className="flex gap-2">
-                      <button 
-                        onClick={() => handleAddPackaging('pack')}
+                <button 
+                  onClick={() => handleAddPackaging('pack')}
                         className="text-sm text-[#3F88C5] hover:underline"
                       >
                         Edit
@@ -992,8 +992,8 @@ export default function ItemTabs({ item: propItem }) {
                         className="text-sm text-red-600 hover:underline"
                       >
                         Delete
-                      </button>
-                    </div>
+                </button>
+              </div>
                   </div>
                   </div>
                   );
@@ -1067,7 +1067,7 @@ export default function ItemTabs({ item: propItem }) {
                           );
                         })
                       ) : (
-                        <tr className="border-t border-gray-200">
+                  <tr className="border-t border-gray-200">
                           <td className="p-2">{item.unitCount} x {item.baseUnit.name} of {item.nameEn || item.name}</td>
                           <td className="p-2 relative supplier-dropdown">
                             <button
@@ -1164,7 +1164,7 @@ export default function ItemTabs({ item: propItem }) {
                                 {supplier?.legalName || 'Unknown Supplier'}
                               </td>
                               <td className="p-2">{item.nameEn || item.name}</td>
-                              <td className="p-2">Item Code</td>
+                    <td className="p-2">Item Code</td>
                               <td className="p-2">{item.packPackaging.packSize} x {item.packPackaging.unit}</td>
                               <td className="p-2 text-center">
                                 {item.priceIncludesVAT ? 
@@ -1305,7 +1305,7 @@ export default function ItemTabs({ item: propItem }) {
                         const supplier = suppliers.find(s => s._id === supplierId);
                         return (
                           <tr key={`${packagingKey}-${supplierId}`} className={`border-t border-gray-200 ${isSubPackaging ? 'bg-blue-50' : ''}`}>
-                            <td className="p-2">
+                    <td className="p-2">
                               {supplierIndex === 0 ? (
                                 <div>
                                   {isSubPackaging && <span className="text-blue-600 text-xs">↳ Sub: </span>}
@@ -1344,8 +1344,8 @@ export default function ItemTabs({ item: propItem }) {
                             </td>
                             <td className="p-2 text-center">
                               <input type="checkbox" className="accent-[#5B2685]" />
-                            </td>
-                          </tr>
+                    </td>
+                  </tr>
                         );
                       })
                     ) : (
