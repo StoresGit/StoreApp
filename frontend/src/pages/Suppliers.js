@@ -9,7 +9,6 @@ const Suppliers = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [supplierMode, setSupplierMode] = useState('standalone'); // Only standalone mode now
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -100,8 +99,6 @@ const Suppliers = () => {
       assignBranch: supplier.assignBranch?._id || '',
     });
     
-    // Always use standalone mode
-    setSupplierMode('standalone');
     setEditingId(supplier._id);
     setShowFormModal(true);
   };
@@ -132,7 +129,6 @@ const Suppliers = () => {
       assignBranch: '',
     });
     setEditingId(null);
-    setSupplierMode('standalone');
     setShowFormModal(false);
   };
 

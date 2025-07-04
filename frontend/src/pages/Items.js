@@ -11,8 +11,7 @@ const Item = () => {
   const [departments, setDepartments] = useState([]);
   const [units, setUnits] = useState([]);
   const [taxes, setTaxes] = useState([]);
-  const [branches, setBranches] = useState([]);
-  const [brands, setBrands] = useState([]);
+
   const [images, setImages] = useState([]);
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
@@ -48,8 +47,6 @@ const Item = () => {
         { url: '/departments', key: 'departments' },
         { url: '/units', key: 'units' },
         { url: '/tax', key: 'taxes' },
-        { url: '/branch', key: 'branches' },
-        { url: '/brand', key: 'brands' },
         { url: '/gallery', key: 'images' }
       ];
       
@@ -62,8 +59,6 @@ const Item = () => {
       // All units are now base units
       setUnits(results.units || []);
       setTaxes(results.taxes || []);
-      setBranches(results.branches || []);
-      setBrands(results.brands || []);
       setImages(results.images || []);
       
     } catch (error) {

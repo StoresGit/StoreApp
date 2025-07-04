@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import ItemDetailsForm from './MainContent/ItemDetailForm';
 import axios from 'axios';
 import backend_url from '../../config/config';
@@ -94,7 +94,7 @@ export default function ItemTabs({ item: propItem }) {
       }
     };
     fetchBranchesAndBrands();
-  }, [id]);
+  }, [id, loadSupplierItemRelationships]);
 
   // Auto-detect unit from item's base unit when opening form
   useEffect(() => {
@@ -189,22 +189,14 @@ export default function ItemTabs({ item: propItem }) {
     return selectedSuppliers[packagingKey] || [];
   };
 
-  const getSupplierName = (packagingKey) => {
-    const supplierIds = selectedSuppliers[packagingKey] || [];
-    if (supplierIds.length === 0) return 'Add Suppliers';
-    if (supplierIds.length === 1) {
-      const supplier = suppliers.find(s => s._id === supplierIds[0]);
-      return supplier ? supplier.legalName : 'Select Supplier';
-    }
-    return `${supplierIds.length} Suppliers Selected`;
-  };
+
 
   const addSupplierRow = (packagingKey) => {
     setShowSupplierDropdown(showSupplierDropdown === packagingKey ? null : packagingKey);
   };
 
   // Load existing supplier-item relationships
-  const loadSupplierItemRelationships = async () => {
+  const loadSupplierItemRelationships = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${backend_url}/supplier-items/item/${id}`, {
@@ -238,7 +230,7 @@ export default function ItemTabs({ item: propItem }) {
     } catch (error) {
       console.error('Error loading supplier-item relationships:', error);
     }
-  };
+  }, [id]);
 
   // Save supplier-item relationships
   const saveSupplierItemRelationships = async () => {
