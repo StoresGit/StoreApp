@@ -21,7 +21,8 @@ export default function ItemTabs({ item: propItem }) {
     type: '',
     description: '',
     branches: [],
-    brands: []
+    brands: [],
+    parentPackaging: null
   });
   const [editingPackagingId, setEditingPackagingId] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
@@ -267,21 +268,69 @@ export default function ItemTabs({ item: propItem }) {
   if (!item) return <div className="p-4">Loading item...</div>;
 
   const handleAddPackaging = (type) => {
+    let packagingTypeValue = '';
     if (type === 'new') {
       // Open modal for new packaging type
       setPackagingType('bulk'); // Default to bulk for new packaging
+      packagingTypeValue = 'bulk';
     } else {
       setPackagingType(type);
+      packagingTypeValue = type;
     }
     setShowPackagingForm(true);
     setPackagingData({
       amount: '',
       unit: '',
       packSize: '',
+      type: packagingTypeValue,
+      description: '',
+      branches: [],
+      brands: [],
+      parentPackaging: null
+    });
+  };
+
+  const handleAddSubPackaging = (parentType, parentPackaging = null) => {
+    setPackagingType('sub');
+    setShowPackagingForm(true);
+    
+    // Pre-fill data based on parent packaging
+    let parentData = {};
+    if (parentType === 'base' && item?.basePackaging) {
+      parentData = {
+        parentType: 'base',
+        parentAmount: item.basePackaging.amount,
+        parentUnit: item.basePackaging.unit,
+        parentDescription: `${item.nameEn || item.name} ${item.basePackaging.amount}${item.basePackaging.unit}`
+      };
+    } else if (parentType === 'pack' && item?.packPackaging) {
+      parentData = {
+        parentType: 'pack',
+        parentAmount: item.packPackaging.amount,
+        parentUnit: item.packPackaging.unit,
+        parentPackSize: item.packPackaging.packSize,
+        parentDescription: `${item.nameEn || item.name} ${item.packPackaging.packSize} x ${item.packPackaging.amount}${item.packPackaging.unit}`
+      };
+    } else if (parentType === 'additional' && parentPackaging) {
+      parentData = {
+        parentType: 'additional',
+        parentId: parentPackaging._id,
+        parentAmount: parentPackaging.amount,
+        parentUnit: parentPackaging.unit,
+        parentPackSize: parentPackaging.packSize,
+        parentDescription: `${parentPackaging.packSize ? `${parentPackaging.packSize} x ` : ''}${parentPackaging.amount} ${parentPackaging.unit}`
+      };
+    }
+    
+    setPackagingData({
+      amount: '',
+      unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'pcs',
+      packSize: '',
       type: '',
       description: '',
       branches: [],
-      brands: []
+      brands: [],
+      parentPackaging: parentData
     });
   };
 
@@ -426,10 +475,10 @@ export default function ItemTabs({ item: propItem }) {
           packPackaging
         });
       } else {
-        // Handle additional packaging (new system)
+        // Handle additional packaging (new system) and sub-packaging
         const payload = {
           itemId: id,
-          type: packagingData.type || packagingType,
+          type: packagingData.type,
           amount: parseFloat(packagingData.amount),
           unit: packagingData.unit,
           packSize: parseInt(packagingData.packSize),
@@ -437,6 +486,14 @@ export default function ItemTabs({ item: propItem }) {
           branches: packagingData.branches,
           brands: packagingData.brands
         };
+
+        // Add parent packaging information for sub-packaging
+        if (packagingData.parentPackaging) {
+          payload.parentType = packagingData.parentPackaging.parentType;
+          if (packagingData.parentPackaging.parentId) {
+            payload.parentPackaging = packagingData.parentPackaging.parentId;
+          }
+        }
 
         console.log('Submitting additional packaging:', payload);
 
@@ -491,7 +548,8 @@ export default function ItemTabs({ item: propItem }) {
       type: '',
       description: '',
       branches: [],
-      brands: []
+      brands: [],
+      parentPackaging: null
     });
   };
 
@@ -515,6 +573,21 @@ export default function ItemTabs({ item: propItem }) {
             />
           </div>
 
+          {/* Parent Packaging Information for Sub-Packaging */}
+          {packagingData.parentPackaging && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+              <label className="block text-sm font-medium text-blue-700 mb-1">
+                Parent Packaging
+              </label>
+              <p className="text-sm text-blue-600">
+                {packagingData.parentPackaging.parentDescription}
+              </p>
+              <p className="text-xs text-blue-500 mt-1">
+                Creating sub-packaging within this parent package
+              </p>
+            </div>
+          )}
+
           {/* Packaging Type - Always editable */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -522,12 +595,8 @@ export default function ItemTabs({ item: propItem }) {
             </label>
             <input
               type="text"
-              value={packagingData.type || packagingType}
-              onChange={(e) => {
-                const value = e.target.value;
-                setPackagingData(prev => ({...prev, type: value}));
-                setPackagingType(value);
-              }}
+              value={packagingData.type || ''}
+              onChange={(e) => setPackagingData(prev => ({...prev, type: e.target.value}))}
               placeholder="Enter packaging type (e.g., bulk, retail, wholesale, custom)"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
               required
@@ -776,6 +845,12 @@ export default function ItemTabs({ item: propItem }) {
                         Edit
                       </button>
                       <button 
+                        onClick={() => handleAddSubPackaging('base')}
+                        className="text-sm text-green-600 hover:underline"
+                      >
+                        Add Sub-Packaging
+                      </button>
+                      <button 
                         onClick={() => handleDeleteBasePackaging()}
                         className="text-sm text-red-600 hover:underline"
                       >
@@ -803,6 +878,12 @@ export default function ItemTabs({ item: propItem }) {
                         Edit
                       </button>
                       <button 
+                        onClick={() => handleAddSubPackaging('pack')}
+                        className="text-sm text-green-600 hover:underline"
+                      >
+                        Add Sub-Packaging
+                      </button>
+                      <button 
                         onClick={() => handleDeletePackPackaging()}
                         className="text-sm text-red-600 hover:underline"
                       >
@@ -813,15 +894,56 @@ export default function ItemTabs({ item: propItem }) {
                 </div>
               )}
 
-              {/* Additional packaging items from Packaging collection */}
-              {item?.additionalPackaging && item.additionalPackaging.map((pkg, index) => (
-                <div key={index} className="border border-gray-300 rounded-lg p-4 bg-white shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-sm text-gray-700 font-bold mb-1 capitalize">{pkg.type}</h3>
-                      <p className="text-sm text-gray-800">
-                        {pkg.packSize ? `${pkg.packSize} x ` : ''}{pkg.amount} {pkg.unit}
-                      </p>
+              {/* Additional packaging items from Packaging collection - Hierarchical Display */}
+              {item?.additionalPackaging && (() => {
+                // Reverse the order to show proper hierarchy: Bulk -> B -> C
+                const packages = [...item.additionalPackaging].reverse();
+                
+                return packages.map((pkg, index) => {
+                  // Determine if this is sub-packaging and find its parent
+                  let isSubPackaging = false;
+                  let parentPkg = null;
+                  
+                  if (index > 0) {
+                    // All packages after the first are sub-packaging of the previous one
+                    isSubPackaging = true;
+                    parentPkg = packages[index - 1]; // Previous package is the parent
+                  }
+                  let cumulativeMultiplier = 1;
+                  let allParentDescriptions = [];
+                  
+                  if (isSubPackaging) {
+                    // Calculate cumulative multiplier from ALL parent levels
+                    for (let i = 0; i < index; i++) {
+                      const parentPkg = packages[i];
+                      const parentUnits = parentPkg.packSize ? (parentPkg.packSize * parentPkg.amount) : parentPkg.amount;
+                      cumulativeMultiplier *= parentUnits;
+                      allParentDescriptions.push(`${parentPkg.packSize ? `${parentPkg.packSize} x ` : ''}${parentPkg.amount}`);
+                    }
+                  }
+                  
+                  const baseUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
+                  const totalUnits = baseUnits * cumulativeMultiplier;
+                  
+                  // Create full multiplication description
+                  const fullMultiplicationDesc = isSubPackaging ? 
+                    `${allParentDescriptions.join(' x ')} x ${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}` :
+                    `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`;
+                
+                  return (
+                  <div key={index} className={`border rounded-lg p-4 shadow-sm ${isSubPackaging ? 'border-blue-300 bg-blue-50 ml-8' : 'border-gray-300 bg-white'}`}>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className={`text-sm font-bold mb-1 capitalize ${isSubPackaging ? 'text-blue-700' : 'text-gray-700'}`}>
+                          {isSubPackaging && '↳ '}{pkg.type}
+                        </h3>
+                        <p className="text-sm text-gray-800">
+                          {isSubPackaging ? (
+                            `${fullMultiplicationDesc} = ${totalUnits.toLocaleString()} total units`
+                          ) : (
+                            `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`
+                          )}
+                        </p>
                       {pkg.description && (
                         <p className="text-xs text-gray-500 mt-1">{pkg.description}</p>
                       )}
@@ -830,17 +952,23 @@ export default function ItemTabs({ item: propItem }) {
                       {item.unitPrice && (
                         <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
                           <div className="flex justify-between">
-                            <span>Total Units:</span>
-                            <span>{pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount}</span>
+                            <span>Base Units:</span>
+                            <span>{baseUnits}</span>
                           </div>
+                          {isSubPackaging && (
+                            <div className="flex justify-between text-blue-600">
+                              <span>Total Units (with parent):</span>
+                              <span>{totalUnits}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between font-medium">
                             <span>Total Price:</span>
-                            <span>{calculatePackagingPrice(pkg)}</span>
+                            <span>{calculatePackagingPrice({...pkg, amount: isSubPackaging ? totalUnits : pkg.amount, packSize: 1})}</span>
                           </div>
                           {item.tax && (
                             <div className="flex justify-between text-gray-600">
                               <span>VAT ({item.tax.rate}%):</span>
-                              <span>{calculateVATAmount(pkg)}</span>
+                              <span>{calculateVATAmount({...pkg, amount: isSubPackaging ? totalUnits : pkg.amount, packSize: 1})}</span>
                             </div>
                           )}
                         </div>
@@ -854,6 +982,12 @@ export default function ItemTabs({ item: propItem }) {
                         Edit
                       </button>
                       <button 
+                        onClick={() => handleAddSubPackaging('additional', pkg)}
+                        className="text-sm text-green-600 hover:underline"
+                      >
+                        Add Sub-Packaging
+                      </button>
+                      <button 
                         onClick={() => handleDeleteAdditionalPackaging(pkg._id)}
                         className="text-sm text-red-600 hover:underline"
                       >
@@ -861,8 +995,10 @@ export default function ItemTabs({ item: propItem }) {
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
+                  </div>
+                  );
+                });
+              })()}
 
               {/* Show message when no packaging */}
               {!item?.unitCount && !item?.basePackaging && !item?.packPackaging && (!item?.additionalPackaging || item.additionalPackaging.length === 0) && (
@@ -1132,131 +1268,181 @@ export default function ItemTabs({ item: propItem }) {
                     </>
                   )}
 
-                  {/* Additional packaging rows - one for each selected supplier */}
-                  {item?.additionalPackaging && item?.unitPrice && item.additionalPackaging.map((pkg, index) => {
-                    const totalUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
-                    const packagingKey = `additional_${index}`;
-                    
-                    return (
-                      <React.Fragment key={index}>
-                        {getSelectedSuppliers(packagingKey).length > 0 ? (
-                          getSelectedSuppliers(packagingKey).map((supplierId, supplierIndex) => {
-                            const supplier = suppliers.find(s => s._id === supplierId);
-                            return (
-                              <tr key={`${packagingKey}-${supplierId}`} className="border-t border-gray-200">
-                                <td className="p-2">
-                                  {supplierIndex === 0 ? `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit} of ${item.nameEn || item.name}` : ''}
-                                </td>
-                                <td className="p-2">
-                                  {supplier?.legalName || 'Unknown Supplier'}
-                                </td>
-                                <td className="p-2">{item.nameEn || item.name}</td>
-                                <td className="p-2">Item Code</td>
-                                <td className="p-2">{pkg.unit}</td>
-                                <td className="p-2 text-center">
-                                  {item.priceIncludesVAT ? 
-                                    calculatePriceExcludingVAT({amount: 1, packSize: 1}) :
-                                    item.unitPrice
-                                  }
-                                </td>
-                                <td className="p-2 text-center">
-                                  {item.priceIncludesVAT ? 
-                                    item.unitPrice :
-                                    calculateUnitPriceIncludingTax()
-                                  }
-                                </td>
-                                <td className="p-2 text-center">{totalUnits}</td>
-                                <td className="p-2 text-center">
-                                  <input type="checkbox" className="accent-[#5B2685]" />
-                                </td>
-                              </tr>
-                            );
-                          })
-                        ) : (
-                          <tr className="border-t border-gray-200">
+                                {/* Additional packaging rows with hierarchical display */}
+              {item?.additionalPackaging && item?.unitPrice && item.additionalPackaging.map((pkg, index) => {
+                const isSubPackaging = pkg.parentPackaging || pkg.parentType;
+                
+                // Calculate total units considering parent packaging multiplication
+                let totalUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
+                let parentMultiplier = 1;
+                let parentDescription = '';
+                
+                if (isSubPackaging) {
+                  // Find parent packaging and calculate multiplier
+                  if (pkg.parentType === 'base' && item?.basePackaging) {
+                    // For base packaging, multiply packSize × amount
+                    parentMultiplier = item.basePackaging.packSize ? (item.basePackaging.packSize * item.basePackaging.amount) : item.basePackaging.amount;
+                    parentDescription = `${item.basePackaging.packSize ? `${item.basePackaging.packSize} x ` : ''}${item.basePackaging.amount} ${item.basePackaging.unit}`;
+                  } else if (pkg.parentType === 'pack' && item?.packPackaging) {
+                    parentMultiplier = item.packPackaging.packSize * item.packPackaging.amount;
+                    parentDescription = `${item.packPackaging.packSize} x ${item.packPackaging.amount} ${item.packPackaging.unit}`;
+                  } else if (pkg.parentType === 'additional' && item?.additionalPackaging) {
+                    const parentPkg = item.additionalPackaging.find(p => p._id === pkg.parentPackaging);
+                    if (parentPkg) {
+                      parentMultiplier = parentPkg.packSize ? (parentPkg.packSize * parentPkg.amount) : parentPkg.amount;
+                      parentDescription = `${parentPkg.packSize ? `${parentPkg.packSize} x ` : ''}${parentPkg.amount} ${parentPkg.unit}`;
+                    }
+                  }
+                  totalUnits = totalUnits * parentMultiplier;
+                }
+                
+                const packagingKey = `additional_${index}`;
+                
+                return (
+                  <React.Fragment key={index}>
+                    {getSelectedSuppliers(packagingKey).length > 0 ? (
+                      getSelectedSuppliers(packagingKey).map((supplierId, supplierIndex) => {
+                        const supplier = suppliers.find(s => s._id === supplierId);
+                        return (
+                          <tr key={`${packagingKey}-${supplierId}`} className={`border-t border-gray-200 ${isSubPackaging ? 'bg-blue-50' : ''}`}>
                             <td className="p-2">
-                              {pkg.packSize ? `${pkg.packSize} x ` : ''}{pkg.amount} {pkg.unit} of {item.nameEn || item.name}
-                            </td>
-                            <td className="p-2 relative supplier-dropdown">
-                              <button
-                                onClick={() => addSupplierRow(packagingKey)}
-                                className="text-blue-600 hover:text-blue-800 underline"
-                              >
-                                Add Suppliers
-                              </button>
-                              {showSupplierDropdown === packagingKey && (
-                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                                  <div className="p-2 border-b bg-gray-50 text-xs font-medium">
-                                    Select multiple suppliers
-                                  </div>
-                                  {suppliers.map(supplier => (
-                                    <label
-                                      key={supplier._id}
-                                      className={`block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer ${
-                                        getSelectedSuppliers(packagingKey).includes(supplier._id) ? 'bg-blue-50 text-blue-700' : ''
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          type="checkbox"
-                                          checked={getSelectedSuppliers(packagingKey).includes(supplier._id)}
-                                          onChange={(e) => handleSupplierSelect(packagingKey, supplier._id, e)}
-                                          className="cursor-pointer"
-                                        />
-                                        {supplier.legalName}
-                                      </div>
-                                    </label>
-                                  ))}
+                              {supplierIndex === 0 ? (
+                                <div>
+                                  {isSubPackaging && <span className="text-blue-600 text-xs">↳ Sub: </span>}
+                                  {`${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit} of ${item.nameEn || item.name}`}
+                                  {isSubPackaging && (
+                                    <div className="text-xs text-blue-500 mt-1">
+                                      × {parentMultiplier} ({parentDescription}) = {totalUnits} total units
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              ) : ''}
                             </td>
-                            <td className="p-2 text-gray-400" colSpan="7">Select suppliers to see pricing details</td>
+                            <td className="p-2">
+                              {supplier?.legalName || 'Unknown Supplier'}
+                            </td>
+                            <td className="p-2">{item.nameEn || item.name}</td>
+                            <td className="p-2">Item Code</td>
+                            <td className="p-2">{pkg.unit}</td>
+                            <td className="p-2 text-center">
+                              {item.priceIncludesVAT ? 
+                                calculatePriceExcludingVAT({amount: 1, packSize: 1}) :
+                                item.unitPrice
+                              }
+                            </td>
+                            <td className="p-2 text-center">
+                              {item.priceIncludesVAT ? 
+                                item.unitPrice :
+                                calculateUnitPriceIncludingTax()
+                              }
+                            </td>
+                            <td className="p-2 text-center">
+                              <span className="font-medium">{totalUnits}</span>
+                              <div className="text-xs text-gray-500">
+                                Total Available
+                              </div>
+                            </td>
+                            <td className="p-2 text-center">
+                              <input type="checkbox" className="accent-[#5B2685]" />
+                            </td>
                           </tr>
-                        )}
-                        
-                        {/* Add more suppliers button for additional packaging */}
-                        {getSelectedSuppliers(packagingKey).length > 0 && (
-                          <tr className="border-t border-gray-100">
-                            <td className="p-2"></td>
-                            <td className="p-2 relative supplier-dropdown">
-                              <button
-                                onClick={() => addSupplierRow(packagingKey)}
-                                className="text-green-600 hover:text-green-800 underline text-sm"
-                              >
-                                + Add More Suppliers
-                              </button>
-                              {showSupplierDropdown === packagingKey && (
-                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
-                                  <div className="p-2 border-b bg-gray-50 text-xs font-medium">
-                                    Select multiple suppliers
+                        );
+                      })
+                    ) : (
+                      <tr className={`border-t border-gray-200 ${isSubPackaging ? 'bg-blue-50' : ''}`}>
+                        <td className="p-2">
+                          <div>
+                            {isSubPackaging ? (
+                              <span>
+                                {parentDescription} × {pkg.packSize ? `${pkg.packSize} x ` : ''}{pkg.amount} {pkg.unit} of {item.nameEn || item.name} = {totalUnits} total units
+                              </span>
+                            ) : (
+                              <span>
+                                {pkg.packSize ? `${pkg.packSize} x ` : ''}{pkg.amount} {pkg.unit} of {item.nameEn || item.name}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-2 relative supplier-dropdown">
+                          <button
+                            onClick={() => addSupplierRow(packagingKey)}
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            Add Suppliers
+                          </button>
+                          {showSupplierDropdown === packagingKey && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
+                              <div className="p-2 border-b bg-gray-50 text-xs font-medium">
+                                Select multiple suppliers
+                              </div>
+                              {suppliers.map(supplier => (
+                                <label
+                                  key={supplier._id}
+                                  className={`block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer ${
+                                    getSelectedSuppliers(packagingKey).includes(supplier._id) ? 'bg-blue-50 text-blue-700' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={getSelectedSuppliers(packagingKey).includes(supplier._id)}
+                                      onChange={(e) => handleSupplierSelect(packagingKey, supplier._id, e)}
+                                      className="cursor-pointer"
+                                    />
+                                    {supplier.legalName}
                                   </div>
-                                  {suppliers.map(supplier => (
-                                    <label
-                                      key={supplier._id}
-                                      className={`block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer ${
-                                        getSelectedSuppliers(packagingKey).includes(supplier._id) ? 'bg-blue-50 text-blue-700' : ''
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <input
-                                          type="checkbox"
-                                          checked={getSelectedSuppliers(packagingKey).includes(supplier._id)}
-                                          onChange={(e) => handleSupplierSelect(packagingKey, supplier._id, e)}
-                                          className="cursor-pointer"
-                                        />
-                                        {supplier.legalName}
-                                      </div>
-                                    </label>
-                                  ))}
-                                </div>
-                              )}
-                            </td>
-                            <td className="p-2" colSpan="7"></td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2 text-gray-400" colSpan="7">Select suppliers</td>
+                      </tr>
+                    )}
+                    
+                    {/* Add more suppliers button for additional packaging */}
+                    {getSelectedSuppliers(packagingKey).length > 0 && (
+                      <tr className="border-t border-gray-100">
+                        <td className="p-2"></td>
+                        <td className="p-2 relative supplier-dropdown">
+                          <button
+                            onClick={() => addSupplierRow(packagingKey)}
+                            className="text-green-600 hover:text-green-800 underline text-sm"
+                          >
+                            + Add More Suppliers
+                          </button>
+                          {showSupplierDropdown === packagingKey && (
+                            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48 max-h-60 overflow-y-auto">
+                              <div className="p-2 border-b bg-gray-50 text-xs font-medium">
+                                Select multiple suppliers
+                              </div>
+                              {suppliers.map(supplier => (
+                                <label
+                                  key={supplier._id}
+                                  className={`block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm cursor-pointer ${
+                                    getSelectedSuppliers(packagingKey).includes(supplier._id) ? 'bg-blue-50 text-blue-700' : ''
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={getSelectedSuppliers(packagingKey).includes(supplier._id)}
+                                      onChange={(e) => handleSupplierSelect(packagingKey, supplier._id, e)}
+                                      className="cursor-pointer"
+                                    />
+                                    {supplier.legalName}
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-2" colSpan="7"></td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
 
                   {/* Show message when no pricing available */}
                   {!item?.unitPrice && (
