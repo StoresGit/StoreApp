@@ -28,6 +28,43 @@ export default function ItemTabs({ item: propItem }) {
   const [selectedSuppliers, setSelectedSuppliers] = useState({});
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(null);
 
+  // Load existing supplier-item relationships
+  const loadSupplierItemRelationships = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${backend_url}/supplier-items/item/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const supplierItems = response.data;
+      
+      // Convert supplier items to the format expected by selectedSuppliers state
+      const suppliersByPackaging = {};
+      
+      supplierItems.forEach(supplierItem => {
+        let packagingKey;
+        
+        if (supplierItem.packagingType === 'base') {
+          packagingKey = 'base';
+        } else if (supplierItem.packagingType === 'pack') {
+          packagingKey = 'pack';
+        } else if (supplierItem.packagingType === 'additional') {
+          packagingKey = `additional_${supplierItem.packaging || 0}`;
+        } else {
+          packagingKey = `${supplierItem.packagingType}-${supplierItem.packaging || ''}`;
+        }
+        
+        if (!suppliersByPackaging[packagingKey]) {
+          suppliersByPackaging[packagingKey] = [];
+        }
+        suppliersByPackaging[packagingKey].push(supplierItem.supplier._id);
+      });
+      
+      setSelectedSuppliers(suppliersByPackaging);
+    } catch (error) {
+      console.error('Error loading supplier-item relationships:', error);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (propItem) {
       // Use the item passed from parent and fetch packaging info
@@ -194,43 +231,6 @@ export default function ItemTabs({ item: propItem }) {
   const addSupplierRow = (packagingKey) => {
     setShowSupplierDropdown(showSupplierDropdown === packagingKey ? null : packagingKey);
   };
-
-  // Load existing supplier-item relationships
-  const loadSupplierItemRelationships = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${backend_url}/supplier-items/item/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const supplierItems = response.data;
-      
-      // Convert supplier items to the format expected by selectedSuppliers state
-      const suppliersByPackaging = {};
-      
-      supplierItems.forEach(supplierItem => {
-        let packagingKey;
-        
-        if (supplierItem.packagingType === 'base') {
-          packagingKey = 'base';
-        } else if (supplierItem.packagingType === 'pack') {
-          packagingKey = 'pack';
-        } else if (supplierItem.packagingType === 'additional') {
-          packagingKey = `additional_${supplierItem.packaging || 0}`;
-        } else {
-          packagingKey = `${supplierItem.packagingType}-${supplierItem.packaging || ''}`;
-        }
-        
-        if (!suppliersByPackaging[packagingKey]) {
-          suppliersByPackaging[packagingKey] = [];
-        }
-        suppliersByPackaging[packagingKey].push(supplierItem.supplier._id);
-      });
-      
-      setSelectedSuppliers(suppliersByPackaging);
-    } catch (error) {
-      console.error('Error loading supplier-item relationships:', error);
-    }
-  }, [id]);
 
   // Save supplier-item relationships
   const saveSupplierItemRelationships = async () => {
