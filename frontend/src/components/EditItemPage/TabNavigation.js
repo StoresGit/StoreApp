@@ -805,25 +805,6 @@ export default function ItemTabs({ item: propItem }) {
                 Unit: {item?.baseUnit?.name || item?.baseUnit?.Symbol || item?.baseUnit?.symbol || 'N/A'}
               </p>
               </div>
-                    ) : packagingType === 'item-base' ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Base Quantity *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={packagingData.amount}
-                onChange={(e) => setPackagingData(prev => ({...prev, amount: e.target.value}))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                placeholder="Enter base quantity (e.g., 1, 2.5, 10)"
-                required 
-                autoComplete="off"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Unit: {item?.baseUnit?.name || item?.baseUnit?.Symbol || item?.baseUnit?.symbol || 'N/A'}
-              </p>
-            </div>
           ) : (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
