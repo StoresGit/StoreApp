@@ -12,16 +12,13 @@ export default function ItemTabs({ item: propItem }) {
   const [item, setItem] = useState(propItem || null);
   const [showPackagingForm, setShowPackagingForm] = useState(false);
   const [packagingType, setPackagingType] = useState(''); // 'base' or 'pack'
-  const [branches, setBranches] = useState([]);
-  const [brands, setBrands] = useState([]);
+
   const [packagingData, setPackagingData] = useState({
     amount: '',
     unit: '',
     packSize: '',
     type: '',
     description: '',
-    branches: [],
-    brands: [],
     parentPackaging: null
   });
   const [editingPackagingId, setEditingPackagingId] = useState(null);
@@ -100,16 +97,14 @@ export default function ItemTabs({ item: propItem }) {
   const handleAddPackaging = useCallback((type) => {
     setPackagingType(type);
     setShowPackagingForm(true);
-    setPackagingData({
-      amount: '',
-      unit: '',
-      packSize: '',
-      type: type,
-      description: '',
-      branches: [],
-      brands: [],
-      parentPackaging: null
-    });
+          setPackagingData({
+        amount: '',
+        unit: '',
+        packSize: '',
+        type: type,
+        description: '',
+        parentPackaging: null
+      });
   }, []);
 
   const refreshAllPackagingData = useCallback(async () => {
@@ -152,7 +147,7 @@ export default function ItemTabs({ item: propItem }) {
     } catch (err) {
       console.error('Error refreshing packaging data:', err);
     }
-  }, [id]);
+  }, [id, item?.basePackaging, item?.packPackaging]);
 
   const handleFormSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -229,9 +224,7 @@ export default function ItemTabs({ item: propItem }) {
             (packagingData.parentPackaging?.parentUnit || packagingData.unit) : 
             packagingData.unit,
           packSize: parseInt(packagingData.packSize) || null,
-          description: packagingData.description,
-          branches: packagingData.branches,
-          brands: packagingData.brands
+          description: packagingData.description
         };
 
         // Add parent packaging information for sub-packaging
@@ -281,8 +274,6 @@ export default function ItemTabs({ item: propItem }) {
       packSize: '',
       type: '',
       description: '',
-      branches: [],
-      brands: [],
       parentPackaging: null
     });
   }, []);
@@ -335,17 +326,11 @@ export default function ItemTabs({ item: propItem }) {
     }
   }, [propItem, id]);
 
-  // Fetch branches, brands, suppliers data and existing supplier-item relationships
+  // Fetch suppliers data and existing supplier-item relationships
   useEffect(() => {
-    const fetchBranchesAndBrands = async () => {
+    const fetchSuppliersData = async () => {
       try {
-        const [branchRes, brandRes, supplierRes] = await Promise.all([
-          axios.get(`${backend_url}/branch`),
-          axios.get(`${backend_url}/brand`),
-          axios.get(`${backend_url}/suppliers`)
-        ]);
-        setBranches(branchRes.data);
-        setBrands(brandRes.data);
+        const supplierRes = await axios.get(`${backend_url}/suppliers`);
         setSuppliers(supplierRes.data);
         
         // Load existing supplier-item relationships if item exists
@@ -353,10 +338,10 @@ export default function ItemTabs({ item: propItem }) {
           loadSupplierItemRelationships();
         }
       } catch (error) {
-        console.error('Error fetching branches, brands, and suppliers:', error);
+        console.error('Error fetching suppliers:', error);
       }
     };
-    fetchBranchesAndBrands();
+    fetchSuppliersData();
   }, [id, loadSupplierItemRelationships]);
 
   // Restore active tab from localStorage when id is available
@@ -504,8 +489,6 @@ export default function ItemTabs({ item: propItem }) {
       packSize: '',
       type: '',
       description: '',
-      branches: [],
-      brands: [],
       parentPackaging: parentData
     });
   };
@@ -514,16 +497,14 @@ export default function ItemTabs({ item: propItem }) {
     console.log('Editing item base packaging (unitCount):', item?.unitCount, item?.baseUnit);
     
     setPackagingType('item-base');
-    setPackagingData({
-      amount: item?.unitCount?.toString() || '',
-      unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'kg',
-      packSize: '',
-      type: item?.baseUnit?.name || 'base',
-      description: '',
-      branches: [],
-      brands: [],
-      parentPackaging: null
-    });
+          setPackagingData({
+        amount: item?.unitCount?.toString() || '',
+        unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'kg',
+        packSize: '',
+        type: item?.baseUnit?.name || 'base',
+        description: '',
+        parentPackaging: null
+      });
     
     setEditingPackagingId(null);
     setShowPackagingForm(true);
@@ -543,22 +524,18 @@ export default function ItemTabs({ item: propItem }) {
         packSize: '',
         type: 'base',
         description: '',
-        branches: [],
-        brands: [],
         parentPackaging: null
       });
       setEditingPackagingId(null); // No existing packaging to edit
     } else {
-      setPackagingData({
-        amount: item.basePackaging.amount.toString(),
-        unit: item.basePackaging.unit,
-        packSize: '',
-        type: item.basePackaging.type || 'base', // Use existing type or default to 'base'
-        description: item.basePackaging.description || '',
-        branches: item.basePackaging.branches?.map(b => b._id || b) || [],
-        brands: item.basePackaging.brands?.map(b => b._id || b) || [],
-        parentPackaging: null
-      });
+              setPackagingData({
+          amount: item.basePackaging.amount.toString(),
+          unit: item.basePackaging.unit,
+          packSize: '',
+          type: item.basePackaging.type || 'base', // Use existing type or default to 'base'
+          description: item.basePackaging.description || '',
+          parentPackaging: null
+        });
       setEditingPackagingId(item.basePackaging._id); // Set the ID for editing
     }
     
@@ -579,22 +556,18 @@ export default function ItemTabs({ item: propItem }) {
         packSize: '',
         type: 'pack',
         description: '',
-        branches: [],
-        brands: [],
         parentPackaging: null
       });
       setEditingPackagingId(null); // No existing packaging to edit
     } else {
-      setPackagingData({
-        amount: item.packPackaging.amount.toString(),
-        unit: item.packPackaging.unit,
-        packSize: item.packPackaging.packSize?.toString() || '',
-        type: item.packPackaging.type || 'pack', // Use existing type or default to 'pack'
-        description: item.packPackaging.description || '',
-        branches: item.packPackaging.branches?.map(b => b._id || b) || [],
-        brands: item.packPackaging.brands?.map(b => b._id || b) || [],
-        parentPackaging: null
-      });
+              setPackagingData({
+          amount: item.packPackaging.amount.toString(),
+          unit: item.packPackaging.unit,
+          packSize: item.packPackaging.packSize?.toString() || '',
+          type: item.packPackaging.type || 'pack', // Use existing type or default to 'pack'
+          description: item.packPackaging.description || '',
+          parentPackaging: null
+        });
       setEditingPackagingId(item.packPackaging._id); // Set the ID for editing
     }
     
@@ -654,8 +627,6 @@ export default function ItemTabs({ item: propItem }) {
         packSize: packaging.packSize?.toString() || '',
         type: packaging.type,
         description: packaging.description || '',
-        branches: packaging.branches?.map(b => b._id || b) || [],
-        brands: packaging.brands?.map(b => b._id || b) || [],
         parentPackaging: parentData
       });
     } else {
@@ -667,8 +638,6 @@ export default function ItemTabs({ item: propItem }) {
         packSize: packaging.packSize?.toString() || '',
         type: packaging.type,
         description: packaging.description || '',
-        branches: packaging.branches?.map(b => b._id || b) || [],
-        brands: packaging.brands?.map(b => b._id || b) || [],
         parentPackaging: null
       });
     }
@@ -1039,13 +1008,14 @@ export default function ItemTabs({ item: propItem }) {
                     }
                   }
                   
-                  const baseUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
-                  const totalUnits = baseUnits * cumulativeMultiplier;
+                  // Remove unused variables to fix ESLint warnings
+                  // const baseUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
+                  // const totalUnits = baseUnits * cumulativeMultiplier;
                   
                   // Create full multiplication description
-                  const fullMultiplicationDesc = isSubPackaging ? 
-                    `${allParentDescriptions.join(' x ')} x ${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}` :
-                    `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`;
+                  // const fullMultiplicationDesc = isSubPackaging ? 
+                  //   `${allParentDescriptions.join(' x ')} x ${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}` :
+                  //   `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`;
                 
                   return (
                   <div key={index} className={`border rounded-lg p-4 shadow-sm ${isSubPackaging ? 'border-blue-300 bg-blue-50 ml-8' : 'ml-0'}`} style={isSubPackaging ? {} : {backgroundColor: '#e66868', borderColor: '#d44545'}}>
@@ -1098,7 +1068,7 @@ export default function ItemTabs({ item: propItem }) {
                                   displayParts.push(`× ${levelPkg.amount}`);
                                 }
                                 
-                                const finalTotal = totalAmount.toFixed(totalAmount < 1 ? 3 : 2);
+                                // const finalTotal = totalAmount.toFixed(totalAmount < 1 ? 3 : 2);
                                 console.log('=== END DEBUG ===');
                                 
                                 // Show in the format: "50 kilogram x 4 carton = 200 kilogram"
