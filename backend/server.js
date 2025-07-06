@@ -40,12 +40,12 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
-// General rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
+// General rate limiting - DISABLED
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100 // limit each IP to 100 requests per windowMs
+// });
+// app.use(limiter);
 
 // Specific rate limiting for login attempts
 const loginLimiter = rateLimit({

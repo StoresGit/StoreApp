@@ -18,6 +18,9 @@ const Item = () => {
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading items data...');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -29,10 +32,8 @@ const Item = () => {
     image: '', // Image
     departments: [], // Keep existing departments
     name: '', // Keep existing name for compatibility
-    subCategory: '', // Sub Category - now required
-    // Pricing fields
-    unitPrice: '',
-    priceIncludesVAT: true
+    subCategory: '' // Sub Category - now required
+    // Pricing fields removed - now handled per supplier
   });
 
   const fetchData = async () => {
@@ -77,6 +78,35 @@ const Item = () => {
   const filteredSubCategories = subCategories.filter(sub => 
     !formData.category || sub.category?._id === formData.category
   );
+
+  // Search function
+  const handleSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      const response = await axios.get(`${backend_url}/items/search?query=${encodeURIComponent(query)}`);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Error searching items:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle search input change with debounce
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      handleSearch(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -140,8 +170,7 @@ const Item = () => {
     setFormData({
       nameEn: '', nameAlt: '', baseUnit: '', category: '',
       tax: '', image: '',
-      departments: [], name: '', subCategory: '',
-      unitPrice: '', priceIncludesVAT: true
+      departments: [], name: '', subCategory: ''
     });
     setEditingId(null);
     setShowFormModal(false);
@@ -163,9 +192,7 @@ const Item = () => {
       image: item.image?._id || '',
       departments: item.departments?.map(d => d._id) || [],
       name: item.nameEn || item.name || '',
-      subCategory: item.subCategory?._id || '',
-      unitPrice: item.unitPrice || '',
-      priceIncludesVAT: item.priceIncludesVAT !== undefined ? item.priceIncludesVAT : true
+      subCategory: item.subCategory?._id || ''
     });
     setEditingId(item._id);
     setShowFormModal(true);
@@ -226,9 +253,7 @@ const Item = () => {
               image: '', 
               departments: [], 
               name: '', 
-              subCategory: '',
-              unitPrice: '',
-              priceIncludesVAT: true
+              subCategory: ''
             });
             setEditingId(null);
             setShowFormModal(true);
@@ -239,14 +264,43 @@ const Item = () => {
         </button>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-4">
+        <div className="relative">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by item code, name, or alternative name..."
+            className="w-full p-3 border border-gray-300 rounded-lg pl-10 focus:ring-2 focus:ring-[#735dff] focus:border-transparent"
+          />
+          <div className="absolute left-3 top-3 text-gray-400">
+            🔍
+          </div>
+          {isSearching && (
+            <div className="absolute right-3 top-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#735dff]"></div>
+            </div>
+          )}
+        </div>
+        {searchQuery && (
+          <div className="mt-2 text-sm text-gray-600">
+            {searchResults.length > 0 
+              ? `Found ${searchResults.length} item${searchResults.length !== 1 ? 's' : ''}`
+              : searchQuery && !isSearching ? 'No items found' : ''
+            }
+          </div>
+        )}
+      </div>
+
       <div className="overflow-x-auto">
         <table className="w-full border border-gray-300">
           <thead className="bg-gray-100">
             <tr>
+              <th className="p-2 border">Item Code</th>
               <th className="p-2 border">Item Name (Eng)</th>
               <th className="p-2 border">Item Name (Alt)</th>
               <th className="p-2 border">Base Unit</th>
-              <th className="p-2 border">Unit Price</th>
               <th className="p-2 border">Main Category</th>
               <th className="p-2 border">Sub Category</th>
               <th className="p-2 border">Tax</th>
@@ -255,26 +309,19 @@ const Item = () => {
             </tr>
           </thead>
           <tbody>
-            {items.map(item => (
+            {(searchQuery ? searchResults : items).map(item => (
               <tr key={item._id} className="text-center">
+                <td className="p-2 border">
+                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-mono">
+                    {item.itemCode || 'Generating...'}
+                  </span>
+                </td>
                 <td className="p-2 border">{item.nameEn || item.name}</td>
                 <td className="p-2 border">{item.nameAlt || 'N/A'}</td>
                 <td className="p-2 border">
                   <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                     {item.baseUnit?.name || 'N/A'}
                   </span>
-                </td>
-                <td className="p-2 border">
-                  {item.unitPrice ? (
-                    <div className="text-center">
-                      <div className="font-medium">{item.unitPrice}</div>
-                      <div className="text-xs text-gray-500">
-                        {item.priceIncludesVAT ? 'Incl. VAT' : 'Excl. VAT'}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">No price</span>
-                  )}
                 </td>
                 <td className="p-2 border">{item.category?.nameEn || 'N/A'}</td>
                 <td className="p-2 border">{item.subCategory?.nameEn || 'N/A'}</td>
@@ -331,9 +378,7 @@ const Item = () => {
                     image: '', 
                     departments: [], 
                     name: '', 
-                    subCategory: '',
-                    unitPrice: '',
-                    priceIncludesVAT: true
+                    subCategory: ''
                   });
                 }}
                 className="text-gray-500 hover:text-gray-700"
@@ -431,42 +476,7 @@ const Item = () => {
                 ))}
               </select>
 
-              {/* Pricing Section */}
-              <div className="col-span-2">
-                <h4 className="font-medium mb-3 text-[#735dff] border-b pb-2">Pricing Information</h4>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Unit Price</label>
-                    <input
-                      type="number"
-                      name="unitPrice"
-                      value={formData.unitPrice}
-                      onChange={handleChange}
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0"
-                      className="w-full border p-2 rounded"
-                    />
-                  </div>
-                  <div className="flex items-center">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        name="priceIncludesVAT"
-                        checked={formData.priceIncludesVAT}
-                        onChange={(e) => setFormData(prev => ({ ...prev, priceIncludesVAT: e.target.checked }))}
-                        className="rounded"
-                      />
-                      <span className="text-sm">Price includes VAT</span>
-                    </label>
-                  </div>
-                </div>
-                <div className="mt-3 p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm text-blue-800">
-                    <strong>Note:</strong> VAT calculations and supplier pricing will be handled in the Suppliers section for each item.
-                  </div>
-                </div>
-              </div>
+              {/* Pricing Section Removed - Unit prices now handled per supplier */}
 
               <div className="col-span-2">
                 <label className="block font-medium mb-1">Image</label>
@@ -515,9 +525,7 @@ const Item = () => {
                     image: '', 
                     departments: [], 
                     name: '', 
-                    subCategory: '',
-                    unitPrice: '',
-                    priceIncludesVAT: true
+                    subCategory: ''
                   });
                 }}
                 className="text-gray-500 px-4 py-2 hover:underline"

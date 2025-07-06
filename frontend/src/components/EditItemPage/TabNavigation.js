@@ -7,7 +7,7 @@ import { useParams } from 'react-router-dom';
 const tabs = ['Item Details', 'Packaging', 'Suppliers', 'Allergens', 'Inventory', 'Recipes'];
 
 export default function ItemTabs({ item: propItem }) {
-  const [activeTab, setActiveTab] = useState('Packaging');
+  const [activeTab, setActiveTab] = useState('Item Details');
   const { id } = useParams();
   const [item, setItem] = useState(propItem || null);
   const [showPackagingForm, setShowPackagingForm] = useState(false);
@@ -74,6 +74,219 @@ export default function ItemTabs({ item: propItem }) {
     }
   }, [id]);
 
+  // Save supplier-item relationships
+  const saveSupplierItemRelationships = useCallback(async () => {
+    try {
+      console.log('Saving suppliers for item:', id);
+      console.log('Selected suppliers data:', selectedSuppliers);
+      
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${backend_url}/supplier-items`, {
+        itemId: id,
+        supplierPackagingData: selectedSuppliers
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('Supplier-item relationships saved successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error saving supplier-item relationships:', error);
+      console.error('Error details:', error.response?.data);
+      throw error;
+    }
+  }, [id, selectedSuppliers]);
+
+  const handleAddPackaging = useCallback((type) => {
+    setPackagingType(type);
+    setShowPackagingForm(true);
+    setPackagingData({
+      amount: '',
+      unit: '',
+      packSize: '',
+      type: type,
+      description: '',
+      branches: [],
+      brands: [],
+      parentPackaging: null
+    });
+  }, []);
+
+  const refreshAllPackagingData = useCallback(async () => {
+    try {
+      const [packagingRes, additionalPackagingRes] = await Promise.all([
+        axios.get(`${backend_url}/packaging/${id}`),
+        axios.get(`${backend_url}/packaging`).then(res => {
+          console.log('Refreshing all packaging data:', res.data);
+          const filtered = res.data.filter(pkg => {
+            if (!pkg.itemId) {
+              console.warn('Package with no itemId found:', pkg);
+              return false;
+            }
+            return pkg.itemId._id === id;
+          });
+          console.log('Filtered packaging for current item:', filtered);
+          return filtered;
+        }).catch(err => {
+          console.error('Error fetching all packaging:', err);
+          return [];
+        })
+      ]);
+      
+      const packagingArr = packagingRes.data;
+      const basePackaging = packagingArr.find(p => p.type === 'base');
+      const packPackaging = packagingArr.find(p => p.type === 'pack');
+      
+      setItem(prevItem => ({
+        ...prevItem,
+        basePackaging,
+        packPackaging,
+        additionalPackaging: additionalPackagingRes
+      }));
+      
+      console.log('Updated item state:', {
+        basePackaging,
+        packPackaging,
+        additionalPackaging: additionalPackagingRes
+      });
+    } catch (err) {
+      console.error('Error refreshing packaging data:', err);
+    }
+  }, [id]);
+
+  const handleFormSubmit = useCallback(async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!packagingData.amount || !packagingData.type) {
+      alert('Please fill in quantity and package name');
+      return;
+    }
+
+    // For non-sub packaging and non-item-base, unit is also required
+    if (packagingType !== 'sub' && packagingType !== 'item-base' && !packagingData.unit) {
+      alert('Please fill in unit field');
+      return;
+    }
+
+    try {
+      if (packagingType === 'item-base') {
+        // Handle updating item's base packaging (unitCount and baseUnit)
+        const payload = {
+          unitCount: parseFloat(packagingData.amount),
+          // We'll keep the existing baseUnit, just update the count
+        };
+
+        console.log('Updating item base packaging:', payload);
+        await axios.put(`${backend_url}/items/${id}`, payload);
+        
+        // Update local item state
+        setItem(prevItem => ({
+          ...prevItem,
+          unitCount: parseFloat(packagingData.amount)
+        }));
+      } else if (packagingType === 'base' || packagingType === 'pack') {
+        // Handle existing base/pack packaging (item-specific)
+        const payload = {
+          itemId: id,
+          type: packagingData.type, // Use the editable type from form
+          amount: packagingData.amount,
+          unit: packagingData.unit,
+          ...(packagingType === 'pack' && packagingData.packSize && {
+            packSize: packagingData.packSize
+          })
+        };
+
+        console.log('Submitting base/pack packaging:', payload);
+        console.log('Base packaging:', item?.basePackaging);
+        console.log('Pack packaging:', item?.packPackaging);
+        
+        // Use editingPackagingId if available, otherwise check for existing packaging
+        if (editingPackagingId) {
+          // Update existing packaging using the editingPackagingId
+          console.log('Updating packaging with editingPackagingId:', editingPackagingId);
+          await axios.put(`${backend_url}/packaging/${editingPackagingId}`, payload);
+        } else if (packagingType === 'base' && item?.basePackaging?._id) {
+          // Update existing base packaging
+          console.log('Updating existing base packaging with ID:', item.basePackaging._id);
+          await axios.put(`${backend_url}/packaging/${item.basePackaging._id}`, payload);
+        } else if (packagingType === 'pack' && item?.packPackaging?._id) {
+          // Update existing pack packaging
+          console.log('Updating existing pack packaging with ID:', item.packPackaging._id);
+          await axios.put(`${backend_url}/packaging/${item.packPackaging._id}`, payload);
+        } else {
+          // Create new base/pack packaging only if none exists
+          console.log('Creating new base/pack packaging');
+          await axios.post(`${backend_url}/packaging/${id}`, payload);
+        }
+      } else {
+        // Handle additional packaging (new system) and sub-packaging
+        const payload = {
+          itemId: id,
+          type: packagingData.type,
+          amount: parseFloat(packagingData.amount),
+          unit: packagingType === 'sub' ? 
+            (packagingData.parentPackaging?.parentUnit || packagingData.unit) : 
+            packagingData.unit,
+          packSize: parseInt(packagingData.packSize) || null,
+          description: packagingData.description,
+          branches: packagingData.branches,
+          brands: packagingData.brands
+        };
+
+        // Add parent packaging information for sub-packaging
+        if (packagingData.parentPackaging) {
+          payload.parentType = packagingData.parentPackaging.parentType;
+          if (packagingData.parentPackaging.parentId) {
+            payload.parentPackaging = packagingData.parentPackaging.parentId;
+          }
+          console.log('Adding parent info to payload:', {
+            parentType: payload.parentType,
+            parentPackaging: payload.parentPackaging,
+            originalParentData: packagingData.parentPackaging
+          });
+        }
+
+        console.log('Submitting additional packaging:', payload);
+
+        if (editingPackagingId) {
+          // Update existing additional packaging
+          await axios.put(`${backend_url}/packaging/${editingPackagingId}`, payload);
+        } else {
+          // Create new additional packaging
+          await axios.post(`${backend_url}/packaging`, payload);
+        }
+      }
+      
+      // Use the existing refreshAllPackagingData function to properly refresh all data
+      await refreshAllPackagingData();
+      
+      setShowPackagingForm(false);
+      setEditingPackagingId(null);
+      alert('Packaging saved successfully!');
+    } catch (err) {
+      console.error('Error saving packaging:', err);
+      console.error('Error details:', err.response?.data);
+      
+      alert(`Error saving packaging: ${err.response?.data?.message || err.message}`);
+    }
+  }, [packagingData, packagingType, editingPackagingId, id, refreshAllPackagingData]);
+
+  const handleFormCancel = useCallback(() => {
+    setShowPackagingForm(false);
+    setEditingPackagingId(null);
+    setPackagingData({
+      amount: '',
+      unit: '',
+      packSize: '',
+      type: '',
+      description: '',
+      branches: [],
+      brands: [],
+      parentPackaging: null
+    });
+  }, []);
+
   useEffect(() => {
     if (propItem) {
       // Use the item passed from parent and fetch packaging info
@@ -98,6 +311,10 @@ export default function ItemTabs({ item: propItem }) {
         const packagingArr = packagingRes.data;
         const basePackaging = packagingArr.find(p => p.type === 'base');
         const packPackaging = packagingArr.find(p => p.type === 'pack');
+        
+        console.log('Packaging from API:', packagingArr);
+        console.log('Found base packaging:', basePackaging);
+        console.log('Found pack packaging:', packPackaging);
           
         setItem({
             ...propItem,
@@ -174,49 +391,7 @@ export default function ItemTabs({ item: propItem }) {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showSupplierDropdown]);
 
-  // Pricing calculation functions
-  const calculatePackagingPrice = (packaging) => {
-    if (!item?.unitPrice || !packaging?.amount) return 0;
-    
-    let totalUnits = packaging.amount;
-    
-    // If it's a pack type, multiply by pack size
-    if (packaging.packSize && packaging.packSize > 0) {
-      totalUnits = packaging.amount * packaging.packSize;
-    }
-    
-    return (item.unitPrice * totalUnits).toFixed(2);
-  };
-
-  const calculateVATAmount = (packaging) => {
-    const totalPrice = parseFloat(calculatePackagingPrice(packaging));
-    if (!totalPrice || !item?.tax?.rate) return 0;
-    
-    const vatRate = item.tax.rate;
-    
-    if (item.priceIncludesVAT) {
-      // Price includes VAT, calculate VAT amount
-      return (totalPrice * vatRate / (100 + vatRate)).toFixed(2);
-    } else {
-      // Price excludes VAT, calculate VAT amount to add
-      return (totalPrice * vatRate / 100).toFixed(2);
-    }
-  };
-
-  const calculatePriceExcludingVAT = (packaging) => {
-    const totalPrice = parseFloat(calculatePackagingPrice(packaging));
-    if (!totalPrice || !item?.tax?.rate) return totalPrice.toFixed(2);
-    
-    const vatRate = item.tax.rate;
-    
-    if (item.priceIncludesVAT) {
-      // Remove VAT from price
-      return (totalPrice / (1 + vatRate / 100)).toFixed(2);
-    } else {
-      // Price already excludes VAT
-      return totalPrice.toFixed(2);
-    }
-  };
+  // Removed pricing calculation functions since unit price is now handled per supplier
 
   const handleSupplierSelect = (packagingKey, supplierId, event) => {
     event.stopPropagation(); // Prevent dropdown from closing
@@ -251,8 +426,6 @@ export default function ItemTabs({ item: propItem }) {
     return selectedSuppliers[packagingKey] || [];
   };
 
-
-
   const addSupplierRow = (packagingKey) => {
     setShowSupplierDropdown(showSupplierDropdown === packagingKey ? null : packagingKey);
   };
@@ -263,66 +436,8 @@ export default function ItemTabs({ item: propItem }) {
     localStorage.setItem(`activeTab_${id}`, tab);
   };
 
-  // Save supplier-item relationships
-  const saveSupplierItemRelationships = async () => {
-    try {
-      console.log('Saving suppliers for item:', id);
-      console.log('Selected suppliers data:', selectedSuppliers);
-      
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${backend_url}/supplier-items`, {
-        itemId: id,
-        supplierPackagingData: selectedSuppliers
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('Supplier-item relationships saved successfully:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Error saving supplier-item relationships:', error);
-      console.error('Error details:', error.response?.data);
-      throw error;
-    }
-  };
-
-  const calculateUnitPriceIncludingTax = () => {
-    if (!item?.unitPrice || !item?.tax?.rate) return item?.unitPrice || 0;
-    
-    const unitPrice = parseFloat(item.unitPrice);
-    const vatRate = item.tax.rate;
-    
-    if (item.priceIncludesVAT) {
-      return unitPrice.toFixed(2);
-    } else {
-      return (unitPrice * (1 + vatRate / 100)).toFixed(2);
-    }
-  };
-
+  // Early return after all hooks are defined
   if (!item) return <div className="p-4">Loading item...</div>;
-
-  const handleAddPackaging = (type) => {
-    let packagingTypeValue = '';
-    if (type === 'new') {
-      // Open modal for new packaging type
-      setPackagingType('bulk'); // Default to bulk for new packaging
-      packagingTypeValue = 'bulk';
-    } else {
-    setPackagingType(type);
-      packagingTypeValue = type;
-    }
-    setShowPackagingForm(true);
-    setPackagingData({
-      amount: '',
-      unit: '',
-      packSize: '',
-      type: packagingTypeValue,
-      description: '',
-      branches: [],
-      brands: [],
-      parentPackaging: null
-    });
-  };
 
   const handleAddSubPackaging = (parentType, parentPackaging = null) => {
     setPackagingType('sub');
@@ -335,30 +450,57 @@ export default function ItemTabs({ item: propItem }) {
         parentType: 'base',
         parentAmount: item.basePackaging.amount,
         parentUnit: item.basePackaging.unit,
-        parentDescription: `${item.nameEn || item.name} ${item.basePackaging.amount}${item.basePackaging.unit}`
+        parentName: item.basePackaging.type, // Get the actual packaging name
+        parentDescription: `amount - ${item.basePackaging.amount} unit - ${item.basePackaging.unit} name - ${item.basePackaging.type}`
       };
+    } else if (parentType === 'base' && item?.unitCount && item?.baseUnit) {
+      // Handle base packaging from item creation (unitCount)
+      parentData = {
+        parentType: 'base',
+        parentAmount: item.unitCount,
+        parentUnit: item.baseUnit.name || item.baseUnit.Symbol || item.baseUnit.symbol,
+        parentName: 'base', // Default name for item-based packaging
+        parentDescription: `amount - ${item.unitCount} unit - ${item.baseUnit.name || item.baseUnit.Symbol || item.baseUnit.symbol} name - base`
+      };
+    } else if (parentType === 'base' && item?.additionalPackaging && !item?.basePackaging && !item?.unitCount) {
+      // Handle when "base" is actually from additionalPackaging (like the "Bag" case)
+      const mainPkg = item.additionalPackaging.find(p => !p.parentType);
+      if (mainPkg) {
+        parentData = {
+          parentType: 'additional', // Change to 'additional' since it's from additionalPackaging
+          parentId: mainPkg._id, // Store the actual parent ID
+          parentAmount: mainPkg.amount,
+          parentUnit: mainPkg.unit,
+          parentName: mainPkg.type,
+          parentDescription: `amount - ${mainPkg.amount} unit - ${mainPkg.unit} name - ${mainPkg.type}`
+        };
+      }
     } else if (parentType === 'pack' && item?.packPackaging) {
       parentData = {
         parentType: 'pack',
         parentAmount: item.packPackaging.amount,
         parentUnit: item.packPackaging.unit,
         parentPackSize: item.packPackaging.packSize,
-        parentDescription: `${item.nameEn || item.name} ${item.packPackaging.packSize} x ${item.packPackaging.amount}${item.packPackaging.unit}`
+        parentName: item.packPackaging.type, // Get the actual packaging name
+        parentDescription: `amount - ${item.packPackaging.amount} unit - ${item.packPackaging.unit} name - ${item.packPackaging.type}`
       };
     } else if (parentType === 'additional' && parentPackaging) {
+      console.log('Creating sub-packaging with additional parent:', parentPackaging);
       parentData = {
         parentType: 'additional',
         parentId: parentPackaging._id,
         parentAmount: parentPackaging.amount,
         parentUnit: parentPackaging.unit,
         parentPackSize: parentPackaging.packSize,
-        parentDescription: `${parentPackaging.packSize ? `${parentPackaging.packSize} x ` : ''}${parentPackaging.amount} ${parentPackaging.unit}`
+        parentName: parentPackaging.type, // Get the actual packaging name
+        parentDescription: `amount - ${parentPackaging.amount} unit - ${parentPackaging.unit} name - ${parentPackaging.type}`
       };
+      console.log('Parent data created:', parentData);
     }
     
     setPackagingData({
       amount: '',
-      unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'pcs',
+      unit: parentData.parentUnit || item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'pcs',
       packSize: '',
       type: '',
       description: '',
@@ -368,61 +510,171 @@ export default function ItemTabs({ item: propItem }) {
     });
   };
 
-  const handleEditAdditionalPackaging = (packaging) => {
-    setPackagingType(packaging.type);
+  const handleEditItemBasePackaging = () => {
+    console.log('Editing item base packaging (unitCount):', item?.unitCount, item?.baseUnit);
+    
+    setPackagingType('item-base');
     setPackagingData({
-      amount: packaging.amount.toString(),
-      unit: packaging.unit,
-      packSize: packaging.packSize?.toString() || '',
-      type: packaging.type,
-      description: packaging.description || '',
-      branches: packaging.branches?.map(b => b._id || b) || [],
-      brands: packaging.brands?.map(b => b._id || b) || []
+      amount: item?.unitCount?.toString() || '',
+      unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'kg',
+      packSize: '',
+      type: item?.baseUnit?.name || 'base',
+      description: '',
+      branches: [],
+      brands: [],
+      parentPackaging: null
     });
-    setEditingPackagingId(packaging._id);
+    
+    setEditingPackagingId(null);
     setShowPackagingForm(true);
   };
 
-  const refreshAllPackagingData = async () => {
-    try {
-      const [packagingRes, additionalPackagingRes] = await Promise.all([
-        axios.get(`${backend_url}/packaging/${id}`),
-        axios.get(`${backend_url}/packaging`).then(res => {
-          console.log('Refreshing all packaging data:', res.data);
-          const filtered = res.data.filter(pkg => {
-            if (!pkg.itemId) {
-              console.warn('Package with no itemId found:', pkg);
-              return false;
-            }
-            return pkg.itemId._id === id;
-          });
-          console.log('Filtered packaging for current item:', filtered);
-          return filtered;
-        }).catch(err => {
-          console.error('Error fetching all packaging:', err);
-          return [];
-        })
-      ]);
-      
-      const packagingArr = packagingRes.data;
-      const basePackaging = packagingArr.find(p => p.type === 'base');
-      const packPackaging = packagingArr.find(p => p.type === 'pack');
-      
-      setItem({
-        ...item,
-        basePackaging,
-        packPackaging,
-        additionalPackaging: additionalPackagingRes
+  const handleEditBasePackaging = () => {
+    console.log('Editing base packaging:', item?.basePackaging);
+    console.log('Item data:', item);
+    
+    setPackagingType('base');
+    
+    // Handle case where base packaging doesn't exist yet
+    if (!item?.basePackaging) {
+      setPackagingData({
+        amount: '',
+        unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'kg',
+        packSize: '',
+        type: 'base',
+        description: '',
+        branches: [],
+        brands: [],
+        parentPackaging: null
       });
-      
-      console.log('Updated item state:', {
-        basePackaging,
-        packPackaging,
-        additionalPackaging: additionalPackagingRes
+      setEditingPackagingId(null); // No existing packaging to edit
+    } else {
+      setPackagingData({
+        amount: item.basePackaging.amount.toString(),
+        unit: item.basePackaging.unit,
+        packSize: '',
+        type: item.basePackaging.type || 'base', // Use existing type or default to 'base'
+        description: item.basePackaging.description || '',
+        branches: item.basePackaging.branches?.map(b => b._id || b) || [],
+        brands: item.basePackaging.brands?.map(b => b._id || b) || [],
+        parentPackaging: null
       });
-    } catch (err) {
-      console.error('Error refreshing packaging data:', err);
+      setEditingPackagingId(item.basePackaging._id); // Set the ID for editing
     }
+    
+    setShowPackagingForm(true);
+  };
+
+  const handleEditPackPackaging = () => {
+    console.log('Editing pack packaging:', item?.packPackaging);
+    console.log('Pack packaging ID:', item?.packPackaging?._id);
+    
+    setPackagingType('pack');
+    
+    // Handle case where pack packaging doesn't exist yet
+    if (!item?.packPackaging) {
+      setPackagingData({
+        amount: '',
+        unit: item?.baseUnit?.symbol || item?.baseUnit?.Symbol || item?.baseUnit?.name?.toLowerCase() || 'kg',
+        packSize: '',
+        type: 'pack',
+        description: '',
+        branches: [],
+        brands: [],
+        parentPackaging: null
+      });
+      setEditingPackagingId(null); // No existing packaging to edit
+    } else {
+      setPackagingData({
+        amount: item.packPackaging.amount.toString(),
+        unit: item.packPackaging.unit,
+        packSize: item.packPackaging.packSize?.toString() || '',
+        type: item.packPackaging.type || 'pack', // Use existing type or default to 'pack'
+        description: item.packPackaging.description || '',
+        branches: item.packPackaging.branches?.map(b => b._id || b) || [],
+        brands: item.packPackaging.brands?.map(b => b._id || b) || [],
+        parentPackaging: null
+      });
+      setEditingPackagingId(item.packPackaging._id); // Set the ID for editing
+    }
+    
+    setShowPackagingForm(true);
+  };
+
+  const handleEditAdditionalPackaging = (packaging) => {
+    // Check if this is sub-packaging by looking for parentType field
+    // Only sub-packaging should have parentType set
+    const isSubPackaging = !!packaging.parentType;
+    
+    if (isSubPackaging) {
+      setPackagingType('sub');
+      
+      // Reconstruct parent data for sub-packaging
+      let parentData = {};
+      if (packaging.parentType === 'base' && item?.basePackaging) {
+        parentData = {
+          parentType: 'base',
+          parentAmount: item.basePackaging.amount,
+          parentUnit: item.basePackaging.unit,
+          parentDescription: `amount - ${item.basePackaging.amount} unit - ${item.basePackaging.unit} name - base`
+        };
+      } else if (packaging.parentType === 'base' && item?.unitCount && item?.baseUnit) {
+        // Handle base packaging from item creation (unitCount)
+        parentData = {
+          parentType: 'base',
+          parentAmount: item.unitCount,
+          parentUnit: item.baseUnit.name || item.baseUnit.Symbol || item.baseUnit.symbol,
+          parentDescription: `amount - ${item.unitCount} unit - ${item.baseUnit.name || item.baseUnit.Symbol || item.baseUnit.symbol} name - base`
+        };
+      } else if (packaging.parentType === 'pack' && item?.packPackaging) {
+        parentData = {
+          parentType: 'pack',
+          parentAmount: item.packPackaging.amount,
+          parentUnit: item.packPackaging.unit,
+          parentPackSize: item.packPackaging.packSize,
+          parentDescription: `amount - ${item.packPackaging.amount} unit - ${item.packPackaging.unit} name - pack`
+        };
+      } else if (packaging.parentType === 'additional' && item?.additionalPackaging) {
+        const parentPkg = item.additionalPackaging.find(p => p._id === packaging.parentPackaging);
+        if (parentPkg) {
+          parentData = {
+            parentType: 'additional',
+            parentId: parentPkg._id,
+            parentAmount: parentPkg.amount,
+            parentUnit: parentPkg.unit,
+            parentPackSize: parentPkg.packSize,
+            parentDescription: `amount - ${parentPkg.amount} unit - ${parentPkg.unit} name - ${parentPkg.type}`
+          };
+        }
+      }
+      
+      setPackagingData({
+        amount: packaging.amount.toString(),
+        unit: packaging.unit,
+        packSize: packaging.packSize?.toString() || '',
+        type: packaging.type,
+        description: packaging.description || '',
+        branches: packaging.branches?.map(b => b._id || b) || [],
+        brands: packaging.brands?.map(b => b._id || b) || [],
+        parentPackaging: parentData
+      });
+    } else {
+      // Regular additional packaging - treat as normal packaging type
+      setPackagingType(packaging.type || 'additional');
+      setPackagingData({
+        amount: packaging.amount.toString(),
+        unit: packaging.unit,
+        packSize: packaging.packSize?.toString() || '',
+        type: packaging.type,
+        description: packaging.description || '',
+        branches: packaging.branches?.map(b => b._id || b) || [],
+        brands: packaging.brands?.map(b => b._id || b) || [],
+        parentPackaging: null
+      });
+    }
+    
+    setEditingPackagingId(packaging._id);
+    setShowPackagingForm(true);
   };
 
   const handleDeleteBasePackaging = async () => {
@@ -473,125 +725,21 @@ export default function ItemTabs({ item: propItem }) {
     }
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
+  const PackagingForm = React.memo(() => {
+    // Simple direct handlers to prevent re-renders
+    const handleTypeChange = (e) => {
+      setPackagingData(prev => ({...prev, type: e.target.value}));
+    };
     
-    // Validate required fields
-    if (!packagingData.amount || !packagingData.unit || !packagingData.packSize) {
-      alert('Please fill in amount, unit, and pack size');
-      return;
-    }
+    const handleAmountChange = (e) => {
+      setPackagingData(prev => ({...prev, amount: e.target.value}));
+    };
 
-    try {
-      if (packagingType === 'base' || packagingType === 'pack') {
-        // Handle existing base/pack packaging (item-specific)
-      const payload = {
-  itemId: id,
-  type: packagingType,
-  amount: packagingData.amount,
-  unit: packagingData.unit,
-          ...(packagingType === 'pack' && packagingData.packSize && {
-            packSize: packagingData.packSize
-  })
-};
-
-        console.log('Submitting base/pack packaging:', payload);
-      await axios.post(`${backend_url}/packaging/${id}`, payload);
-      
-        // Refresh packaging data
-        const packagingRes = await axios.get(`${backend_url}/packaging/${id}`);
-        const packagingArr = packagingRes.data;
-        const basePackaging = packagingArr.find(p => p.type === 'base');
-        const packPackaging = packagingArr.find(p => p.type === 'pack');
-        setItem({
-          ...item,
-          basePackaging,
-          packPackaging
-        });
-      } else {
-        // Handle additional packaging (new system) and sub-packaging
-        const payload = {
-          itemId: id,
-          type: packagingData.type,
-          amount: parseFloat(packagingData.amount),
-          unit: packagingData.unit,
-          packSize: parseInt(packagingData.packSize),
-          description: packagingData.description,
-          branches: packagingData.branches,
-          brands: packagingData.brands
-        };
-
-        // Add parent packaging information for sub-packaging
-        if (packagingData.parentPackaging) {
-          payload.parentType = packagingData.parentPackaging.parentType;
-          if (packagingData.parentPackaging.parentId) {
-            payload.parentPackaging = packagingData.parentPackaging.parentId;
-          }
-        }
-
-        console.log('Submitting additional packaging:', payload);
-
-        if (editingPackagingId) {
-          // Update existing additional packaging
-          await axios.put(`${backend_url}/packaging/${editingPackagingId}`, payload);
-        } else {
-          // Create new additional packaging
-          await axios.post(`${backend_url}/packaging`, payload);
-        }
-
-        // Refresh additional packaging data
-        const additionalPackagingRes = await axios.get(`${backend_url}/packaging`).then(res => {
-          console.log('Refreshing packaging data:', res.data);
-          const filtered = res.data.filter(pkg => {
-            if (!pkg.itemId) {
-              console.warn('Package with no itemId found:', pkg);
-              return false;
-            }
-            return pkg.itemId._id === id;
-          });
-          console.log('Filtered packaging after save:', filtered);
-          return filtered;
-        }).catch(err => {
-          console.error('Error refreshing packaging:', err);
-          return item.additionalPackaging || [];
-        });
-        
-        setItem({
-          ...item,
-          additionalPackaging: additionalPackagingRes
-        });
-      }
-      
-      setShowPackagingForm(false);
-      setEditingPackagingId(null);
-      alert('Packaging saved successfully!');
-    } catch (err) {
-      console.error('Error saving packaging:', err);
-      console.error('Error details:', err.response?.data);
-      alert(`Error saving packaging: ${err.response?.data?.message || err.message}`);
-    }
-  };
-
-  const handleFormCancel = () => {
-    setShowPackagingForm(false);
-    setEditingPackagingId(null);
-    setPackagingData({
-      amount: '',
-      unit: '',
-      packSize: '',
-      type: '',
-      description: '',
-      branches: [],
-      brands: [],
-      parentPackaging: null
-    });
-  };
-
-  const PackagingForm = () => (
+    return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-[600px] max-w-[90vw] max-h-[90vh] overflow-y-auto">
         <h3 className="text-lg font-semibold text-[#5B2685] mb-4">
-          {editingPackagingId ? 'Edit' : 'Add'} Packaging
+          {editingPackagingId ? 'Edit' : 'Add'} {packagingType === 'sub' ? 'Sub-Packaging' : 'Packaging'}
         </h3>
         
         <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -609,47 +757,50 @@ export default function ItemTabs({ item: propItem }) {
 
           {/* Parent Packaging Information for Sub-Packaging */}
           {packagingData.parentPackaging && (
-            <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-              <label className="block text-sm font-medium text-blue-700 mb-1">
-                Parent Packaging
+            <div className="border rounded-md p-3" style={{backgroundColor: '#e66868', borderColor: '#d44545'}}>
+              <label className="block text-sm font-medium text-white mb-1">
+                Base packaging
               </label>
-              <p className="text-sm text-blue-600">
-                {packagingData.parentPackaging.parentDescription}
-              </p>
-              <p className="text-xs text-blue-500 mt-1">
-                Creating sub-packaging within this parent package
+              <p className="text-sm text-white">
+                {packagingData.parentPackaging.parentAmount} {packagingData.parentPackaging.parentUnit} {packagingData.parentPackaging.parentName || packagingData.parentPackaging.parentType}
               </p>
             </div>
           )}
 
-          {/* Packaging Type - Always editable */}
+          {/* Package Name - Always editable */}
           <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-              Packaging Type *
+              Package Name *
             </label>
             <input
               type="text"
               value={packagingData.type || ''}
-              onChange={(e) => setPackagingData(prev => ({...prev, type: e.target.value}))}
-              placeholder="Enter packaging type (e.g., bulk, retail, wholesale, custom)"
+              onChange={handleTypeChange}
+              placeholder="Enter package name (e.g., bulk container, retail bag, wholesale box)"
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
               required
+              autoComplete="off"
+              autoFocus={!editingPackagingId} // Auto-focus for new packaging
             />
           </div>
 
+          {/* Show unit field only for non-sub packaging and non-item-base */}
+          {packagingType !== 'sub' && packagingType !== 'item-base' ? (
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount *
+                  Quantity in this package *
               </label>
               <input
                 type="number"
                 step="0.01"
                 value={packagingData.amount}
-                onChange={(e) => setPackagingData(prev => ({...prev, amount: e.target.value}))}
+                onChange={handleAmountChange}
                 className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                placeholder="1"
+                  placeholder="Enter quantity (e.g., 1, 2.5, 10)"
                 required 
+                  autoComplete="off"
+                onFocus={(e) => e.target.select()} // Select all text on focus
               />
             </div>
             <div>
@@ -659,148 +810,71 @@ export default function ItemTabs({ item: propItem }) {
               <input
                 type="text"
                 value={packagingData.unit}
-                onChange={(e) => setPackagingData(prev => ({...prev, unit: e.target.value}))}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                placeholder="Unit"
-                required
+                  disabled
+                  className="w-full p-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
+                  placeholder="Auto-detected from item"
               />
             </div>
           </div>
-
+          ) : packagingType === 'item-base' ? (
           <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-              Pack Size *
+                Base Quantity *
                 </label>
                 <input
                   type="number"
-                  value={packagingData.packSize}
-              onChange={(e) => setPackagingData(prev => ({...prev, packSize: e.target.value}))}
+                step="0.01"
+                value={packagingData.amount}
+                onChange={handleAmountChange}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-                  placeholder="10"
+                placeholder="Enter base quantity (e.g., 1, 2.5, 10)"
                   required
+                autoComplete="off"
+                onFocus={(e) => e.target.select()} // Select all text on focus
                 />
+              <p className="text-xs text-gray-500 mt-1">
+                Unit: {item?.baseUnit?.name || item?.baseUnit?.Symbol || item?.baseUnit?.symbol || 'N/A'}
+              </p>
               </div>
-
-          <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (Optional)
-                </label>
-            <textarea
-              value={packagingData.description}
-              onChange={(e) => setPackagingData(prev => ({...prev, description: e.target.value}))}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
-              rows="2"
-              placeholder="Add packaging description..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Branches (Multiple selection)
-            </label>
-            <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-              {branches.map(branch => (
-                <label key={branch._id} className="flex items-center space-x-2 py-1">
-                  <input
-                    type="checkbox"
-                    checked={packagingData.branches.includes(branch._id)}
-                    onChange={(e) => {
-                      const branchId = branch._id;
-                      if (e.target.checked) {
-                        setPackagingData(prev => ({
-                          ...prev,
-                          branches: [...prev.branches, branchId]
-                        }));
-                      } else {
-                        setPackagingData(prev => ({
-                          ...prev,
-                          branches: prev.branches.filter(id => id !== branchId)
-                        }));
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <span className="text-sm">{branch.name}</span>
-                </label>
-              ))}
+                    ) : packagingType === 'item-base' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Base Quantity *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={packagingData.amount}
+                onChange={(e) => setPackagingData(prev => ({...prev, amount: e.target.value}))}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
+                placeholder="Enter base quantity (e.g., 1, 2.5, 10)"
+                required 
+                autoComplete="off"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Unit: {item?.baseUnit?.name || item?.baseUnit?.Symbol || item?.baseUnit?.symbol || 'N/A'}
+              </p>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Brands (Multiple selection)
-            </label>
-            <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-md p-2">
-              {brands.map(brand => (
-                <label key={brand._id} className="flex items-center space-x-2 py-1">
-                  <input
-                    type="checkbox"
-                    checked={packagingData.brands.includes(brand._id)}
-                    onChange={(e) => {
-                      const brandId = brand._id;
-                      if (e.target.checked) {
-                        setPackagingData(prev => ({
-                          ...prev,
-                          brands: [...prev.brands, brandId]
-                        }));
-                      } else {
-                        setPackagingData(prev => ({
-                          ...prev,
-                          brands: prev.brands.filter(id => id !== brandId)
-                        }));
-                      }
-                    }}
-                    className="rounded"
-                  />
-                  <span className="text-sm">{brand.nameEn || brand.name}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Pricing Preview */}
-          {item?.unitPrice && packagingData.amount && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4">
-              <h6 className="font-medium mb-2 text-green-800">Pricing Calculation</h6>
-              <div className="text-sm space-y-1 text-green-700">
-                <div className="flex justify-between">
-                  <span>Item Unit Price:</span>
-                  <span>{item.unitPrice} {item.priceIncludesVAT ? '(Incl. VAT)' : '(Excl. VAT)'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Packaging Amount:</span>
-                  <span>{packagingData.amount} {packagingData.unit}</span>
-                </div>
-                {packagingData.packSize && (
-                  <div className="flex justify-between">
-                    <span>Pack Size:</span>
-                    <span>{packagingData.packSize}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span>Total Units:</span>
-                  <span>{packagingData.packSize ? (packagingData.amount * (packagingData.packSize || 1)) : packagingData.amount}</span>
-                </div>
-                <hr className="border-green-300" />
-                <div className="flex justify-between font-medium">
-                  <span>Total Price:</span>
-                  <span>{calculatePackagingPrice(packagingData)}</span>
-                </div>
-                {item.tax && (
-                  <>
-                    <div className="flex justify-between text-xs">
-                      <span>Price Excl. VAT:</span>
-                      <span>{calculatePriceExcludingVAT(packagingData)}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span>VAT ({item.tax.rate}%):</span>
-                      <span>{calculateVATAmount(packagingData)}</span>
-                    </div>
-                  </>
-                )}
-              </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Quantity in this package *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={packagingData.amount}
+                onChange={handleAmountChange}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#5B2685] focus:border-transparent"
+                placeholder="Enter quantity (e.g., 1, 2.5, 10)"
+                required 
+                autoComplete="off"
+                onFocus={(e) => e.target.select()} // Select all text on focus
+              />
             </div>
           )}
+
+          {/* Pricing Preview removed - unit prices now handled per supplier */}
 
           <div className="flex gap-3 pt-4">
             <button
@@ -820,7 +894,8 @@ export default function ItemTabs({ item: propItem }) {
         </form>
       </div>
     </div>
-  );
+    );
+  });
 
   const renderContent = () => {
     switch (activeTab) {
@@ -835,10 +910,10 @@ export default function ItemTabs({ item: propItem }) {
             <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-[#5B2685]">Packaging</h2>
               <button
-                onClick={() => handleAddPackaging('new')}
+                onClick={() => handleAddPackaging('base')}
                 className="bg-[#5B2685] text-white px-4 py-2 rounded-md hover:bg-[#4A1F6F] transition-colors"
               >
-                Add More Packaging
+                Create Base Package
               </button>
             </div>
 
@@ -846,47 +921,61 @@ export default function ItemTabs({ item: propItem }) {
             <div className="space-y-4">
               {/* Base packaging from unitCount */}
               {item?.unitCount && item?.baseUnit && (
-              <div className="border border-[#D9D9D9] rounded-lg p-4 bg-white shadow-sm">
+              <div className="border rounded-lg p-4 shadow-sm" style={{backgroundColor: '#e66868', borderColor: '#d44545'}}>
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-sm text-[#5B2685] font-bold mb-1">Base (From Item Creation)</h3>
-                <p className="text-sm text-gray-800">
-                        {item.unitCount} x {item.baseUnit.name} of {item.nameEn || item.name}
+                      <h3 className="text-sm text-white font-bold mb-1">Base</h3>
+                <p className="text-sm text-white">
+                        {item.unitCount} {item.baseUnit.name} of {item.nameEn || item.name}
                       </p>
                     </div>
-                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
-                      Default
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Custom packaging items */}
-              {item?.basePackaging && (
-                <div className="border border-[#D9D9D9] rounded-lg p-4 bg-white shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-sm text-[#5B2685] font-bold mb-1">Base (Custom)</h3>
-                      <p className="text-sm text-gray-800">
-                        {item.nameEn || item.name} {item.basePackaging.amount}{item.basePackaging.unit}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                <button 
-                  onClick={() => handleAddPackaging('base')}
-                        className="text-sm text-[#5B2685] hover:underline"
+                    <div className="flex gap-2 items-center">
+                      <button 
+                        onClick={() => handleEditItemBasePackaging()}
+                        className="text-sm text-white hover:underline"
                       >
                         Edit
                       </button>
                       <button 
                         onClick={() => handleAddSubPackaging('base')}
-                        className="text-sm text-green-600 hover:underline"
+                        className="text-sm text-white hover:underline"
+                      >
+                        Add Sub-Packaging
+                      </button>
+                    <span className="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded-full">
+                      Default
+                    </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Custom packaging items - only show if no item base packaging */}
+              {item?.basePackaging && !item?.unitCount && (
+                <div className="border rounded-lg p-4 shadow-sm" style={{backgroundColor: '#e66868', borderColor: '#d44545'}}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-sm text-white font-bold mb-1">Base (Custom)</h3>
+                      <p className="text-sm text-white">
+                        {item.nameEn || item.name} {item.basePackaging.amount}{item.basePackaging.unit}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                <button 
+                  onClick={handleEditBasePackaging}
+                        className="text-sm text-white hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleAddSubPackaging('base')}
+                        className="text-sm text-white hover:underline"
                       >
                         Add Sub-Packaging
                       </button>
                       <button 
                         onClick={() => handleDeleteBasePackaging()}
-                        className="text-sm text-red-600 hover:underline"
+                        className="text-sm text-white hover:underline"
                       >
                         Delete
                 </button>
@@ -906,7 +995,7 @@ export default function ItemTabs({ item: propItem }) {
                     </div>
                     <div className="flex gap-2">
                 <button 
-                  onClick={() => handleAddPackaging('pack')}
+                  onClick={handleEditPackPackaging}
                         className="text-sm text-[#3F88C5] hover:underline"
                       >
                         Edit
@@ -934,13 +1023,9 @@ export default function ItemTabs({ item: propItem }) {
                 const packages = [...item.additionalPackaging].reverse();
                 
                 return packages.map((pkg, index) => {
-                  // Determine if this is sub-packaging and find its parent
-                  let isSubPackaging = false;
-                  
-                  if (index > 0) {
-                    // All packages after the first are sub-packaging of the previous one
-                    isSubPackaging = true;
-                  }
+                  // Determine if this is sub-packaging based on position in hierarchy
+                  // In the reversed array, anything after index 0 is sub-packaging
+                  let isSubPackaging = index > 0;
                   let cumulativeMultiplier = 1;
                   let allParentDescriptions = [];
                   
@@ -963,15 +1048,76 @@ export default function ItemTabs({ item: propItem }) {
                     `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`;
                 
                   return (
-                  <div key={index} className={`border rounded-lg p-4 shadow-sm ${isSubPackaging ? 'border-blue-300 bg-blue-50 ml-8' : 'border-gray-300 bg-white'}`}>
+                  <div key={index} className={`border rounded-lg p-4 shadow-sm ${isSubPackaging ? 'border-blue-300 bg-blue-50 ml-8' : 'ml-0'}`} style={isSubPackaging ? {} : {backgroundColor: '#e66868', borderColor: '#d44545'}}>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className={`text-sm font-bold mb-1 capitalize ${isSubPackaging ? 'text-blue-700' : 'text-gray-700'}`}>
+                        <h3 className={`text-sm font-bold mb-1 capitalize ${isSubPackaging ? 'text-blue-700' : 'text-white'}`}>
                           {isSubPackaging && '↳ '}{pkg.type}
                         </h3>
-                        <p className="text-sm text-gray-800">
+                        <p className={`text-sm ${isSubPackaging ? 'text-gray-800' : 'text-white'}`}>
                           {isSubPackaging ? (
-                            `${fullMultiplicationDesc} = ${totalUnits.toLocaleString()} total units`
+                            (() => {
+                              // Build hierarchical calculation based on package order
+                              // Since packages are stored in creation order, we can use their position to determine hierarchy
+                              const packages = [...item.additionalPackaging].reverse(); // Reverse to get proper hierarchy (oldest first)
+                              const currentIndex = packages.findIndex(p => p._id === pkg._id);
+                              
+                              console.log('=== HIERARCHICAL CALCULATION DEBUG ===');
+                              console.log('Package type:', pkg.type);
+                              console.log('Current index in hierarchy:', currentIndex);
+                              console.log('All packages in order:', packages.map(p => ({type: p.type, amount: p.amount, unit: p.unit})));
+                              
+                              if (currentIndex > 0) {
+                                // This is a sub-packaging, calculate hierarchically
+                                const basePkg = packages[0]; // First package is the base
+                                let totalAmount = basePkg.amount; // Start with base amount
+                                let unitValue = basePkg.amount; // For calculating per-unit value
+                                let multipliers = [];
+                                
+                                // Calculate through the hierarchy up to current package
+                                for (let i = 1; i <= currentIndex; i++) {
+                                  const levelPkg = packages[i];
+                                  multipliers.push(levelPkg.amount);
+                                  totalAmount = totalAmount * levelPkg.amount; // Total amount multiplies
+                                  unitValue = unitValue / levelPkg.amount; // Unit value divides
+                                }
+                                
+                                console.log('Hierarchical calculation:', {
+                                  base: `${basePkg.amount} ${basePkg.unit}`,
+                                  multipliers: multipliers,
+                                  totalAmount: totalAmount,
+                                  unitValue: unitValue,
+                                  result: `${pkg.amount} ${pkg.type} × ${totalAmount} ${basePkg.unit} total, ${unitValue.toFixed(3)} ${basePkg.unit} per ${pkg.type}`
+                                });
+                                
+                                // Build display string showing the multiplication for total
+                                let displayParts = [`${basePkg.amount} ${basePkg.unit}`];
+                                
+                                for (let i = 1; i <= currentIndex; i++) {
+                                  const levelPkg = packages[i];
+                                  displayParts.push(`× ${levelPkg.amount}`);
+                                }
+                                
+                                const finalTotal = totalAmount.toFixed(totalAmount < 1 ? 3 : 2);
+                                console.log('=== END DEBUG ===');
+                                
+                                // Show in the format: "50 kilogram x 4 carton = 200 kilogram"
+                                // We need to calculate the cumulative parent value up to this level
+                                let cumulativeParentValue = basePkg.amount;
+                                for (let i = 1; i < currentIndex; i++) {
+                                  cumulativeParentValue = cumulativeParentValue * packages[i].amount;
+                                }
+                                
+                                const result = cumulativeParentValue * pkg.amount;
+                                
+                                return `${cumulativeParentValue} ${basePkg.unit} × ${pkg.amount} ${pkg.type} = ${result} ${basePkg.unit}`;
+                              } else {
+                                // This is the base package, show simple format
+                                console.log('This is the base package');
+                                console.log('=== END DEBUG ===');
+                                return `${pkg.amount} ${pkg.unit}`;
+                              }
+                            })()
                           ) : (
                             `${pkg.packSize ? `${pkg.packSize} x ` : ''}${pkg.amount} ${pkg.unit}`
                           )}
@@ -980,48 +1126,24 @@ export default function ItemTabs({ item: propItem }) {
                         <p className="text-xs text-gray-500 mt-1">{pkg.description}</p>
                       )}
                       
-                      {/* Pricing Information */}
-                      {item.unitPrice && (
-                        <div className="mt-2 p-2 bg-gray-50 rounded text-xs">
-                          <div className="flex justify-between">
-                            <span>Base Units:</span>
-                            <span>{baseUnits}</span>
-                          </div>
-                          {isSubPackaging && (
-                            <div className="flex justify-between text-blue-600">
-                              <span>Total Units (with parent):</span>
-                              <span>{totalUnits}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between font-medium">
-                            <span>Total Price:</span>
-                            <span>{calculatePackagingPrice({...pkg, amount: isSubPackaging ? totalUnits : pkg.amount, packSize: 1})}</span>
-                          </div>
-                          {item.tax && (
-                            <div className="flex justify-between text-gray-600">
-                              <span>VAT ({item.tax.rate}%):</span>
-                              <span>{calculateVATAmount({...pkg, amount: isSubPackaging ? totalUnits : pkg.amount, packSize: 1})}</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      {/* Pricing Information removed - handled per supplier */}
                     </div>
                     <div className="flex gap-2 ml-4">
                       <button 
                         onClick={() => handleEditAdditionalPackaging(pkg)}
-                        className="text-sm text-blue-600 hover:underline"
+                        className={`text-sm hover:underline ${isSubPackaging ? 'text-blue-600' : 'text-white'}`}
                       >
                         Edit
                       </button>
                       <button 
                         onClick={() => handleAddSubPackaging('additional', pkg)}
-                        className="text-sm text-green-600 hover:underline"
+                        className={`text-sm hover:underline ${isSubPackaging ? 'text-green-600' : 'text-white'}`}
                       >
                         Add Sub-Packaging
                       </button>
                       <button 
                         onClick={() => handleDeleteAdditionalPackaging(pkg._id)}
-                        className="text-sm text-red-600 hover:underline"
+                        className={`text-sm hover:underline ${isSubPackaging ? 'text-red-600' : 'text-white'}`}
                       >
                         Delete
                 </button>
@@ -1056,14 +1178,12 @@ export default function ItemTabs({ item: propItem }) {
                     <th className="p-2 text-left">Supplier Item Code</th>
                     <th className="p-2 text-left">Pricing UOM</th>
                     <th className="p-2 text-left">Unit Price (SAR)</th>
-                    <th className="p-2 text-left">Unit Price Incl. Tax (SAR)</th>
                     <th className="p-2 text-left">Total Units</th>
-                    <th className="p-2 text-left">Priority</th>
                   </tr>
                 </thead>
                 <tbody>
                   {/* Base packaging rows - one for each selected supplier */}
-                  {item?.unitCount && item?.baseUnit && item?.unitPrice && (
+                  {item?.unitCount && item?.baseUnit && (
                     <>
                       {getSelectedSuppliers('base').length > 0 ? (
                         getSelectedSuppliers('base').map((supplierId, index) => {
@@ -1077,24 +1197,23 @@ export default function ItemTabs({ item: propItem }) {
                                 {supplier?.legalName || 'Unknown Supplier'}
                               </td>
                               <td className="p-2">{item.nameEn || item.name}</td>
-                              <td className="p-2">Item Code</td>
-                              <td className="p-2">{item.baseUnit.name}</td>
-                              <td className="p-2 text-center">
-                                {item.priceIncludesVAT ? 
-                                  calculatePriceExcludingVAT({amount: 1, packSize: 1}) :
-                                  item.unitPrice
-                                }
+                              <td className="p-2">
+                                <input
+                                  type="text"
+                                  placeholder="Item Code"
+                                  className="w-full p-1 border border-gray-300 rounded text-sm"
+                                />
                               </td>
-                              <td className="p-2 text-center">
-                                {item.priceIncludesVAT ? 
-                                  item.unitPrice :
-                                  calculateUnitPriceIncludingTax()
-                                }
+                              <td className="p-2">{item.baseUnit.name}</td>
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-full p-1 border border-gray-300 rounded text-sm"
+                                />
                               </td>
                               <td className="p-2 text-center">{item.unitCount}</td>
-                              <td className="p-2 text-center">
-                                <input type="checkbox" className="accent-[#5B2685]" />
-                              </td>
                             </tr>
                           );
                         })
@@ -1134,7 +1253,7 @@ export default function ItemTabs({ item: propItem }) {
                               </div>
                             )}
                           </td>
-                          <td className="p-2 text-gray-400" colSpan="7">Select suppliers to see pricing details</td>
+                          <td className="p-2 text-gray-400" colSpan="5">Select suppliers to add pricing details</td>
                         </tr>
                       )}
                       
@@ -1175,14 +1294,14 @@ export default function ItemTabs({ item: propItem }) {
                               </div>
                             )}
                           </td>
-                          <td className="p-2" colSpan="7"></td>
+                          <td className="p-2" colSpan="5"></td>
                         </tr>
                       )}
                     </>
                   )}
                   
                   {/* Pack packaging rows - one for each selected supplier */}
-                  {item?.packPackaging && item?.unitPrice && (
+                  {item?.packPackaging && (
                     <>
                       {getSelectedSuppliers('pack').length > 0 ? (
                         getSelectedSuppliers('pack').map((supplierId, index) => {
@@ -1196,24 +1315,23 @@ export default function ItemTabs({ item: propItem }) {
                                 {supplier?.legalName || 'Unknown Supplier'}
                               </td>
                               <td className="p-2">{item.nameEn || item.name}</td>
-                    <td className="p-2">Item Code</td>
-                              <td className="p-2">{item.packPackaging.packSize} x {item.packPackaging.unit}</td>
-                              <td className="p-2 text-center">
-                                {item.priceIncludesVAT ? 
-                                  calculatePriceExcludingVAT({amount: 1, packSize: 1}) :
-                                  item.unitPrice
-                                }
+                              <td className="p-2">
+                                <input
+                                  type="text"
+                                  placeholder="Item Code"
+                                  className="w-full p-1 border border-gray-300 rounded text-sm"
+                                />
                               </td>
-                              <td className="p-2 text-center">
-                                {item.priceIncludesVAT ? 
-                                  item.unitPrice :
-                                  calculateUnitPriceIncludingTax()
-                                }
+                              <td className="p-2">{item.packPackaging.packSize} x {item.packPackaging.unit}</td>
+                              <td className="p-2">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-full p-1 border border-gray-300 rounded text-sm"
+                                />
                               </td>
                               <td className="p-2 text-center">{item.packPackaging.packSize * item.packPackaging.amount}</td>
-                              <td className="p-2 text-center">
-                                <input type="checkbox" className="accent-[#5B2685]" />
-                              </td>
                             </tr>
                           );
                         })
@@ -1253,7 +1371,7 @@ export default function ItemTabs({ item: propItem }) {
                               </div>
                             )}
                           </td>
-                          <td className="p-2 text-gray-400" colSpan="7">Select suppliers to see pricing details</td>
+                          <td className="p-2 text-gray-400" colSpan="5">Select suppliers to add pricing details</td>
                         </tr>
                       )}
                       
@@ -1294,14 +1412,14 @@ export default function ItemTabs({ item: propItem }) {
                               </div>
                             )}
                           </td>
-                          <td className="p-2" colSpan="7"></td>
+                          <td className="p-2" colSpan="5"></td>
                         </tr>
                       )}
                     </>
                   )}
 
                                 {/* Additional packaging rows with hierarchical display */}
-              {item?.additionalPackaging && item?.unitPrice && item.additionalPackaging.map((pkg, index) => {
+              {item?.additionalPackaging && item.additionalPackaging.map((pkg, index) => {
                 const isSubPackaging = pkg.parentPackaging || pkg.parentType;
                 
                 // Calculate total units considering parent packaging multiplication
@@ -1355,28 +1473,27 @@ export default function ItemTabs({ item: propItem }) {
                               {supplier?.legalName || 'Unknown Supplier'}
                             </td>
                             <td className="p-2">{item.nameEn || item.name}</td>
-                            <td className="p-2">Item Code</td>
-                            <td className="p-2">{pkg.unit}</td>
-                            <td className="p-2 text-center">
-                              {item.priceIncludesVAT ? 
-                                calculatePriceExcludingVAT({amount: 1, packSize: 1}) :
-                                item.unitPrice
-                              }
+                            <td className="p-2">
+                              <input
+                                type="text"
+                                placeholder="Item Code"
+                                className="w-full p-1 border border-gray-300 rounded text-sm"
+                              />
                             </td>
-                            <td className="p-2 text-center">
-                              {item.priceIncludesVAT ? 
-                                item.unitPrice :
-                                calculateUnitPriceIncludingTax()
-                              }
+                            <td className="p-2">{pkg.unit}</td>
+                            <td className="p-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                placeholder="0.00"
+                                className="w-full p-1 border border-gray-300 rounded text-sm"
+                              />
                             </td>
                             <td className="p-2 text-center">
                               <span className="font-medium">{totalUnits}</span>
                               <div className="text-xs text-gray-500">
                                 Total Available
                               </div>
-                            </td>
-                            <td className="p-2 text-center">
-                              <input type="checkbox" className="accent-[#5B2685]" />
                     </td>
                   </tr>
                         );
@@ -1429,7 +1546,7 @@ export default function ItemTabs({ item: propItem }) {
                             </div>
                           )}
                         </td>
-                        <td className="p-2 text-gray-400" colSpan="7">Select suppliers</td>
+                        <td className="p-2 text-gray-400" colSpan="5">Select suppliers</td>
                       </tr>
                     )}
                     
@@ -1470,27 +1587,18 @@ export default function ItemTabs({ item: propItem }) {
                             </div>
                           )}
                         </td>
-                        <td className="p-2" colSpan="7"></td>
+                        <td className="p-2" colSpan="5"></td>
                       </tr>
                     )}
                   </React.Fragment>
                 );
               })}
 
-                  {/* Show message when no pricing available */}
-                  {!item?.unitPrice && (
-                    <tr>
-                      <td colSpan="9" className="p-4 text-center text-gray-500">
-                        No unit price set for this item. Please add unit price in the Item Details tab to see supplier pricing calculations.
-                      </td>
-                    </tr>
-                  )}
-
                   {/* Show message when no packaging available */}
-                  {item?.unitPrice && !item?.unitCount && !item?.packPackaging && (!item?.additionalPackaging || item.additionalPackaging.length === 0) && (
+                  {!item?.unitCount && !item?.packPackaging && (!item?.additionalPackaging || item.additionalPackaging.length === 0) && (
                     <tr>
-                      <td colSpan="9" className="p-4 text-center text-gray-500">
-                        No packaging configured. Please add packaging in the Packaging tab to see supplier pricing.
+                      <td colSpan="7" className="p-4 text-center text-gray-500">
+                        No packaging configured. Please add packaging in the Packaging tab to add supplier pricing.
                       </td>
                     </tr>
                   )}
