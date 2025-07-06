@@ -147,7 +147,7 @@ export default function ItemTabs({ item: propItem }) {
     } catch (err) {
       console.error('Error refreshing packaging data:', err);
     }
-  }, [id, item?.basePackaging, item?.packPackaging]);
+  }, [id]);
 
   const handleFormSubmit = useCallback(async (e) => {
     e.preventDefault();
@@ -263,7 +263,7 @@ export default function ItemTabs({ item: propItem }) {
       
       alert(`Error saving packaging: ${err.response?.data?.message || err.message}`);
     }
-  }, [packagingData, packagingType, editingPackagingId, id, refreshAllPackagingData]);
+  }, [packagingData, packagingType, editingPackagingId, id, refreshAllPackagingData, item?.basePackaging, item?.packPackaging]);
 
   const handleFormCancel = useCallback(() => {
     setShowPackagingForm(false);
@@ -995,18 +995,19 @@ export default function ItemTabs({ item: propItem }) {
                   // Determine if this is sub-packaging based on position in hierarchy
                   // In the reversed array, anything after index 0 is sub-packaging
                   let isSubPackaging = index > 0;
-                  let cumulativeMultiplier = 1;
-                  let allParentDescriptions = [];
+                  // Remove unused variables to fix ESLint warnings
+                  // let cumulativeMultiplier = 1;
+                  // let allParentDescriptions = [];
                   
-                  if (isSubPackaging) {
-                    // Calculate cumulative multiplier from ALL parent levels
-                    for (let i = 0; i < index; i++) {
-                      const parentPkg = packages[i];
-                      const parentUnits = parentPkg.packSize ? (parentPkg.packSize * parentPkg.amount) : parentPkg.amount;
-                      cumulativeMultiplier *= parentUnits;
-                      allParentDescriptions.push(`${parentPkg.packSize ? `${parentPkg.packSize} x ` : ''}${parentPkg.amount}`);
-                    }
-                  }
+                  // if (isSubPackaging) {
+                  //   // Calculate cumulative multiplier from ALL parent levels
+                  //   for (let i = 0; i < index; i++) {
+                  //     const parentPkg = packages[i];
+                  //     const parentUnits = parentPkg.packSize ? (parentPkg.packSize * parentPkg.amount) : parentPkg.amount;
+                  //     cumulativeMultiplier *= parentUnits;
+                  //     allParentDescriptions.push(`${parentPkg.packSize ? `${parentPkg.packSize} x ` : ''}${parentPkg.amount}`);
+                  //   }
+                  // }
                   
                   // Remove unused variables to fix ESLint warnings
                   // const baseUnits = pkg.packSize ? (pkg.packSize * pkg.amount) : pkg.amount;
