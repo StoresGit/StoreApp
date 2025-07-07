@@ -31,6 +31,7 @@ import EditItem from './pages/EditItem';
 import UserManagement from './pages/UserManagement';
 import SubCategoryItems from './pages/SubCategoryItems';
 import SubCategories from './pages/SubCategories';
+import BranchOrders from './pages/BranchOrders';
 
 function App() {
   const menuItems = [
@@ -113,6 +114,11 @@ function App() {
       path: '/production',
       icon: '📊',
     },
+     {
+      label: 'Branch Orders',
+      path: '/branch-orders',
+      icon: '📦',
+    },
     
   ];
 
@@ -157,6 +163,7 @@ function App() {
                 <Route path="/items/:id/edit" element={<EditItem />} />
                 <Route path="/sub-category-items" element={<SubCategoryItems />} />
                 <Route path="/sub-categories" element={<SubCategories />} />
+                <Route path="/branch-orders" element={<BranchOrders />} />
               </Routes>
             </Layout>
               </ProtectedRoute>
