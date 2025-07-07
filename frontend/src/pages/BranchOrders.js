@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import backend_url from '../config/config';
 
@@ -29,10 +29,8 @@ const BranchOrders = () => {
   
   // Order Fulfilment State
   const [pendingOrders, setPendingOrders] = useState([]);
-  const [fulfilmentData, setFulfilmentData] = useState({});
   
   // Stock Count State
-  const [stockCount, setStockCount] = useState([]);
   const [stockFilters, setStockFilters] = useState({
     branch: '',
     item: ''
@@ -264,12 +262,7 @@ const BranchOrders = () => {
 
   // Submit Order Component
   const SubmitOrder = () => {
-    const [draftOrders, setDraftOrders] = useState([]);
-
-    useEffect(() => {
-      const drafts = orders.filter(order => order.status === 'draft');
-      setDraftOrders(drafts);
-    }, [orders]);
+    const draftOrders = orders.filter(order => order.status === 'draft');
 
     const submitOrder = async (orderId) => {
       try {
@@ -331,9 +324,7 @@ const BranchOrders = () => {
 
   // Order History Component
   const OrderHistory = () => {
-    const [filteredHistory, setFilteredHistory] = useState([]);
-
-    useEffect(() => {
+    const filteredHistory = useMemo(() => {
       let filtered = orderHistory;
       
       if (historyFilters.branch) {
@@ -353,8 +344,8 @@ const BranchOrders = () => {
         );
       }
       
-      setFilteredHistory(filtered);
-    }, [orderHistory, historyFilters]);
+      return filtered;
+    }, [historyFilters.branch, historyFilters.status, historyFilters.dateFrom, historyFilters.dateTo, orderHistory]);
 
     const getStatusColor = (status) => {
       switch (status) {
@@ -519,19 +510,19 @@ const BranchOrders = () => {
 
   // Stock Count Component
   const StockCount = () => {
-    const [stockData, setStockData] = useState([]);
-
-    useEffect(() => {
+    const stockData = useMemo(() => {
       // Mock stock data - in real app, this would come from backend
-      const mockStockData = items.map(item => ({
-        _id: item._id,
-        name: item.nameEn || item.name,
-        currentStock: Math.floor(Math.random() * 100),
-        minStock: Math.floor(Math.random() * 20),
-        maxStock: Math.floor(Math.random() * 150) + 100,
-        lastUpdated: new Date()
-      }));
-      setStockData(mockStockData);
+      if (items.length > 0) {
+        return items.map(item => ({
+          _id: item._id,
+          name: item.nameEn || item.name,
+          currentStock: Math.floor(Math.random() * 100),
+          minStock: Math.floor(Math.random() * 20),
+          maxStock: Math.floor(Math.random() * 150) + 100,
+          lastUpdated: new Date()
+        }));
+      }
+      return [];
     }, [items]);
 
     const getStockStatus = (current, min, max) => {
