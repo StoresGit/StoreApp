@@ -345,6 +345,7 @@ const BranchOrders = () => {
       }
       
       return filtered;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [historyFilters.branch, historyFilters.status, historyFilters.dateFrom, historyFilters.dateTo, orderHistory]);
 
     const getStatusColor = (status) => {
@@ -523,6 +524,7 @@ const BranchOrders = () => {
         }));
       }
       return [];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [items]);
 
     const getStockStatus = (current, min, max) => {
