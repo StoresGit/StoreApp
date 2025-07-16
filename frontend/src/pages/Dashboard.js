@@ -4,7 +4,7 @@ import axios from 'axios';
 import backend_url from '../config/config';
 
 const Dashboard = () => {
-  const { user, isMasterAdmin } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState({
     totalItems: 0,
     totalUsers: 0,

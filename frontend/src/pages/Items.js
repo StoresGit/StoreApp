@@ -26,7 +26,6 @@ const Item = () => {
   const [loadingMessage, setLoadingMessage] = useState('Loading items data...');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -89,19 +88,15 @@ const Item = () => {
     
     if (!query.trim()) {
       setSearchResults([]);
-      setIsSearching(false);
       return;
     }
 
     try {
-      setIsSearching(true);
       const response = await axios.get(`${backend_url}/items/search?query=${encodeURIComponent(query)}`);
       setSearchResults(response.data);
     } catch (error) {
       console.error('Error searching items:', error);
       setSearchResults([]);
-    } finally {
-      setIsSearching(false);
     }
   };
 
