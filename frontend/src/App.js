@@ -33,6 +33,16 @@ import SubCategoryItems from './pages/SubCategoryItems';
 import SubCategories from './pages/SubCategories';
 import BranchOrders from './pages/BranchOrders';
 
+// Import new Branch Order pages
+import BranchOrderBranch from './pages/BranchOrder/Branch';
+import BranchOrderCentralKitchen from './pages/BranchOrder/CentralKitchen';
+import BranchOrderReports from './pages/BranchOrder/Reports';
+import BranchOrderSettings from './pages/BranchOrder/Settings';
+import CreateOrder from './pages/BranchOrder/CreateOrder';
+import OrderSubmission from './pages/BranchOrder/OrderSubmission';
+import OrderHistory from './pages/BranchOrder/OrderHistory';
+import InventoryControl from './pages/BranchOrder/InventoryControl';
+
 function App() {
   const menuItems = [
     {
@@ -41,8 +51,27 @@ function App() {
       icon: '📊',
     },
     {
+      label: 'Branch Order',
+      icon: '📦',
+      children: [
+        { 
+          label: 'Branch', 
+          path: '/branch-order/branch',
+          children: [
+            { label: 'Create Order', path: '/branch-order/create-order' },
+            { label: 'Order Submission', path: '/branch-order/order-submission' },
+            { label: 'Order History', path: '/branch-order/order-history' },
+            { label: 'Inventory Control', path: '/branch-order/inventory-control' },
+          ]
+        },
+        { label: 'Central Kitchen', path: '/branch-order/central-kitchen' },
+        { label: 'Reports and Analysis', path: '/branch-order/reports' },
+        { label: 'Settings', path: '/branch-order/settings' },
+      ],
+    },
+    {
       label: 'Settings',
-      icon: '⚙️', // You can use any icon you prefer
+      icon: '⚙️',
       children: [
         { label: 'User Management', path: '/user-management' },
         { label: 'User', path: '/user' },
@@ -52,26 +81,16 @@ function App() {
         { label: 'Menu Category', path: '/menu' },
         { label: 'Item Category', path: '/item-category' },
         { label: 'Sub Categories', path: '/sub-categories' },
-        // { label: 'Items', path: '/items' },
         { label: 'Departments', path: '/departments' },
         { label: 'Tax', path: '/tax' },
-         {
-      label: 'Branches',
-      path: '/branches',
-    },
-     {
-      label: 'Brand',
-      path: '/brand',
-    },
-      {
-      label: 'Currency',
-      path: '/currency',
-    },
+        { label: 'Branches', path: '/branches' },
+        { label: 'Brand', path: '/brand' },
+        { label: 'Currency', path: '/currency' },
       ],
     },
     {
       label: 'Create',
-      icon: '⚙️', // You can use any icon you prefer
+      icon: '➕',
       children: [
         { label: 'Items', path: '/items' },
         { label: 'Recipe Experts', path: '/recipe-experts' },
@@ -79,47 +98,41 @@ function App() {
         { label: 'Packaging', path: '/packaging' },
       ],
     },
-     {
+    {
       label: 'Inventory',
       path: '/inventory',
-      icon: '📊',
+      icon: '📦',
     },
-     {
-      label: 'Repoerts',
+    {
+      label: 'Reports',
       path: '/reports',
       icon: '📊',
     },
-     {
+    {
       label: 'Procurements',
       path: '/procurements',
-      icon: '📊',
+      icon: '🛒',
     },
-     {
+    {
       label: 'Costing',
       path: '/costing',
-      icon: '📊',
+      icon: '💰',
     },
-     {
+    {
       label: 'Analytics',
       path: '/analytics',
-      icon: '📊',
+      icon: '📈',
     },
-     {
+    {
       label: 'Operations',
       path: '/operations',
-      icon: '📊',
+      icon: '⚙️',
     },
-     {
+    {
       label: 'Production',
       path: '/production',
-      icon: '📊',
+      icon: '🏭',
     },
-     {
-      label: 'Branch Orders',
-      path: '/branch-orders',
-      icon: '📦',
-    },
-    
   ];
 
   return (
@@ -164,6 +177,16 @@ function App() {
                 <Route path="/sub-category-items" element={<SubCategoryItems />} />
                 <Route path="/sub-categories" element={<SubCategories />} />
                 <Route path="/branch-orders" element={<BranchOrders />} />
+                
+                {/* Branch Order Routes */}
+                <Route path="/branch-order/branch" element={<BranchOrderBranch />} />
+                <Route path="/branch-order/central-kitchen" element={<BranchOrderCentralKitchen />} />
+                <Route path="/branch-order/reports" element={<BranchOrderReports />} />
+                <Route path="/branch-order/settings" element={<BranchOrderSettings />} />
+                <Route path="/branch-order/create-order" element={<CreateOrder />} />
+                <Route path="/branch-order/order-submission" element={<OrderSubmission />} />
+                <Route path="/branch-order/order-history" element={<OrderHistory />} />
+                <Route path="/branch-order/inventory-control" element={<InventoryControl />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

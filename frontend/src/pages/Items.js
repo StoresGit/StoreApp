@@ -3,6 +3,9 @@ import axios from 'axios';
 import backend_url from '../config/config';
 import { useNavigate } from 'react-router-dom';
 import { fetchMultipleEndpoints } from '../services/api';
+import ResponsiveTable from '../components/ResponsiveTable';
+import ResponsiveModal, { ConfirmationModal, ImageModal } from '../components/ResponsiveModal';
+import ResponsiveForm, { FormField, FormInput, FormSelect, FormCheckbox, FormGrid } from '../components/ResponsiveForm';
 
 const Item = () => {
   const [items, setItems] = useState([]);
@@ -11,12 +14,15 @@ const Item = () => {
   const [departments, setDepartments] = useState([]);
   const [units, setUnits] = useState([]);
   const [taxes, setTaxes] = useState([]);
-
   const [images, setImages] = useState([]);
   const [showFormModal, setShowFormModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState('');
+  const [deleteItemId, setDeleteItemId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [formLoading, setFormLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Loading items data...');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -24,16 +30,15 @@ const Item = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    nameEn: '', // Item Name (Eng)
-    nameAlt: '', // Item Name (Alt)
-    baseUnit: '', // Base Unit
-    category: '', // Item Category
-    tax: '', // Tax
-    image: '', // Image
-    departments: [], // Keep existing departments
-    name: '', // Keep existing name for compatibility
-    subCategory: '' // Sub Category - now required
-    // Pricing fields removed - now handled per supplier
+    nameEn: '',
+    nameAlt: '',
+    baseUnit: '',
+    category: '',
+    tax: '',
+    image: '',
+    departments: [],
+    name: '',
+    subCategory: ''
   });
 
   const fetchData = async () => {
@@ -57,7 +62,6 @@ const Item = () => {
       setCategories(results.categories || []);
       setSubCategories(results.subCategories || []);
       setDepartments(results.departments || []);
-      // All units are now base units
       setUnits(results.units || []);
       setTaxes(results.taxes || []);
       setImages(results.images || []);
@@ -81,6 +85,8 @@ const Item = () => {
 
   // Search function
   const handleSearch = async (query) => {
+    setSearchQuery(query);
+    
     if (!query.trim()) {
       setSearchResults([]);
       setIsSearching(false);
@@ -98,15 +104,6 @@ const Item = () => {
       setIsSearching(false);
     }
   };
-
-  // Handle search input change with debounce
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      handleSearch(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -129,58 +126,63 @@ const Item = () => {
     });
   };
 
-  const handleSubmit = async () => {
-  // Validate required fields
-  if (!formData.nameEn?.trim()) {
-    alert('Item Name (Eng) is required');
-    return;
-  }
-  if (!formData.baseUnit) {
-    alert('Base Unit is required');
-    return;
-  }
-  if (!formData.category) {
-    alert('Category is required');
-    return;
-  }
-  if (!formData.subCategory) {
-    alert('Sub Category is required');
-    return;
-  }
-
-  try {
-    const submitData = {
-      ...formData,
-      unit: formData.baseUnit,
-      name: formData.nameEn
-    };
-
-    if (editingId) {
-      await axios.put(`${backend_url}/items/${editingId}`, submitData);
-      fetchData();
-    } else {
-      const res = await axios.post(`${backend_url}/items`, submitData);
-      const newItemId = res.data?._id;
-      if (newItemId) {
-        navigate(`/items/${newItemId}/edit`);
-      }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.nameEn?.trim()) {
+      alert('Item Name (Eng) is required');
+      return;
+    }
+    if (!formData.baseUnit) {
+      alert('Base Unit is required');
+      return;
+    }
+    if (!formData.category) {
+      alert('Category is required');
+      return;
+    }
+    if (!formData.subCategory) {
+      alert('Sub Category is required');
+      return;
     }
 
-    // Reset state
-    setFormData({
-      nameEn: '', nameAlt: '', baseUnit: '', category: '',
-      tax: '', image: '',
-      departments: [], name: '', subCategory: ''
-    });
-    setEditingId(null);
-    setShowFormModal(false);
+    try {
+      setFormLoading(true);
+      
+      const submitData = {
+        ...formData,
+        name: formData.nameEn // Keep backward compatibility
+      };
 
-  } catch (error) {
-    console.error('Error saving item:', error);
-    alert(error?.response?.data?.message || 'Error saving item');
-  }
-};
+      if (editingId) {
+        await axios.put(`${backend_url}/items/${editingId}`, submitData);
+      } else {
+        await axios.post(`${backend_url}/items`, submitData);
+      }
 
+      // Reset form and close modal
+      setFormData({
+        nameEn: '',
+        nameAlt: '',
+        baseUnit: '',
+        category: '',
+        tax: '',
+        image: '',
+        departments: [],
+        name: '',
+        subCategory: ''
+      });
+      setEditingId(null);
+      setShowFormModal(false);
+      fetchData();
+    } catch (error) {
+      console.error('Error saving item:', error);
+      alert('Error saving item. Please try again.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   const handleEdit = (item) => {
     setFormData({
@@ -190,8 +192,8 @@ const Item = () => {
       category: item.category?._id || '',
       tax: item.tax?._id || '',
       image: item.image?._id || '',
-      departments: item.departments?.map(d => d._id) || [],
-      name: item.nameEn || item.name || '',
+      departments: item.departments?.map(dep => dep._id) || [],
+      name: item.name || '',
       subCategory: item.subCategory?._id || ''
     });
     setEditingId(item._id);
@@ -199,380 +201,411 @@ const Item = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this item? This will also delete all associated packaging for this item.')) {
-      try {
-        const response = await axios.delete(`${backend_url}/items/${id}`);
-        
-        // Show success message with packaging deletion info
-        if (response.data && response.data.deletedPackagingCount !== undefined) {
-          const packagingCount = response.data.deletedPackagingCount;
-          const itemName = response.data.itemName || 'Item';
-          if (packagingCount > 0) {
-            alert(`"${itemName}" deleted successfully! Also removed ${packagingCount} associated packaging item${packagingCount !== 1 ? 's' : ''}.`);
-          } else {
-            alert(`"${itemName}" deleted successfully!`);
-          }
+    setDeleteItemId(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const response = await axios.delete(`${backend_url}/items/${deleteItemId}`);
+      
+      // Show success message with packaging deletion info
+      if (response.data && response.data.deletedPackagingCount !== undefined) {
+        const packagingCount = response.data.deletedPackagingCount;
+        const itemName = response.data.itemName || 'Item';
+        if (packagingCount > 0) {
+          alert(`"${itemName}" deleted successfully! Also removed ${packagingCount} associated packaging item${packagingCount !== 1 ? 's' : ''}.`);
         } else {
-          alert('Item deleted successfully!');
+          alert(`"${itemName}" deleted successfully!`);
         }
-        
-        fetchData();
-      } catch (error) {
-        console.error('Error deleting item:', error);
-        alert('Error deleting item. Please try again.');
+      } else {
+        alert('Item deleted successfully!');
       }
+      
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert('Error deleting item. Please try again.');
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteItemId(null);
     }
   };
 
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setShowImageModal(true);
+  };
+
+  // Table columns configuration
+  const columns = [
+    {
+      key: 'itemCode',
+      header: 'Item Code',
+      sortable: true,
+      render: (item) => (
+        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-mono">
+          {item.itemCode || 'Generating...'}
+        </span>
+      )
+    },
+    {
+      key: 'nameEn',
+      header: 'Item Name (Eng)',
+      sortable: true,
+      render: (item) => item.nameEn || item.name
+    },
+    {
+      key: 'nameAlt',
+      header: 'Item Name (Alt)',
+      sortable: true,
+      render: (item) => item.nameAlt || 'N/A'
+    },
+    {
+      key: 'baseUnit',
+      header: 'Base Unit',
+      sortable: true,
+      render: (item) => (
+        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+          {item.baseUnit?.name || 'N/A'}
+        </span>
+      )
+    },
+    {
+      key: 'category',
+      header: 'Main Category',
+      sortable: true,
+      render: (item) => item.category?.nameEn || 'N/A'
+    },
+    {
+      key: 'subCategory',
+      header: 'Sub Category',
+      sortable: true,
+      render: (item) => item.subCategory?.nameEn || 'N/A'
+    },
+    {
+      key: 'tax',
+      header: 'Tax',
+      sortable: true,
+      render: (item) => item.tax?.name || 'N/A'
+    },
+    {
+      key: 'image',
+      header: 'Image',
+      render: (item) => (
+        item.image?.url ? (
+          <img 
+            src={item.image.url} 
+            alt="Item"
+            className="w-12 h-12 object-cover mx-auto rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+            onClick={() => handleImageClick(item.image.url)}
+          />
+        ) : (
+          <span className="text-gray-500 text-sm">No image</span>
+        )
+      )
+    }
+  ];
+
+  // Custom actions for table
+  const customActions = [
+    {
+      icon: '📋',
+      title: 'Details',
+      onClick: (item) => navigate(`/items/${item._id}/edit`),
+      className: 'text-blue-600 hover:text-blue-800'
+    }
+  ];
+
+  // Mobile card render function
+  const mobileCardRender = (item, index) => (
+    <div key={item._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-medium text-gray-900">{item.nameEn || item.name}</h3>
+          <p className="text-sm text-gray-500">{item.nameAlt || 'No alternative name'}</p>
+        </div>
+        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-mono">
+          {item.itemCode || 'Generating...'}
+        </span>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <p className="text-xs text-gray-500">Base Unit</p>
+          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+            {item.baseUnit?.name || 'N/A'}
+          </span>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Tax</p>
+          <p className="text-sm font-medium">{item.tax?.name || 'N/A'}</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <p className="text-xs text-gray-500">Category</p>
+          <p className="text-sm font-medium">{item.category?.nameEn || 'N/A'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Sub Category</p>
+          <p className="text-sm font-medium">{item.subCategory?.nameEn || 'N/A'}</p>
+        </div>
+      </div>
+      
+      {item.image?.url && (
+        <div className="mb-4">
+          <p className="text-xs text-gray-500 mb-2">Image</p>
+          <img 
+            src={item.image.url} 
+            alt="Item"
+            className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-75 transition-opacity"
+            onClick={() => handleImageClick(item.image.url)}
+          />
+        </div>
+      )}
+      
+      <div className="flex justify-end space-x-2 pt-4 border-t border-gray-100">
+        <button
+          onClick={() => navigate(`/items/${item._id}/edit`)}
+          className="text-blue-600 hover:text-blue-800 p-1 rounded"
+          title="Details"
+        >
+          📋
+        </button>
+        <button
+          onClick={() => handleEdit(item)}
+          className="text-green-600 hover:text-green-800 p-1 rounded"
+          title="Edit"
+        >
+          ✏️
+        </button>
+        <button
+          onClick={() => handleDelete(item._id)}
+          className="text-red-600 hover:text-red-800 p-1 rounded"
+          title="Delete"
+        >
+          🗑️
+        </button>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="p-4">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#735dff] mx-auto mb-4"></div>
-            <p className="text-gray-600">{loadingMessage}</p>
-            <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{loadingMessage}</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Items</h2>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Items</h1>
         <button
           onClick={() => {
-            setFormData({ 
-              nameEn: '', 
-              nameAlt: '', 
-              baseUnit: '', 
-              category: '', 
-              tax: '', 
-              image: '', 
-              departments: [], 
-              name: '', 
+            setFormData({
+              nameEn: '',
+              nameAlt: '',
+              baseUnit: '',
+              category: '',
+              tax: '',
+              image: '',
+              departments: [],
+              name: '',
               subCategory: ''
             });
             setEditingId(null);
             setShowFormModal(true);
           }}
-          className="bg-[#735dff] text-white px-4 py-2 rounded"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           Add Item
         </button>
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-4">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by item code, name, or alternative name..."
-            className="w-full p-3 border border-gray-300 rounded-lg pl-10 focus:ring-2 focus:ring-[#735dff] focus:border-transparent"
-          />
-          <div className="absolute left-3 top-3 text-gray-400">
-            🔍
-          </div>
-          {isSearching && (
-            <div className="absolute right-3 top-3">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#735dff]"></div>
-            </div>
-          )}
-        </div>
-        {searchQuery && (
-          <div className="mt-2 text-sm text-gray-600">
-            {searchResults.length > 0 
-              ? `Found ${searchResults.length} item${searchResults.length !== 1 ? 's' : ''}`
-              : searchQuery && !isSearching ? 'No items found' : ''
-            }
-          </div>
-        )}
-      </div>
+      {/* Items Table */}
+      <ResponsiveTable
+        title="Items Management"
+        columns={columns}
+        data={searchQuery ? searchResults : items}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        customActions={customActions}
+        loading={loading}
+        searchQuery={searchQuery}
+        onSearch={handleSearch}
+        mobileCardRender={mobileCardRender}
+      />
 
-      <div className="overflow-x-auto">
-        <table className="w-full border border-gray-300">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 border">Item Code</th>
-              <th className="p-2 border">Item Name (Eng)</th>
-              <th className="p-2 border">Item Name (Alt)</th>
-              <th className="p-2 border">Base Unit</th>
-              <th className="p-2 border">Main Category</th>
-              <th className="p-2 border">Sub Category</th>
-              <th className="p-2 border">Tax</th>
-              <th className="p-2 border">Image</th>
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(searchQuery ? searchResults : items).map(item => (
-              <tr key={item._id} className="text-center">
-                <td className="p-2 border">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-mono">
-                    {item.itemCode || 'Generating...'}
-                  </span>
-                </td>
-                <td className="p-2 border">{item.nameEn || item.name}</td>
-                <td className="p-2 border">{item.nameAlt || 'N/A'}</td>
-                <td className="p-2 border">
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                    {item.baseUnit?.name || 'N/A'}
-                  </span>
-                </td>
-                <td className="p-2 border">{item.category?.nameEn || 'N/A'}</td>
-                <td className="p-2 border">{item.subCategory?.nameEn || 'N/A'}</td>
-                <td className="p-2 border">{item.tax?.name || 'N/A'}</td>
-                <td className="p-2 border">
-                  {item.image?.url ? (
-                    <img src={item.image.url} alt="img" className="w-12 h-12 object-cover mx-auto" />
-                  ) : (
-                    'No image'
-                  )}
-                </td>
-                <td className="p-2 border space-x-2">
-                  <button
-                    className="bg-yellow-500 text-white px-2 py-1 rounded text-sm"
-                    onClick={() => handleEdit(item)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="bg-red-500 text-white px-2 py-1 rounded text-sm"
-                    onClick={() => handleDelete(item._id)}
-                  >
-                    Delete
-                  </button>
-                  <button
-                    className="bg-blue-500 text-white px-2 py-1 rounded text-sm"
-                    onClick={() => navigate(`/items/${item._id}/edit`)}
-                  >
-                    Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal for Add/Edit Item */}
-      {showFormModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
-          <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between mb-4">
-              <h3 className="text-lg font-bold">{editingId ? 'Edit Item' : 'Add Item'}</h3>
-              <button
-                onClick={() => {
-                  setShowFormModal(false);
-                  setEditingId(null);
-                  setFormData({ 
-                    nameEn: '', 
-                    nameAlt: '', 
-                    baseUnit: '', 
-                    category: '', 
-                    tax: '', 
-                    image: '', 
-                    departments: [], 
-                    name: '', 
-                    subCategory: ''
-                  });
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
+      {/* Form Modal */}
+      <ResponsiveModal
+        isOpen={showFormModal}
+        onClose={() => {
+          setShowFormModal(false);
+          setEditingId(null);
+          setFormData({
+            nameEn: '',
+            nameAlt: '',
+            baseUnit: '',
+            category: '',
+            tax: '',
+            image: '',
+            departments: [],
+            name: '',
+            subCategory: ''
+          });
+        }}
+        title={editingId ? 'Edit Item' : 'Add Item'}
+        size="lg"
+      >
+        <ResponsiveForm
+          onSubmit={handleSubmit}
+          loading={formLoading}
+          submitText={editingId ? 'Update Item' : 'Add Item'}
+        >
+          <FormGrid cols={2}>
+            <FormField label="Item Name (English)" required>
+              <FormInput
                 name="nameEn"
                 value={formData.nameEn}
                 onChange={handleChange}
-                placeholder="Item Name (Eng) *"
-                className="border p-2 rounded"
+                placeholder="Enter item name in English"
+                required
               />
+            </FormField>
 
-              <input
-                type="text"
+            <FormField label="Item Name (Alternative)">
+              <FormInput
                 name="nameAlt"
                 value={formData.nameAlt}
                 onChange={handleChange}
-                placeholder="Item Name (Alt)"
-                className="border p-2 rounded"
+                placeholder="Enter alternative name"
               />
+            </FormField>
+          </FormGrid>
 
-              <select
+          <FormGrid cols={2}>
+            <FormField label="Base Unit" required>
+              <FormSelect
                 name="baseUnit"
                 value={formData.baseUnit}
                 onChange={handleChange}
-                className="border p-2 rounded"
+                required
               >
-                <option value="">Select Base Unit *</option>
+                <option value="">Select Base Unit</option>
                 {units.map(unit => (
                   <option key={unit._id} value={unit._id}>
-                    {unit.name} ({unit.symbol || unit.Symbol})
+                    {unit.name}
                   </option>
                 ))}
-              </select>
+              </FormSelect>
+            </FormField>
 
-              <div className="flex gap-2">
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="border p-2 rounded flex-1"
-                >
-                  <option value="">Select Main Category *</option>
-                  {categories.map(cat => (
-                    <option key={cat._id} value={cat._id}>{cat.nameEn}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => window.open('/item-category', '_blank')}
-                  className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
-                  title="Create new main category"
-                >
-                  +
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <select 
-                  className="border p-2 rounded flex-1" 
-                  name="subCategory" 
-                  value={formData.subCategory} 
-                  onChange={handleChange}
-                >
-                  <option value="">Select Sub Category *</option>
-                  {filteredSubCategories.map(sc => (
-                    <option key={sc._id} value={sc._id}>{sc.nameEn}</option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => window.open('/sub-categories', '_blank')}
-                  className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600"
-                  title="Create new sub category"
-                >
-                  +
-                </button>
-              </div>
-
-              <select
+            <FormField label="Tax">
+              <FormSelect
                 name="tax"
                 value={formData.tax}
                 onChange={handleChange}
-                className="border p-2 rounded"
               >
                 <option value="">Select Tax</option>
                 {taxes.map(tax => (
-                  <option key={tax._id} value={tax._id}>{tax.name}</option>
+                  <option key={tax._id} value={tax._id}>
+                    {tax.name}
+                  </option>
                 ))}
-              </select>
+              </FormSelect>
+            </FormField>
+          </FormGrid>
 
-              {/* Pricing Section Removed - Unit prices now handled per supplier */}
-
-              <div className="col-span-2">
-                <label className="block font-medium mb-1">Image</label>
-                <div
-                  className="w-32 h-32 border rounded flex items-center justify-center cursor-pointer overflow-hidden"
-                  onClick={() => setShowImageModal(true)}
-                >
-                  {formData.image ? (
-                    <img src={formData.image.url} alt="Selected" className="object-cover w-full h-full" />
-                  ) : (
-                    <span className="text-gray-500">Select Image</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="col-span-2">
-                <label className="block font-medium mb-1">Departments</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {departments.map(dept => (
-                    <label key={dept._id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.departments.includes(dept._id)}
-                        onChange={() => handleDepartmentToggle(dept._id)}
-                        className="rounded"
-                      />
-                      <span className="text-sm">{dept.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowFormModal(false);
-                  setEditingId(null);
-                  setFormData({ 
-                    nameEn: '', 
-                    nameAlt: '', 
-                    baseUnit: '', 
-                    category: '', 
-                    tax: '', 
-                    image: '', 
-                    departments: [], 
-                    name: '', 
-                    subCategory: ''
-                  });
-                }}
-                className="text-gray-500 px-4 py-2 hover:underline"
+          <FormGrid cols={2}>
+            <FormField label="Main Category" required>
+              <FormSelect
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                required
               >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                className="bg-[#735dff] text-white px-4 py-2 rounded hover:bg-[#5a4bcc]"
-              >
-                {editingId ? 'Update Item' : 'Add Item'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                <option value="">Select Category</option>
+                {categories.map(category => (
+                  <option key={category._id} value={category._id}>
+                    {category.nameEn}
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
 
-      {/* Image Selection Modal */}
-      {showImageModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
-          <div className="bg-white p-6 rounded-lg w-[90%] max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between mb-4">
-              <h3 className="text-lg font-bold">Select Image</h3>
-              <button 
-                onClick={() => setShowImageModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+            <FormField label="Sub Category" required>
+              <FormSelect
+                name="subCategory"
+                value={formData.subCategory}
+                onChange={handleChange}
+                required
               >
-                ✕
-              </button>
-            </div>
-            <div className="grid grid-cols-4 gap-4">
-              {images.map(img => (
-                <div
-                  key={img._id}
-                  className="cursor-pointer border rounded p-2 hover:bg-gray-50"
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev, image: img }));
-                    setShowImageModal(false);
-                  }}
-                >
-                  <img src={img.url} alt="img" className="w-full h-32 object-cover" />
-                </div>
+                <option value="">Select Sub Category</option>
+                {filteredSubCategories.map(subCategory => (
+                  <option key={subCategory._id} value={subCategory._id}>
+                    {subCategory.nameEn}
+                  </option>
+                ))}
+              </FormSelect>
+            </FormField>
+          </FormGrid>
+
+          <FormField label="Image">
+            <FormSelect
+              name="image"
+              value={formData.image}
+              onChange={handleChange}
+            >
+              <option value="">Select Image</option>
+              {images.map(image => (
+                <option key={image._id} value={image._id}>
+                  {image.originalName}
+                </option>
+              ))}
+            </FormSelect>
+          </FormField>
+
+          <FormField label="Departments">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {departments.map(department => (
+                <FormCheckbox
+                  key={department._id}
+                  checked={formData.departments.includes(department._id)}
+                  onChange={() => handleDepartmentToggle(department._id)}
+                  label={department.nameEn}
+                />
               ))}
             </div>
-          </div>
-        </div>
-      )}
+          </FormField>
+        </ResponsiveForm>
+      </ResponsiveModal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete Item"
+        message="Are you sure you want to delete this item? This will also delete all associated packaging for this item."
+        type="danger"
+      />
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={showImageModal}
+        onClose={() => setShowImageModal(false)}
+        imageUrl={selectedImage}
+        imageAlt="Item Image"
+      />
     </div>
   );
 };
