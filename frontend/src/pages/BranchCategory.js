@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import backend_url from '../config/config';
 
-const ItemCategory = () => {
+const BranchCategory = () => {
   const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -14,8 +14,13 @@ const ItemCategory = () => {
   });
 
   const fetchCategories = async () => {
-    const res = await axios.get(`${backend_url}/item-categories`);
-    setCategories(res.data);
+    try {
+      const res = await axios.get(`${backend_url}/branch-categories`);
+      setCategories(Array.isArray(res.data) ? res.data : []);
+    } catch (error) {
+      console.error('Error fetching branch categories:', error);
+      setCategories([]);
+    }
   };
 
   useEffect(() => {
@@ -36,21 +41,31 @@ const ItemCategory = () => {
 
   const handleSave = async () => {
     if (formData.nameEn.trim()) {
-      if (editMode) {
-        await axios.put(`${backend_url}/item-categories/${currentId}`, formData);
-      } else {
-        await axios.post(`${backend_url}/item-categories`, formData);
+      try {
+        if (editMode) {
+          await axios.put(`${backend_url}/branch-categories/${currentId}`, formData);
+        } else {
+          await axios.post(`${backend_url}/branch-categories`, formData);
+        }
+        resetForm();
+        fetchCategories();
+      } catch (error) {
+        console.error('Error saving branch category:', error);
+        alert('Failed to save branch category');
       }
-      resetForm();
-      fetchCategories();
     }
   };
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Delete this category?');
+    const confirmDelete = window.confirm('Delete this branch category?');
     if (confirmDelete) {
-      await axios.delete(`${backend_url}/item-categories/${id}`);
-      fetchCategories();
+      try {
+        await axios.delete(`${backend_url}/branch-categories/${id}`);
+        fetchCategories();
+      } catch (error) {
+        console.error('Error deleting branch category:', error);
+        alert('Failed to delete branch category');
+      }
     }
   };
 
@@ -64,12 +79,12 @@ const ItemCategory = () => {
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">Item Categories</h2>
+        <h2 className="text-xl font-bold">Branch Categories</h2>
         <button
           className="bg-[#735dff] text-white px-4 py-2 rounded"
           onClick={() => setShowModal(true)}
         >
-          Add Category
+          Add Branch Category
         </button>
       </div>
 
@@ -77,7 +92,7 @@ const ItemCategory = () => {
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
           <div className="bg-white p-6 rounded shadow-md w-1/2">
             <h3 className="text-lg font-semibold mb-4">
-              {editMode ? 'Edit Category' : 'Add New Category'}
+              {editMode ? 'Edit Branch Category' : 'Add New Branch Category'}
             </h3>
 
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -124,7 +139,7 @@ const ItemCategory = () => {
             <tr key={cat._id}>
               <td className="py-2 border-b text-center">{cat.nameEn}</td>
               <td className="py-2 border-b text-center">{cat.nameUr}</td>
-              <td className="py-2 border-b text-center">{cat.totalItems}</td>
+              <td className="py-2 border-b text-center">{cat.totalItems || 0}</td>
               <td className="py-2 border-b text-center space-x-2">
                 <button
                   onClick={() => openEditModal(cat)}
@@ -147,4 +162,4 @@ const ItemCategory = () => {
   );
 };
 
-export default ItemCategory;
+export default BranchCategory; 

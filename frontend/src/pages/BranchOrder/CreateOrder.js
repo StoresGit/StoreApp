@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import axios from 'axios';
+import backend_url from '../../config/config';
 
 const ORDER_TYPES = ['Urgent', 'Routine', 'Schedule'];
 const ORDER_STATUSES = ['Draft', 'Confirmed', 'Shipped', 'Delivered', 'Rejected'];
 const SECTIONS = ['Section A', 'Section B', 'Section C']; // Example sections
 const UNITS = ['Kg', 'Litre', 'Piece']; // Example units
-const CATEGORIES = ['Category 1', 'Category 2', 'Category 3']; // Example categories
 
 const CreateOrder = () => {
   const [orderType, setOrderType] = useState('Urgent');
@@ -16,9 +17,34 @@ const CreateOrder = () => {
   const [userName, setUserName] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
   const [scheduleDate, setScheduleDate] = useState(null);
+  const [branchCategories, setBranchCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [items, setItems] = useState([
-    { code: '', name: '', unit: UNITS[0], category: CATEGORIES[0], qty: '' },
+    { code: '', name: '', unit: UNITS[0], category: '', qty: '' },
   ]);
+
+  // Fetch branch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get(`${backend_url}/branch-categories`);
+        
+        // Ensure data is array
+        const branchData = Array.isArray(res.data) ? res.data : [];
+        setBranchCategories(branchData);
+      } catch (error) {
+        console.error('Error fetching branch categories:', error);
+        setError('Failed to load branch categories');
+        setBranchCategories([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Generate a unique item code
   const generateItemCode = (idx) => `ITEM${Date.now()}${idx}`;
@@ -33,7 +59,7 @@ const CreateOrder = () => {
   const addItemRow = () => {
     setItems([
       ...items,
-      { code: generateItemCode(items.length), name: '', unit: UNITS[0], category: CATEGORIES[0], qty: '' },
+      { code: generateItemCode(items.length), name: '', unit: UNITS[0], category: '', qty: '' },
     ]);
   };
 
@@ -119,6 +145,8 @@ const CreateOrder = () => {
         {/* Item Table */}
         <div>
           <label className="block text-lg font-semibold mb-2">Order Items</label>
+          {loading && <p className="text-blue-600 mb-2">Loading categories...</p>}
+          {error && <p className="text-red-600 mb-2">{error}</p>}
           <div className="overflow-x-auto">
             <table className="min-w-full border text-sm">
               <thead>
@@ -147,7 +175,12 @@ const CreateOrder = () => {
                     </td>
                     <td className="border px-2 py-1">
                       <select className="w-full border rounded px-1 py-0.5" value={item.category} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
-                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                        <option value="">Select Category</option>
+                        {branchCategories.map(cat => (
+                          <option key={cat._id} value={cat.nameEn}>
+                            {cat.nameEn}
+                          </option>
+                        ))}
                       </select>
                     </td>
                     <td className="border px-2 py-1">

@@ -131,6 +131,24 @@ export const apiService = {
     getById: (id) => apiService.get(`/sections/${id}`),
     update: (id, sectionData) => apiService.put(`/sections/${id}`, sectionData),
     delete: (id) => apiService.delete(`/sections/${id}`),
+  },
+  
+  // Purchase Category methods
+  purchaseCategories: {
+    create: (categoryData) => apiService.post('/purchase-categories', categoryData),
+    getAll: () => apiService.get('/purchase-categories'),
+    getById: (id) => apiService.get(`/purchase-categories/${id}`),
+    update: (id, categoryData) => apiService.put(`/purchase-categories/${id}`, categoryData),
+    delete: (id) => apiService.delete(`/purchase-categories/${id}`),
+  },
+  
+  // Branch Category methods
+  branchCategories: {
+    create: (categoryData) => apiService.post('/branch-categories', categoryData),
+    getAll: () => apiService.get('/branch-categories'),
+    getById: (id) => apiService.get(`/branch-categories/${id}`),
+    update: (id, categoryData) => apiService.put(`/branch-categories/${id}`, categoryData),
+    delete: (id) => apiService.delete(`/branch-categories/${id}`),
   }
 };
 

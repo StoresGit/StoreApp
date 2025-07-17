@@ -19,7 +19,6 @@ import Packaging from './pages/Packaging';
 import RecipeExperts from './pages/RecipeExperts';
 import Departments from './pages/Departments';
 import Items from './pages/Items';
-import ItemCategory from './pages/ItemCategory';
 import Units from './pages/Units';
 import Roles from './pages/Roles';
 import Brand from './pages/Brand';
@@ -33,6 +32,11 @@ import SubCategoryItems from './pages/SubCategoryItems';
 import SubCategories from './pages/SubCategories';
 import BranchOrders from './pages/BranchOrders';
 import Sections from './pages/Sections';
+
+// Import new category pages
+import PurchaseCategory from './pages/PurchaseCategory';
+import MenuCategory from './pages/MenuCategory';
+import BranchCategory from './pages/BranchCategory';
 
 // Import new Branch Order pages
 import BranchOrderBranch from './pages/BranchOrder/Branch';
@@ -91,7 +95,6 @@ function App() {
         { label: 'Roles', path: '/roles' },
         { label: 'Units', path: '/units' },
         { label: 'Menu Category', path: '/menu' },
-        { label: 'Item Category', path: '/item-category' },
         { label: 'Sub Categories', path: '/sub-categories' },
         { label: 'Departments', path: '/departments' },
         { label: 'Tax', path: '/tax' },
@@ -99,6 +102,16 @@ function App() {
         { label: 'Brand', path: '/brand' },
         { label: 'Currency', path: '/currency' },
         { label: 'Sections', path: '/sections' },
+      ],
+    },
+    {
+      label: 'Item Category',
+      icon: '📂',
+      children: [
+        { label: 'Purchase Category', path: '/purchase-category' },
+        { label: 'Menu Category', path: '/menu-category' },
+        { label: 'Branch Category', path: '/branch-category' },
+        { label: 'Sub Categories', path: '/sub-categories' },
       ],
     },
     {
@@ -168,7 +181,6 @@ function App() {
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/roles" element={<Roles />} />
                 <Route path="/units" element={<Units />} />
-                <Route path="/item-category" element={<ItemCategory />} />
                 <Route path="/items" element={<Items />} />
                 <Route path="/departments" element={<Departments />} />
                 <Route path="/recipe-experts" element={<RecipeExperts />} />
@@ -191,6 +203,11 @@ function App() {
                 <Route path="/sub-categories" element={<SubCategories />} />
                 <Route path="/branch-orders" element={<BranchOrders />} />
                 <Route path="/sections" element={<Sections />} />
+                
+                {/* New Category Routes */}
+                <Route path="/purchase-category" element={<PurchaseCategory />} />
+                <Route path="/menu-category" element={<MenuCategory />} />
+                <Route path="/branch-category" element={<BranchCategory />} />
                 
                 {/* Branch Order Routes */}
                 <Route path="/branch-order/branch" element={<BranchOrderBranch />} />
