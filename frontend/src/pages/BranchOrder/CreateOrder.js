@@ -1,78 +1,173 @@
-import React from 'react';
+import React, { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+const ORDER_TYPES = ['Urgent', 'Routine', 'Schedule'];
+const ORDER_STATUSES = ['Draft', 'Confirmed', 'Shipped', 'Delivered', 'Rejected'];
+const SECTIONS = ['Section A', 'Section B', 'Section C']; // Example sections
+const UNITS = ['Kg', 'Litre', 'Piece']; // Example units
+const CATEGORIES = ['Category 1', 'Category 2', 'Category 3']; // Example categories
 
 const CreateOrder = () => {
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Create Order</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">
-            Create and manage new branch orders
-          </p>
-        </div>
-      </div>
+  const [orderType, setOrderType] = useState('Urgent');
+  const [orderStatus, setOrderStatus] = useState('Draft');
+  const [orderNo, setOrderNo] = useState('');
+  const [section, setSection] = useState(SECTIONS[0]);
+  const [userName, setUserName] = useState('');
+  const [dateTime, setDateTime] = useState(new Date());
+  const [scheduleDate, setScheduleDate] = useState(null);
+  const [items, setItems] = useState([
+    { code: '', name: '', unit: UNITS[0], category: CATEGORIES[0], qty: '' },
+  ]);
 
-      {/* Coming Soon Content */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="text-center py-16">
-          <div className="mx-auto h-32 w-32 bg-green-100 rounded-full flex items-center justify-center mb-8">
-            <span className="text-6xl">📝</span>
+  // Generate a unique item code
+  const generateItemCode = (idx) => `ITEM${Date.now()}${idx}`;
+
+  // Handle item row changes
+  const handleItemChange = (idx, field, value) => {
+    const newItems = [...items];
+    newItems[idx][field] = value;
+    setItems(newItems);
+  };
+
+  const addItemRow = () => {
+    setItems([
+      ...items,
+      { code: generateItemCode(items.length), name: '', unit: UNITS[0], category: CATEGORIES[0], qty: '' },
+    ]);
+  };
+
+  const removeItemRow = (idx) => {
+    if (items.length === 1) return;
+    setItems(items.filter((_, i) => i !== idx));
+  };
+
+  // Handle form submit
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // TODO: Submit logic here
+    alert('Order submitted! (Demo)');
+  };
+
+  // On mount, generate code for the first item
+  React.useEffect(() => {
+    setItems([{ ...items[0], code: generateItemCode(0) }]);
+    // eslint-disable-next-line
+  }, []);
+
+  return (
+    <div className="max-w-5xl mx-auto py-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Create Order</h1>
+      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
+        {/* Order Details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Order Type</label>
+            <select className="w-full border rounded px-2 py-1" value={orderType} onChange={e => setOrderType(e.target.value)}>
+              {ORDER_TYPES.map(type => <option key={type}>{type}</option>)}
+            </select>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Coming Soon</h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Order creation features are currently under development. 
-            This module will allow you to create new orders, select items, 
-            set quantities, and manage order details efficiently.
-          </p>
-          
-          {/* Feature Preview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">🛒</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Item Selection</h3>
-              <p className="text-sm text-gray-600">
-                Browse and select items from catalog
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">📊</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Quantity Management</h3>
-              <p className="text-sm text-gray-600">
-                Set quantities and manage stock levels
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">📋</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Order Details</h3>
-              <p className="text-sm text-gray-600">
-                Add notes and special instructions
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">🏢</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Branch Selection</h3>
-              <p className="text-sm text-gray-600">
-                Choose destination branch
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">📅</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Delivery Scheduling</h3>
-              <p className="text-sm text-gray-600">
-                Schedule delivery dates and times
-              </p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-6">
-              <div className="text-3xl mb-3">✅</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Order Review</h3>
-              <p className="text-sm text-gray-600">
-                Review and confirm order details
-              </p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Order Status</label>
+            <select className="w-full border rounded px-2 py-1" value={orderStatus} onChange={e => setOrderStatus(e.target.value)}>
+              {ORDER_STATUSES.map(status => <option key={status}>{status}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Order No</label>
+            <input className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" value={orderNo} readOnly tabIndex={-1} />
           </div>
         </div>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Select Section</label>
+            <select className="w-full border rounded px-2 py-1" value={section} onChange={e => setSection(e.target.value)}>
+              {SECTIONS.map(sec => <option key={sec}>{sec}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">User Name</label>
+            <input className="w-full border rounded px-2 py-1" value={userName} onChange={e => setUserName(e.target.value)} placeholder="User Name" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date & Time</label>
+            <DatePicker
+              selected={dateTime}
+              onChange={date => setDateTime(date)}
+              showTimeSelect
+              dateFormat="Pp"
+              className="w-full border rounded px-2 py-1"
+            />
+          </div>
+        </div>
+        {/* Schedule Order Time & Date (only if Schedule) */}
+        {orderType === 'Schedule' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-start-3">
+              <label className="block text-sm font-medium mb-1 bg-yellow-200 px-2 py-1 rounded">Schedule Order Time & Date</label>
+              <DatePicker
+                selected={scheduleDate}
+                onChange={date => setScheduleDate(date)}
+                showTimeSelect
+                dateFormat="Pp"
+                className="w-full border rounded px-2 py-1"
+                placeholderText="Select schedule time"
+              />
+            </div>
+          </div>
+        )}
+        {/* Item Table */}
+        <div>
+          <label className="block text-lg font-semibold mb-2">Order Items</label>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border text-sm">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border px-2 py-1">Item Code</th>
+                  <th className="border px-2 py-1">Item Name</th>
+                  <th className="border px-2 py-1">Unit</th>
+                  <th className="border px-2 py-1">Category</th>
+                  <th className="border px-2 py-1">Order Qty</th>
+                  <th className="border px-2 py-1">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="border px-2 py-1">
+                      <input className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={item.code} readOnly tabIndex={-1} />
+                    </td>
+                    <td className="border px-2 py-1">
+                      <input className="w-full border rounded px-1 py-0.5" value={item.name} onChange={e => handleItemChange(idx, 'name', e.target.value)} />
+                    </td>
+                    <td className="border px-2 py-1">
+                      <select className="w-full border rounded px-1 py-0.5" value={item.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
+                        {UNITS.map(u => <option key={u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td className="border px-2 py-1">
+                      <select className="w-full border rounded px-1 py-0.5" value={item.category} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
+                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                    </td>
+                    <td className="border px-2 py-1">
+                      <input type="number" min="0" className="w-full border rounded px-1 py-0.5" value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
+                    </td>
+                    <td className="border px-2 py-1 text-center">
+                      <button type="button" className="text-red-500 font-bold px-2" onClick={() => removeItemRow(idx)} disabled={items.length === 1}>-</button>
+                      <button type="button" className="text-green-500 font-bold px-2" onClick={addItemRow}>+</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <button type="submit" className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700">Submit Order</button>
+        </div>
+      </form>
     </div>
   );
 };

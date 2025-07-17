@@ -32,6 +32,7 @@ import UserManagement from './pages/UserManagement';
 import SubCategoryItems from './pages/SubCategoryItems';
 import SubCategories from './pages/SubCategories';
 import BranchOrders from './pages/BranchOrders';
+import Sections from './pages/Sections';
 
 // Import new Branch Order pages
 import BranchOrderBranch from './pages/BranchOrder/Branch';
@@ -40,8 +41,11 @@ import BranchOrderReports from './pages/BranchOrder/Reports';
 import BranchOrderSettings from './pages/BranchOrder/Settings';
 import CreateOrder from './pages/BranchOrder/CreateOrder';
 import OrderSubmission from './pages/BranchOrder/OrderSubmission';
-import OrderHistory from './pages/BranchOrder/OrderHistory';
+import OrderHistoryTracking from './pages/BranchOrder/OrderHistoryTracking';
 import InventoryControl from './pages/BranchOrder/InventoryControl';
+import ReceivingOrder from './pages/BranchOrder/ReceivingOrder';
+import StockCount from './pages/BranchOrder/StockCount';
+import Wastage from './pages/BranchOrder/Wastage';
 
 function App() {
   const menuItems = [
@@ -61,7 +65,15 @@ function App() {
             { label: 'Create Order', path: '/branch-order/create-order' },
             { label: 'Order Submission', path: '/branch-order/order-submission' },
             { label: 'Order History', path: '/branch-order/order-history' },
-            { label: 'Inventory Control', path: '/branch-order/inventory-control' },
+          ]
+        },
+        { 
+          label: 'Inventory Control', 
+          path: '/branch-order/inventory-control',
+          children: [
+            { label: 'Receiving Order', path: '/branch-order/receiving-order' },
+            { label: 'Stock Count', path: '/branch-order/stock-count' },
+            { label: 'Wastage', path: '/branch-order/wastage' },
           ]
         },
         { label: 'Central Kitchen', path: '/branch-order/central-kitchen' },
@@ -86,6 +98,7 @@ function App() {
         { label: 'Branches', path: '/branches' },
         { label: 'Brand', path: '/brand' },
         { label: 'Currency', path: '/currency' },
+        { label: 'Sections', path: '/sections' },
       ],
     },
     {
@@ -98,37 +111,37 @@ function App() {
         { label: 'Packaging', path: '/packaging' },
       ],
     },
-    {
+     {
       label: 'Inventory',
       path: '/inventory',
       icon: '📦',
     },
-    {
+     {
       label: 'Reports',
       path: '/reports',
       icon: '📊',
     },
-    {
+     {
       label: 'Procurements',
       path: '/procurements',
       icon: '🛒',
     },
-    {
+     {
       label: 'Costing',
       path: '/costing',
       icon: '💰',
     },
-    {
+     {
       label: 'Analytics',
       path: '/analytics',
       icon: '📈',
     },
-    {
+     {
       label: 'Operations',
       path: '/operations',
       icon: '⚙️',
     },
-    {
+     {
       label: 'Production',
       path: '/production',
       icon: '🏭',
@@ -177,6 +190,7 @@ function App() {
                 <Route path="/sub-category-items" element={<SubCategoryItems />} />
                 <Route path="/sub-categories" element={<SubCategories />} />
                 <Route path="/branch-orders" element={<BranchOrders />} />
+                <Route path="/sections" element={<Sections />} />
                 
                 {/* Branch Order Routes */}
                 <Route path="/branch-order/branch" element={<BranchOrderBranch />} />
@@ -185,8 +199,11 @@ function App() {
                 <Route path="/branch-order/settings" element={<BranchOrderSettings />} />
                 <Route path="/branch-order/create-order" element={<CreateOrder />} />
                 <Route path="/branch-order/order-submission" element={<OrderSubmission />} />
-                <Route path="/branch-order/order-history" element={<OrderHistory />} />
+                <Route path="/branch-order/order-history" element={<OrderHistoryTracking />} />
                 <Route path="/branch-order/inventory-control" element={<InventoryControl />} />
+                <Route path="/branch-order/receiving-order" element={<ReceivingOrder />} />
+                <Route path="/branch-order/stock-count" element={<StockCount />} />
+                <Route path="/branch-order/wastage" element={<Wastage />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

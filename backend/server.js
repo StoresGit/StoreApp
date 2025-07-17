@@ -26,6 +26,8 @@ const SupplierRoutes = require('./routes/supplierRoutes');
 const packagingRoutes = require('./routes/packagingRoutes');
 const SubCategoryRoutes = require('./routes/subCategoryRoutes');
 const supplierItemRoutes = require('./routes/supplierItemRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const sectionRoutes = require('./routes/sectionRoutes');
 
 const app = express();
 
@@ -99,6 +101,8 @@ app.use('/api/tax', TaxRoutes)
 app.use('/api/suppliers', SupplierRoutes);
 app.use('/api/sub-categories', SubCategoryRoutes);
 app.use('/api/supplier-items', supplierItemRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/sections', sectionRoutes);
 
 // Apply login rate limiting to login route
 app.use('/api/users/login', loginLimiter);

@@ -112,6 +112,26 @@ export const apiService = {
   post: (url, data, config = {}) => makeRequest({ ...config, method: 'POST', url, data }),
   put: (url, data, config = {}) => makeRequest({ ...config, method: 'PUT', url, data }),
   delete: (url, config = {}) => makeRequest({ ...config, method: 'DELETE', url }),
+  
+  // Order-specific methods
+  orders: {
+    create: (orderData) => apiService.post('/orders', orderData),
+    getAll: () => apiService.get('/orders'),
+    getById: (id) => apiService.get(`/orders/${id}`),
+    update: (id, orderData) => apiService.put(`/orders/${id}`, orderData),
+    delete: (id) => apiService.delete(`/orders/${id}`),
+    updateStatus: (id, status) => apiService.put(`/orders/${id}`, { status }),
+  },
+  
+  // Section-specific methods
+  sections: {
+    create: (sectionData) => apiService.post('/sections', sectionData),
+    getAll: () => apiService.get('/sections'),
+    getActive: () => apiService.get('/sections/active'),
+    getById: (id) => apiService.get(`/sections/${id}`),
+    update: (id, sectionData) => apiService.put(`/sections/${id}`, sectionData),
+    delete: (id) => apiService.delete(`/sections/${id}`),
+  }
 };
 
 // Batch request function for multiple endpoints

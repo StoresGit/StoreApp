@@ -124,40 +124,40 @@ const Item = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate required fields
-    if (!formData.nameEn?.trim()) {
-      alert('Item Name (Eng) is required');
-      return;
-    }
-    if (!formData.baseUnit) {
-      alert('Base Unit is required');
-      return;
-    }
-    if (!formData.category) {
-      alert('Category is required');
-      return;
-    }
-    if (!formData.subCategory) {
-      alert('Sub Category is required');
-      return;
-    }
+  // Validate required fields
+  if (!formData.nameEn?.trim()) {
+    alert('Item Name (Eng) is required');
+    return;
+  }
+  if (!formData.baseUnit) {
+    alert('Base Unit is required');
+    return;
+  }
+  if (!formData.category) {
+    alert('Category is required');
+    return;
+  }
+  if (!formData.subCategory) {
+    alert('Sub Category is required');
+    return;
+  }
 
-    try {
+  try {
       setFormLoading(true);
       
-      const submitData = {
-        ...formData,
+    const submitData = {
+      ...formData,
         name: formData.nameEn // Keep backward compatibility
-      };
+    };
 
-      if (editingId) {
-        await axios.put(`${backend_url}/items/${editingId}`, submitData);
-      } else {
+    if (editingId) {
+      await axios.put(`${backend_url}/items/${editingId}`, submitData);
+    } else {
         await axios.post(`${backend_url}/items`, submitData);
-      }
+    }
 
       // Reset form and close modal
-      setFormData({
+    setFormData({
         nameEn: '',
         nameAlt: '',
         baseUnit: '',
@@ -167,17 +167,17 @@ const Item = () => {
         departments: [],
         name: '',
         subCategory: ''
-      });
-      setEditingId(null);
-      setShowFormModal(false);
+    });
+    setEditingId(null);
+    setShowFormModal(false);
       fetchData();
-    } catch (error) {
-      console.error('Error saving item:', error);
+  } catch (error) {
+    console.error('Error saving item:', error);
       alert('Error saving item. Please try again.');
     } finally {
       setFormLoading(false);
-    }
-  };
+  }
+};
 
   const handleEdit = (item) => {
     setFormData({
@@ -201,26 +201,26 @@ const Item = () => {
   };
 
   const confirmDelete = async () => {
-    try {
+      try {
       const response = await axios.delete(`${backend_url}/items/${deleteItemId}`);
-      
-      // Show success message with packaging deletion info
-      if (response.data && response.data.deletedPackagingCount !== undefined) {
-        const packagingCount = response.data.deletedPackagingCount;
-        const itemName = response.data.itemName || 'Item';
-        if (packagingCount > 0) {
-          alert(`"${itemName}" deleted successfully! Also removed ${packagingCount} associated packaging item${packagingCount !== 1 ? 's' : ''}.`);
+        
+        // Show success message with packaging deletion info
+        if (response.data && response.data.deletedPackagingCount !== undefined) {
+          const packagingCount = response.data.deletedPackagingCount;
+          const itemName = response.data.itemName || 'Item';
+          if (packagingCount > 0) {
+            alert(`"${itemName}" deleted successfully! Also removed ${packagingCount} associated packaging item${packagingCount !== 1 ? 's' : ''}.`);
+          } else {
+            alert(`"${itemName}" deleted successfully!`);
+          }
         } else {
-          alert(`"${itemName}" deleted successfully!`);
+          alert('Item deleted successfully!');
         }
-      } else {
-        alert('Item deleted successfully!');
-      }
-      
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('Error deleting item. Please try again.');
+        
+        fetchData();
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Error deleting item. Please try again.');
     } finally {
       setShowDeleteModal(false);
       setDeleteItemId(null);
@@ -389,11 +389,11 @@ const Item = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{loadingMessage}</p>
-          <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
+            <p className="text-gray-600">{loadingMessage}</p>
+            <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
         </div>
       </div>
     );
@@ -406,15 +406,15 @@ const Item = () => {
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Items</h1>
         <button
           onClick={() => {
-            setFormData({
-              nameEn: '',
-              nameAlt: '',
-              baseUnit: '',
-              category: '',
-              tax: '',
-              image: '',
-              departments: [],
-              name: '',
+            setFormData({ 
+              nameEn: '', 
+              nameAlt: '', 
+              baseUnit: '', 
+              category: '', 
+              tax: '', 
+              image: '', 
+              departments: [], 
+              name: '', 
               subCategory: ''
             });
             setEditingId(null);
@@ -444,23 +444,23 @@ const Item = () => {
       <ResponsiveModal
         isOpen={showFormModal}
         onClose={() => {
-          setShowFormModal(false);
-          setEditingId(null);
-          setFormData({
-            nameEn: '',
-            nameAlt: '',
-            baseUnit: '',
-            category: '',
-            tax: '',
-            image: '',
-            departments: [],
-            name: '',
-            subCategory: ''
-          });
-        }}
+                  setShowFormModal(false);
+                  setEditingId(null);
+                  setFormData({ 
+                    nameEn: '', 
+                    nameAlt: '', 
+                    baseUnit: '', 
+                    category: '', 
+                    tax: '', 
+                    image: '', 
+                    departments: [], 
+                    name: '', 
+                    subCategory: ''
+                  });
+                }}
         title={editingId ? 'Edit Item' : 'Add Item'}
         size="lg"
-      >
+              >
         <ResponsiveForm
           onSubmit={handleSubmit}
           loading={formLoading}
