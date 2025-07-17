@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { apiService } from '../../services/api';
+// import { apiService } from '../../services/api';
 
 const Wastage = () => {
   const [wastageRecords, setWastageRecords] = useState([]);
@@ -13,7 +13,7 @@ const Wastage = () => {
     reason: '',
     notes: ''
   });
-  const [error, setError] = useState('');
+  // const [error, setError] = useState('');
 
   // Mock data for demonstration (in real app, fetch from backend)
   useEffect(() => {

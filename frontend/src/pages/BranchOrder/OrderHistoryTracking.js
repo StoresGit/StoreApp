@@ -55,9 +55,9 @@ const OrderHistoryTracking = () => {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const formatDateTime = (dateString) => {
-    return new Date(dateString).toLocaleString();
-  };
+  // const formatDateTime = (dateString) => {
+  //   return new Date(dateString).toLocaleString();
+  // };
 
   if (loading) {
     return (

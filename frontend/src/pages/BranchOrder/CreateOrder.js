@@ -11,7 +11,7 @@ const CATEGORIES = ['Category 1', 'Category 2', 'Category 3']; // Example catego
 const CreateOrder = () => {
   const [orderType, setOrderType] = useState('Urgent');
   const [orderStatus, setOrderStatus] = useState('Draft');
-  const [orderNo, setOrderNo] = useState('');
+  const [orderNo] = useState('');
   const [section, setSection] = useState(SECTIONS[0]);
   const [userName, setUserName] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
