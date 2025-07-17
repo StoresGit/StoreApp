@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-
+npm
 const ReceivingOrder = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -22,12 +22,14 @@ const ReceivingOrder = () => {
     try {
       setLoading(true);
       const response = await apiService.orders.getAll();
-      // Filter for shipped orders
-      const shippedOrders = (response.data || []).filter(order => order.status === 'Shipped');
+      // Ensure response.data is an array and filter for shipped orders
+      const ordersData = Array.isArray(response.data) ? response.data : [];
+      const shippedOrders = ordersData.filter(order => order.status === 'Shipped');
       setOrders(shippedOrders);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError(err.response?.data?.error || err.message || 'Failed to fetch orders');
+      setOrders([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -39,12 +41,12 @@ const ReceivingOrder = () => {
         if (order._id === orderId) {
           return {
             ...order,
-            items: order.items.map(item => {
+            items: Array.isArray(order.items) ? order.items.map(item => {
               if (item.itemCode === itemId) {
                 return { ...item, [field]: value };
               }
               return item;
-            })
+            }) : []
           };
         }
         return order;
@@ -57,7 +59,7 @@ const ReceivingOrder = () => {
     if (order) {
       setSelectedOrder(order);
       setReceivingForm({
-        receivedItems: order.items.map(item => ({ ...item })),
+        receivedItems: Array.isArray(order.items) ? order.items.map(item => ({ ...item })) : [],
         missingItems: [],
         qualityIssues: [],
         notes: ''
@@ -138,7 +140,7 @@ const ReceivingOrder = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {orders.filter(order => order.status === 'Shipped').map((order) => (
+                {Array.isArray(orders) && orders.filter(order => order.status === 'Shipped').map((order) => (
                   <tr key={order._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
@@ -153,9 +155,9 @@ const ReceivingOrder = () => {
                       <div className="text-sm text-gray-900">{formatDate(order.dateTime)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.items.length} items</div>
+                      <div className="text-sm text-gray-900">{Array.isArray(order.items) ? order.items.length : 0} items</div>
                       <div className="text-sm text-gray-500">
-                        {order.items.map(item => `${item.itemName} (${item.orderQty} ${item.unit})`).join(', ')}
+                        {Array.isArray(order.items) && order.items.map(item => `${item.itemName} (${item.orderQty} ${item.unit})`).join(', ')}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -206,7 +208,7 @@ const ReceivingOrder = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {selectedOrder.items.map((item) => (
+                      {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item) => (
                         <tr key={item.itemCode}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">{item.itemName}</div>

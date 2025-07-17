@@ -52,10 +52,13 @@ const OrderSubmission = () => {
     const fetchSections = async () => {
       try {
         const response = await apiService.sections.getActive();
-        setSections(response.data || []);
+        // Ensure sections is always an array
+        const sectionsData = Array.isArray(response.data) ? response.data : [];
+        setSections(sectionsData);
       } catch (error) {
         console.error('Error fetching sections:', error);
         setError('Failed to load sections');
+        setSections([]); // Set empty array on error
       }
     };
 
@@ -171,7 +174,7 @@ const OrderSubmission = () => {
               <label className="block text-sm font-medium mb-1">Select Section</label>
               <select name="section" value={form.section} onChange={handleChange} className="w-full border rounded px-3 py-2">
                 <option value="">Select...</option>
-                {sections.map(section => (
+                {Array.isArray(sections) && sections.map(section => (
                   <option key={section._id} value={section.name}>
                     {section.name}
                   </option>

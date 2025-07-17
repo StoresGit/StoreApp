@@ -22,10 +22,13 @@ const OrderHistoryTracking = () => {
     try {
       setLoading(true);
       const response = await apiService.orders.getAll();
-      setOrders(response.data || []);
+      // Ensure orders is always an array
+      const ordersData = Array.isArray(response.data) ? response.data : [];
+      setOrders(ordersData);
     } catch (err) {
       console.error('Error fetching orders:', err);
       setError(err.response?.data?.error || err.message || 'Failed to fetch orders');
+      setOrders([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -42,14 +45,14 @@ const OrderHistoryTracking = () => {
     }
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
     if (filters.status && order.status !== filters.status) return false;
     if (filters.branch && !order.section.toLowerCase().includes(filters.branch.toLowerCase())) return false;
     if (filters.orderNumber && !order.orderNo.includes(filters.orderNumber)) return false;
     if (filters.dateFrom && new Date(order.dateTime) < new Date(filters.dateFrom)) return false;
     if (filters.dateTo && new Date(order.dateTime) > new Date(filters.dateTo)) return false;
     return true;
-  });
+  }) : [];
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -187,10 +190,10 @@ const OrderHistoryTracking = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{order.items.length} items</div>
+                      <div className="text-sm text-gray-900">{Array.isArray(order.items) ? order.items.length : 0} items</div>
                       <div className="text-sm text-gray-500">
-                        {order.items.slice(0, 2).map(item => item.itemName).join(', ')}
-                        {order.items.length > 2 && '...'}
+                        {Array.isArray(order.items) && order.items.slice(0, 2).map(item => item.itemName).join(', ')}
+                        {Array.isArray(order.items) && order.items.length > 2 && '...'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
