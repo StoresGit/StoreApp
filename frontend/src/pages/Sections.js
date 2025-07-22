@@ -31,11 +31,16 @@ const Sections = () => {
         axios.get(`${backend_url}/branch`)
       ]);
       
-      setSections(sectionsRes.data || []);
-      setBranches(branchesRes.data || []);
+      const sectionsData = Array.isArray(sectionsRes.data) ? sectionsRes.data : [];
+      const branchesData = Array.isArray(branchesRes.data) ? branchesRes.data : [];
+      
+      setSections(sectionsData);
+      setBranches(branchesData);
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load data. Please refresh the page.');
+      setSections([]);
+      setBranches([]);
     } finally {
       setLoading(false);
     }

@@ -24,7 +24,7 @@ const processQueue = async () => {
     
     try {
       await Promise.all(batch.map(({ resolve, config }) => 
-        axios(config).then(resolve).catch(resolve)
+        api(config).then(resolve).catch(resolve)
       ));
     } catch (error) {
       console.error('Batch request error:', error);
