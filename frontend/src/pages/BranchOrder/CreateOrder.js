@@ -81,9 +81,9 @@ const CreateOrder = () => {
 
   // Validate all fields before submit
   const validateForm = () => {
-    if (!orderNo || !section || !userName || !dateTime || !Array.isArray(items) || items.length === 0) return false;
+    if (!section || !userName || !dateTime || !Array.isArray(items) || items.length === 0) return false;
     for (const item of items) {
-      if (!item.code || !item.name || !item.unit || !item.category || !item.qty) return false;
+      if (!item.name || !item.unit || !item.category || !item.qty) return false;
     }
     return true;
   };

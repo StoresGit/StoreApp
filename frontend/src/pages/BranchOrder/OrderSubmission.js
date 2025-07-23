@@ -102,9 +102,9 @@ const OrderSubmission = () => {
 
   // Validate all fields before submit
   const validateForm = () => {
-    if (!form.orderNo || !form.section || !form.userName || !form.dateTime || !Array.isArray(form.items) || form.items.length === 0) return false;
+    if (!form.section || !form.userName || !form.dateTime || !Array.isArray(form.items) || form.items.length === 0) return false;
     for (const item of form.items) {
-      if (!item.itemCode || !item.itemName || !item.unit || !item.category || !item.orderQty) return false;
+      if (!item.itemName || !item.unit || !item.category || !item.orderQty) return false;
     }
     return true;
   };
