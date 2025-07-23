@@ -104,7 +104,7 @@ function App() {
         { label: 'Sections', path: '/sections' },
       ],
     },
-    {
+      {
       label: 'Item Category',
       icon: '📂',
       children: [
