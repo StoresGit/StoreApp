@@ -7,14 +7,14 @@ import { MasterAdminOnly } from '../../components/PermissionGuard';
 
 const ORDER_TYPES = ['Urgent', 'Routine', 'Schedule'];
 const ORDER_STATUSES = ['Draft', 'Confirmed', 'Shipped', 'Delivered', 'Rejected'];
-const SECTIONS = ['Section A', 'Section B', 'Section C']; // Example sections
 const UNITS = ['Kg', 'Litre', 'Piece']; // Example units
 
 const CreateOrder = () => {
   const [orderType, setOrderType] = useState('Urgent');
   const [orderStatus, setOrderStatus] = useState('Draft');
   const [orderNo] = useState('');
-  const [section, setSection] = useState(SECTIONS[0]);
+  const [section, setSection] = useState('');
+  const [sections, setSections] = useState([]);
   const [userName, setUserName] = useState('');
   const [dateTime, setDateTime] = useState(new Date());
   const [scheduleDate, setScheduleDate] = useState(null);
@@ -42,6 +42,21 @@ const CreateOrder = () => {
       }
     };
     fetchCategories();
+  }, []);
+
+  // Fetch active sections from backend
+  useEffect(() => {
+    const fetchSections = async () => {
+      try {
+        const response = await axios.get(`${backend_url}/sections/active`);
+        const sectionsData = Array.isArray(response.data) ? response.data : [];
+        setSections(sectionsData);
+      } catch (error) {
+        setError('Failed to load sections');
+        setSections([]);
+      }
+    };
+    fetchSections();
   }, []);
 
   const generateItemCode = (idx) => `ITEM${Date.now()}${idx}`;
@@ -99,7 +114,7 @@ const CreateOrder = () => {
           orderQty: item.qty
         }))
       };
-      const res = await axios.post(
+      await axios.post(
         `${backend_url}/orders`,
         orderData,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -107,7 +122,7 @@ const CreateOrder = () => {
       setSubmitSuccess('Order submitted and saved successfully!');
       setItems([{ code: generateItemCode(0), name: '', unit: UNITS[0], category: '', qty: '' }]);
       setUserName('');
-      setSection(SECTIONS[0]);
+      setSection('');
       setOrderType('Urgent');
       setOrderStatus('Draft');
       setDateTime(new Date());
@@ -150,7 +165,10 @@ const CreateOrder = () => {
             <div>
               <label className="block text-sm font-medium mb-1">Select Section</label>
               <select className="w-full border rounded px-2 py-1" value={section} onChange={e => setSection(e.target.value)}>
-                {SECTIONS.map(sec => <option key={sec}>{sec}</option>)}
+                <option value="">Select Section</option>
+                {sections.map(sec => (
+                  <option key={sec._id} value={sec.name}>{sec.name}</option>
+                ))}
               </select>
             </div>
             <div>
