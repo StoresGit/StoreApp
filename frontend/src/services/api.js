@@ -39,7 +39,7 @@ const processQueue = async () => {
   isProcessingQueue = false;
 };
 
-// Add request interceptor for queuing
+// Add request interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
     // Add timestamp to prevent caching issues
@@ -47,6 +47,12 @@ api.interceptors.request.use(
       ...config.params,
       _t: Date.now()
     };
+    // Attach token if present
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
