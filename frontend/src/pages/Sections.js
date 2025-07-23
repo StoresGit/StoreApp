@@ -151,7 +151,7 @@ const Sections = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-c        <h1 className="text-2xl font-bold text-gray-900">Add Section</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Add Section</h1>
         <button
           onClick={() => setShowFormModal(true)}
           className="bg-[#735dff] text-white px-4 py-2 rounded-lg hover:bg-[#5a4bcc] transition-colors"
