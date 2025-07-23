@@ -12,7 +12,7 @@ const UNITS = ['Kg', 'Litre', 'Piece']; // Example units
 const CreateOrder = () => {
   const [orderType, setOrderType] = useState('Urgent');
   const [orderStatus, setOrderStatus] = useState('Draft');
-  const [orderNo] = useState('');
+  const [orderNo, setOrderNo] = useState('');
   const [section, setSection] = useState('');
   const [sections, setSections] = useState([]);
   const [userName, setUserName] = useState('');
@@ -88,6 +88,12 @@ const CreateOrder = () => {
     return true;
   };
 
+  // Generate a unique order number
+  function generateOrderNo() {
+    const now = new Date();
+    return `ORD-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*900+100)}`;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitError('');
@@ -107,7 +113,7 @@ const CreateOrder = () => {
         dateTime,
         scheduleDate: orderType === 'Schedule' ? scheduleDate : null,
         items: items.map(item => ({
-          itemCode: item.code,
+          itemCode: item.code, // Use itemCode for backend
           itemName: item.name,
           unit: item.unit,
           category: item.category,
@@ -127,6 +133,7 @@ const CreateOrder = () => {
       setOrderStatus('Draft');
       setDateTime(new Date());
       setScheduleDate(null);
+      setOrderNo(generateOrderNo());
     } catch (err) {
       setSubmitError(err.response?.data?.error || err.message || 'Failed to submit order');
     }
@@ -134,6 +141,7 @@ const CreateOrder = () => {
 
   React.useEffect(() => {
     setItems([{ ...items[0], code: generateItemCode(0) }]);
+    setOrderNo(generateOrderNo());
     // eslint-disable-next-line
   }, []);
 

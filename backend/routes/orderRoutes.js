@@ -1,17 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const orderController = require('../controllers/orderController');
+const auth = require('../middleware/auth');
 const { requireMasterAdmin } = require('../middleware/permissions');
 
 // Create order
-router.post('/', requireMasterAdmin, orderController.createOrder);
+router.post('/', auth, requireMasterAdmin, orderController.createOrder);
 // Get all orders
-router.get('/', requireMasterAdmin, orderController.getOrders);
+router.get('/', auth, requireMasterAdmin, orderController.getOrders);
 // Get order by ID
-router.get('/:id', requireMasterAdmin, orderController.getOrderById);
+router.get('/:id', auth, requireMasterAdmin, orderController.getOrderById);
 // Update order
-router.patch('/:id', requireMasterAdmin, orderController.updateOrder);
+router.patch('/:id', auth, requireMasterAdmin, orderController.updateOrder);
 // Delete order
-router.delete('/:id', requireMasterAdmin, orderController.deleteOrder);
+router.delete('/:id', auth, requireMasterAdmin, orderController.deleteOrder);
 
 module.exports = router; 
