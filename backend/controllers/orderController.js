@@ -3,6 +3,15 @@ const Order = require('../models/Order');
 // Create a new order
 exports.createOrder = async (req, res) => {
   try {
+    const { orderNo, section, userName, dateTime, items } = req.body;
+    if (!orderNo || !section || !userName || !dateTime || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: 'All required fields must be filled and at least one item must be added.' });
+    }
+    for (const item of items) {
+      if (!item.itemCode || !item.itemName || !item.unit || !item.category || !item.orderQty) {
+        return res.status(400).json({ error: 'All item fields are required.' });
+      }
+    }
     const order = new Order(req.body);
     await order.save();
     res.status(201).json(order);
