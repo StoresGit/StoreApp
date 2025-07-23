@@ -3,14 +3,14 @@ const router = express.Router();
 const sectionController = require('../controllers/sectionController');
 const auth = require('../middleware/auth');
 
-// Apply auth middleware to all routes
+// GET active sections only (public)
+router.get('/active', sectionController.getActiveSections);
+
+// Apply auth middleware to all other routes
 router.use(auth);
 
 // GET all sections
 router.get('/', sectionController.getSections);
-
-// GET active sections only
-router.get('/active', sectionController.getActiveSections);
 
 // GET single section by ID
 router.get('/:id', sectionController.getSectionById);
