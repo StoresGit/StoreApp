@@ -4,7 +4,7 @@ import backend_url from '../../config/config';
 import { useAuth } from '../../context/AuthContext';
 
 const BranchUsers = () => {
-  const { isMasterAdmin } = useAuth();
+  const { user, isMasterAdmin } = useAuth();
   const [formData, setFormData] = useState({
     branchName: '',
     employeeName: '',
@@ -197,6 +197,7 @@ const BranchUsers = () => {
                 ))}
               </select>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
           </div>
 
           {/* Employee Name */}
@@ -213,6 +214,7 @@ const BranchUsers = () => {
                 required
               />
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Employee name</div>
           </div>
 
           {/* Username */}
@@ -229,6 +231,7 @@ const BranchUsers = () => {
                 required
               />
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Username (will be username@gmail.com)</div>
           </div>
 
           {/* Password */}
@@ -245,6 +248,7 @@ const BranchUsers = () => {
                 required
               />
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Password</div>
           </div>
 
           {/* Section Selection */}
@@ -266,6 +270,7 @@ const BranchUsers = () => {
                 ))}
               </div>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Select sections for this user</div>
           </div>
 
           {/* Submit Button */}

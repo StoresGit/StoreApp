@@ -28,11 +28,9 @@ const CreateItem = () => {
     if (formData.assignBranch) {
       // Filter sections for the selected branch
       const branchSections = sections.filter(section => 
-        section.branch === formData.assignBranch || 
-        section.branch?._id === formData.assignBranch ||
-        section.branch?.toString() === formData.assignBranch
+        section.branch === formData.assignBranch || section.branch?._id === formData.assignBranch
       );
-      setFilteredSections(branchSections.length > 0 ? branchSections : sections);
+      setFilteredSections(branchSections);
     } else {
       // If no branch selected, show all sections
       setFilteredSections(sections);
@@ -41,7 +39,6 @@ const CreateItem = () => {
 
   const fetchData = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
@@ -52,16 +49,15 @@ const CreateItem = () => {
         axios.get(`${backend_url}/sections`, { headers })
       ]);
 
-      console.log('Categories fetched:', categoriesRes.data);
-      console.log('Units fetched:', unitsRes.data);
-      console.log('Branches fetched:', branchesRes.data);
-      console.log('Sections fetched:', sectionsRes.data);
+      // Show all available data initially, but prefer branch-specific data
+      const allCategories = categoriesRes.data;
+      const allUnits = unitsRes.data;
+      const allSections = sectionsRes.data;
 
-      // Show all available data
-      setCategories(categoriesRes.data);
-      setUnits(unitsRes.data);
+      setCategories(allCategories);
+      setUnits(allUnits);
       setBranches(branchesRes.data);
-      setSections(sectionsRes.data);
+      setSections(allSections);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Error loading data: ' + (error.response?.data?.error || error.message));
@@ -154,6 +150,7 @@ const CreateItem = () => {
                 disabled
               />
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Auto generated</div>
           </div>
 
           {/* Item Name */}
@@ -170,6 +167,7 @@ const CreateItem = () => {
                 required
               />
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Item Name</div>
           </div>
 
           {/* Item Category */}
@@ -186,11 +184,12 @@ const CreateItem = () => {
                 <option value="">Select Category</option>
                 {categories.map((category) => (
                   <option key={category._id} value={category._id}>
-                    {category.nameEn || category.name || category.nameUr}
+                    {category.name}
                   </option>
                 ))}
               </select>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
           </div>
 
           {/* Unit */}
@@ -212,6 +211,7 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
           </div>
 
           {/* Assign Branch */}
@@ -233,6 +233,7 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Assign branch (Selectable)</div>
           </div>
 
           {/* Assign Section */}
@@ -245,15 +246,17 @@ const CreateItem = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 required
+                disabled={!formData.assignBranch}
               >
-                <option value="">Select Section</option>
+                <option value="">{formData.assignBranch ? 'Select Section' : 'Select Branch First'}</option>
                 {filteredSections.map((section) => (
                   <option key={section._id} value={section._id}>
-                    {section.name} {section.branch ? `(${section.branch.name || section.branch})` : ''}
+                    {section.name}
                   </option>
                 ))}
               </select>
             </div>
+            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Assign Section (Selectable - Only shows sections from selected branch)</div>
           </div>
 
           {/* Submit Button */}
