@@ -4,7 +4,7 @@ import backend_url from '../../config/config';
 import { useAuth } from '../../context/AuthContext';
 
 const BranchUsers = () => {
-  const { user, isMasterAdmin } = useAuth();
+  const { isMasterAdmin } = useAuth();
   const [formData, setFormData] = useState({
     branchName: '',
     employeeName: '',
