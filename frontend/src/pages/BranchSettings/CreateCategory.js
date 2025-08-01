@@ -142,7 +142,7 @@ const CreateCategory = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         {/* Create Category Section */}
         <div className="bg-green-200 p-4 rounded-lg mb-6">
-          <h1 className="text-2xl font-bold text-black">Create Category</h1>
+          <h1 className="text-2xl font-bold text-black">Branch Category</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="mb-8">
