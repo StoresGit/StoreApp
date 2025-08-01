@@ -60,9 +60,6 @@ import OrderProcessingPrep from './pages/CentralKitchen/OrderProcessingPrep';
 // Import new Branch Settings pages
 import CreateItem from './pages/BranchSettings/CreateItem';
 import CreateCategory from './pages/BranchSettings/CreateCategory';
-import BranchUnits from './pages/BranchSettings/BranchUnits';
-import BranchUsers from './pages/BranchSettings/BranchUsers';
-import BranchSection from './pages/BranchSettings/BranchSection';
 
 function App() {
   const menuItems = [
