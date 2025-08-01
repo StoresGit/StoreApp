@@ -16,36 +16,34 @@ exports.getUnit = async (req, res) => {
 };
 
 // -------------------------
-// POST /units
+// POST  /units
 // -------------------------
 exports.addUnit = async (req, res) => {
   try {
-    const { name, baseUnit, standardUnit, symbol } = req.body;
+    const { name, baseUnit, standardUnit, symbol, unitType, branch } = req.body;
     
+    // Validate required fields
     if (!name || !baseUnit || !symbol) {
-      return res.status(400).json({ error: "name, baseUnit & symbol are required" });
+      return res.status(400).json({ error: "Name, baseUnit, and symbol are required" });
     }
 
-    // Validate baseUnit is one of the allowed values
-    const allowedBaseUnits = ['kg', 'liter', 'pieces'];
-    if (!allowedBaseUnits.includes(baseUnit)) {
-      return res.status(400).json({ error: "baseUnit must be one of: kg, liter, pieces" });
-    }
-
+    // Create unit data
     const unitData = {
       name,
       baseUnit,
-      symbol: symbol,
+      symbol,
+      unitType: unitType || 'standard'
     };
 
-    // Add optional fields if provided
+    // Add optional fields
     if (standardUnit) unitData.standardUnit = standardUnit;
+    if (branch && unitType === 'branch') unitData.branch = branch;
 
     const unit = await Unit.create(unitData);
     return res.status(201).json(unit);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: "Failed to add unit" });
+    return res.status(500).json({ error: "Failed to create unit" });
   }
 };
 

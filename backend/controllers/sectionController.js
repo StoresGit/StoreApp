@@ -39,7 +39,7 @@ exports.getSectionById = async (req, res) => {
 // POST create new section
 exports.createSection = async (req, res) => {
   try {
-    const { name, code, description, isActive, branch } = req.body;
+    const { name, code, description, isActive, branch, sectionType } = req.body;
 
     // Check if section with same name or code already exists
     const existingSection = await Section.findOne({
@@ -66,6 +66,7 @@ exports.createSection = async (req, res) => {
       description,
       isActive: isActive !== undefined ? isActive : true,
       branch,
+      sectionType: sectionType || 'standard',
       createdBy: req.user?.id
     });
 
@@ -88,7 +89,7 @@ exports.createSection = async (req, res) => {
 // PUT update section
 exports.updateSection = async (req, res) => {
   try {
-    const { name, code, description, isActive, branch } = req.body;
+    const { name, code, description, isActive, branch, sectionType } = req.body;
 
     // Check if section exists
     const existingSection = await Section.findById(req.params.id);
@@ -116,16 +117,19 @@ exports.updateSection = async (req, res) => {
       }
     }
 
+    const updateData = {
+      name,
+      code,
+      description,
+      isActive: isActive !== undefined ? isActive : true,
+      branch,
+      sectionType: sectionType || 'standard',
+      updatedBy: req.user?.id
+    };
+
     const updatedSection = await Section.findByIdAndUpdate(
       req.params.id,
-      {
-        name,
-        code,
-        description,
-        isActive,
-        branch,
-        updatedBy: req.user?.id
-      },
+      updateData,
       { new: true, runValidators: true }
     ).populate('branch', 'name code')
      .populate('createdBy', 'name')

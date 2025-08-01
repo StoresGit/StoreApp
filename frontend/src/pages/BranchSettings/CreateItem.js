@@ -9,7 +9,9 @@ const CreateItem = () => {
     itemCategory: '',
     unit: '',
     assignBranch: '',
-    assignSection: ''
+    assignSection: '',
+    assignBranchCheckbox: false,
+    assignSectionCheckbox: false
   });
 
   const [categories, setCategories] = useState([]);
@@ -18,9 +20,63 @@ const CreateItem = () => {
   const [sections, setSections] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchData();
+    
+    // Check for pending unit data from Units page
+    const pendingUnitData = localStorage.getItem('pendingUnitData');
+    if (pendingUnitData) {
+      try {
+        const unitData = JSON.parse(pendingUnitData);
+        
+        // Auto-populate the form with unit data
+        setFormData(prev => ({
+          ...prev,
+          itemName: unitData.name,
+          unit: unitData.name, // Use unit name as item name
+          assignBranchCheckbox: true,
+          assignBranch: unitData.unitType.replace('branch-', '') // Extract branch ID
+        }));
+        
+        // Clear the pending data
+        localStorage.removeItem('pendingUnitData');
+        
+        // Show notification
+        alert('Unit data has been transferred from Units page. Please complete the item creation.');
+      } catch (error) {
+        console.error('Error parsing pending unit data:', error);
+        localStorage.removeItem('pendingUnitData');
+      }
+    }
+    
+    // Check for pending section data from Sections page
+    const pendingSectionData = localStorage.getItem('pendingSectionData');
+    if (pendingSectionData) {
+      try {
+        const sectionData = JSON.parse(pendingSectionData);
+        
+        // Auto-populate the form with section data
+        setFormData(prev => ({
+          ...prev,
+          itemName: sectionData.name,
+          assignSectionCheckbox: true,
+          assignSection: sectionData.name, // Use section name
+          assignBranchCheckbox: true,
+          assignBranch: sectionData.sectionType.replace('branch-', '') // Extract branch ID
+        }));
+        
+        // Clear the pending data
+        localStorage.removeItem('pendingSectionData');
+        
+        // Show notification
+        alert('Section data has been transferred from Sections page. Please complete the item creation.');
+      } catch (error) {
+        console.error('Error parsing pending section data:', error);
+        localStorage.removeItem('pendingSectionData');
+      }
+    }
   }, []);
 
   // Filter sections when branch changes
@@ -36,6 +92,12 @@ const CreateItem = () => {
       setFilteredSections(sections);
     }
   }, [formData.assignBranch, sections]);
+
+  // Filter categories based on search term
+  const filteredCategories = categories.filter(category =>
+    category.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    category.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const fetchData = async () => {
     try {
@@ -174,6 +236,13 @@ const CreateItem = () => {
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Item Category:</div>
             <div className="col-span-2">
+              <input
+                type="text"
+                placeholder="Search categories..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
+              />
               <select
                 name="itemCategory"
                 value={formData.itemCategory}
@@ -182,14 +251,14 @@ const CreateItem = () => {
                 required
               >
                 <option value="">Select Category</option>
-                {categories.map((category) => (
+                {filteredCategories.map((category) => (
                   <option key={category._id} value={category._id}>
-                    {category.name}
+                    {category.nameEn || category.name}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
+            <div className="col-span-3 text-sm text-gray-600">Searchable - Drop down Menu (Selectable)</div>
           </div>
 
           {/* Unit */}
@@ -214,49 +283,81 @@ const CreateItem = () => {
             <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
           </div>
 
-          {/* Assign Branch */}
+          {/* Assign Branch Checkbox */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Assign Branch:</div>
             <div className="col-span-2">
-              <select
-                name="assignBranch"
-                value={formData.assignBranch}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Select Branch</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="assignBranchCheckbox"
+                  checked={formData.assignBranchCheckbox}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    assignBranchCheckbox: e.target.checked,
+                    assignBranch: e.target.checked ? prev.assignBranch : ''
+                  }))}
+                  className="rounded"
+                />
+                <span className="text-sm text-gray-700">Enable Branch Assignment</span>
+              </label>
+              {formData.assignBranchCheckbox && (
+                <select
+                  name="assignBranch"
+                  value={formData.assignBranch}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                  required={formData.assignBranchCheckbox}
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Assign branch (Selectable)</div>
+            <div className="col-span-3 text-sm text-gray-600">Checkbox to enable branch assignment</div>
           </div>
 
-          {/* Assign Section */}
+          {/* Assign Section Checkbox */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Assign Section:</div>
             <div className="col-span-2">
-              <select
-                name="assignSection"
-                value={formData.assignSection}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-                disabled={!formData.assignBranch}
-              >
-                <option value="">{formData.assignBranch ? 'Select Section' : 'Select Branch First'}</option>
-                {filteredSections.map((section) => (
-                  <option key={section._id} value={section._id}>
-                    {section.name}
-                  </option>
-                ))}
-              </select>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="assignSectionCheckbox"
+                  checked={formData.assignSectionCheckbox}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    assignSectionCheckbox: e.target.checked,
+                    assignSection: e.target.checked ? prev.assignSection : ''
+                  }))}
+                  className="rounded"
+                />
+                <span className="text-sm text-gray-700">Enable Section Assignment</span>
+              </label>
+              {formData.assignSectionCheckbox && (
+                <select
+                  name="assignSection"
+                  value={formData.assignSection}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md mt-2"
+                  required={formData.assignSectionCheckbox}
+                  disabled={!formData.assignBranch}
+                >
+                  <option value="">Select Section</option>
+                  {filteredSections.map((section) => (
+                    <option key={section._id} value={section._id}>
+                      {section.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Assign Section (Selectable - Only shows sections from selected branch)</div>
+            <div className="col-span-3 text-sm text-gray-600">Checkbox to enable section assignment</div>
           </div>
 
           {/* Submit Button */}

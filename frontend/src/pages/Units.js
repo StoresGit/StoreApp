@@ -4,11 +4,13 @@ import backend_url from '../config/config';
 
 const Units = () => {
   const [units, setUnits] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [formData, setFormData] = useState({ 
     name: '', 
     baseUnit: '', 
     standardUnit: '', 
-    symbol: ''
+    symbol: '',
+    unitType: '' // New field for unit type
   });
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -19,6 +21,7 @@ const Units = () => {
 
   useEffect(() => {
     fetchUnits();
+    fetchBranches();
   }, []);
 
   const fetchUnits = async () => {
@@ -30,38 +33,99 @@ const Units = () => {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const res = await axios.get(`${backend_url}/branch`);
+      setBranches(res.data);
+    } catch (err) {
+      console.error('Failed to fetch branches:', err);
+    }
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleAddUnit = async () => {
-    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim()) {
+    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim() && formData.unitType.trim()) {
       try {
+        // If branch unit is selected, redirect to Create Item page
+        if (formData.unitType.startsWith('branch-')) {
+          // Store the unit data in localStorage for Create Item page
+          localStorage.setItem('pendingUnitData', JSON.stringify({
+            name: formData.name,
+            baseUnit: formData.baseUnit,
+            symbol: formData.symbol,
+            standardUnit: formData.standardUnit,
+            unitType: formData.unitType
+          }));
+          
+          // Redirect to Create Item page
+          window.location.href = '/branch-settings/create-item';
+          return;
+        }
+        
+        // For standard units, show confirmation
+        if (formData.unitType === 'standard') {
+          const confirmed = window.confirm('Are you sure you want to create a Standard Unit? Operations are running.');
+          if (!confirmed) {
+            return;
+          }
+        }
+        
         await axios.post(`${backend_url}/units`, formData);
         closeModal();
         fetchUnits();
+        alert('Unit created successfully!');
       } catch (err) {
         console.error('Failed to add unit:', err);
         alert('Failed to add unit. Please check your input.');
       }
     } else {
-      alert('Name, Base Unit, and Symbol are required fields.');
+      alert('Name, Base Unit, Symbol, and Unit Type are required fields.');
     }
   };
 
   const handleUpdateUnit = async () => {
-    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim() && currentUnitId) {
+    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim() && formData.unitType.trim() && currentUnitId) {
       try {
+        // If branch unit is selected, redirect to Create Item page
+        if (formData.unitType.startsWith('branch-')) {
+          // Store the unit data in localStorage for Create Item page
+          localStorage.setItem('pendingUnitData', JSON.stringify({
+            name: formData.name,
+            baseUnit: formData.baseUnit,
+            symbol: formData.symbol,
+            standardUnit: formData.standardUnit,
+            unitType: formData.unitType,
+            isUpdate: true,
+            unitId: currentUnitId
+          }));
+          
+          // Redirect to Create Item page
+          window.location.href = '/branch-settings/create-item';
+          return;
+        }
+        
+        // For standard units, show confirmation
+        if (formData.unitType === 'standard') {
+          const confirmed = window.confirm('Are you sure you want to update to Standard Unit? Operations are running.');
+          if (!confirmed) {
+            return;
+          }
+        }
+        
         await axios.put(`${backend_url}/units/${currentUnitId}`, formData);
         closeModal();
         fetchUnits();
+        alert('Unit updated successfully!');
       } catch (err) {
         console.error('Failed to update unit:', err);
         alert('Failed to update unit. Please check your input.');
       }
     } else {
-      alert('Name, Base Unit, and Symbol are required fields.');
+      alert('Name, Base Unit, Symbol, and Unit Type are required fields.');
     }
   };
 
@@ -85,7 +149,8 @@ const Units = () => {
       name: unit.name, 
       baseUnit: unit.baseUnit, 
       standardUnit: unit.standardUnit || '', 
-      symbol: unit.symbol || unit.Symbol // Handle both old and new field names
+      symbol: unit.symbol || unit.Symbol, // Handle both old and new field names
+      unitType: unit.unitType || 'standard' // Default to standard if not set
     });
     setShowModal(true);
   };
@@ -95,7 +160,8 @@ const Units = () => {
       name: '', 
       baseUnit: '', 
       standardUnit: '', 
-      symbol: ''
+      symbol: '',
+      unitType: ''
     });
     setShowModal(false);
     setEditMode(false);
@@ -126,6 +192,7 @@ const Units = () => {
             <tr>
               <th className="p-2 border text-left">Name</th>
               <th className="p-2 border text-left">Base Unit</th>
+              <th className="p-2 border text-left">Unit Type</th>
               <th className="p-2 border text-left">Standard Unit</th>
               <th className="p-2 border text-left">Symbol</th>
               <th className="p-2 border text-left">Actions</th>
@@ -142,6 +209,14 @@ const Units = () => {
                     'bg-orange-100 text-orange-800'
                   }`}>
                     {unit.baseUnit}
+                  </span>
+                </td>
+                <td className="p-2 border">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    unit.unitType === 'branch' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {unit.unitType || 'standard'}
                   </span>
                 </td>
                 <td className="p-2 border">{unit.standardUnit || '-'}</td>
@@ -164,7 +239,7 @@ const Units = () => {
             ))}
             {units.length === 0 && (
               <tr>
-                <td colSpan="5" className="p-4 text-center text-gray-500">
+                <td colSpan="6" className="p-4 text-center text-gray-500">
                   No units found. Add your first unit to get started.
                 </td>
               </tr>
@@ -212,6 +287,29 @@ const Units = () => {
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Choose the base unit this unit belongs to: kg (weight), liter (volume), or pieces (count)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Unit Type *
+                </label>
+                <select
+                  name="unitType"
+                  value={formData.unitType}
+                  onChange={handleChange}
+                  className="w-full border p-2 rounded"
+                >
+                  <option value="">Select Unit Type *</option>
+                  <option value="standard">Standard Unit</option>
+                  {branches.map(branch => (
+                    <option key={branch._id} value={`branch-${branch._id}`}>
+                      Branch Unit - {branch.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Choose whether this is a standard unit or a branch-specific unit
                 </p>
               </div>
 

@@ -112,10 +112,7 @@ function App() {
           label: 'Branch Settings', 
           children: [
             { label: 'Create Item', path: '/branch-settings/create-item' },
-            { label: 'Create Category', path: '/branch-settings/create-category' },
-            { label: 'Branch Units', path: '/branch-settings/branch-units' },
-            { label: 'Branch Users', path: '/branch-settings/branch-users' },
-            { label: 'Branch Section', path: '/branch-settings/branch-section' },
+            { label: 'Branch Category', path: '/branch-settings/create-category' }
           ]
         },
       ],
@@ -271,9 +268,6 @@ function App() {
                 {/* Branch Settings Routes */}
                 <Route path="/branch-settings/create-item" element={<CreateItem />} />
                 <Route path="/branch-settings/create-category" element={<CreateCategory />} />
-                <Route path="/branch-settings/branch-units" element={<BranchUnits />} />
-                <Route path="/branch-settings/branch-users" element={<BranchUsers />} />
-                <Route path="/branch-settings/branch-section" element={<BranchSection />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

@@ -21,6 +21,11 @@ const UnitSchema = new mongoose.Schema({
   branch: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch'
+  },
+  unitType: {
+    type: String,
+    enum: ['standard', 'branch'],
+    default: 'standard'
   }
 }, { timestamps: true });
 

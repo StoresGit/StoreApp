@@ -18,7 +18,8 @@ const Sections = () => {
     code: '',
     description: '',
     isActive: true,
-    branch: ''
+    branch: '',
+    sectionType: '' // New field for section type
   });
 
   const fetchData = async () => {
@@ -64,7 +65,8 @@ const Sections = () => {
       code: '',
       description: '',
       isActive: true,
-      branch: ''
+      branch: '',
+      sectionType: ''
     });
     setEditingId(null);
     setShowFormModal(false);
@@ -77,6 +79,33 @@ const Sections = () => {
     setError('');
 
     try {
+      // If branch section is selected, redirect to Create Item page
+      if (formData.sectionType.startsWith('branch-')) {
+        // Store the section data in localStorage for Create Item page
+        localStorage.setItem('pendingSectionData', JSON.stringify({
+          name: formData.name,
+          code: formData.code,
+          description: formData.description,
+          isActive: formData.isActive,
+          sectionType: formData.sectionType,
+          isUpdate: editingId ? true : false,
+          sectionId: editingId
+        }));
+        
+        // Redirect to Create Item page
+        window.location.href = '/branch-settings/create-item';
+        return;
+      }
+      
+      // For standard sections, show confirmation
+      if (formData.sectionType === 'standard') {
+        const confirmed = window.confirm('Are you sure you want to create a Standard Section? Operations are running.');
+        if (!confirmed) {
+          setFormLoading(false);
+          return;
+        }
+      }
+
       if (editingId) {
         await apiService.sections.update(editingId, formData);
         setSuccess('Section updated successfully!');
@@ -103,7 +132,8 @@ const Sections = () => {
       code: section.code,
       description: section.description || '',
       isActive: section.isActive,
-      branch: section.branch?._id || ''
+      branch: section.branch?._id || '',
+      sectionType: section.sectionType || 'standard' // Assuming 'standard' is the default
     });
     setEditingId(section._id);
     setShowFormModal(true);
@@ -185,6 +215,9 @@ c        <h1 className="text-2xl font-bold text-gray-900">Add Section</h1>
                   Code
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Section Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -210,6 +243,14 @@ c        <h1 className="text-2xl font-bold text-gray-900">Add Section</h1>
                     <div className="text-sm text-gray-900">
                       {section.code}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      section.sectionType === 'branch-item' ? 'bg-purple-100 text-purple-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {section.sectionType === 'branch-item' ? 'Branch Item' : 'Standard'}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900 max-w-xs truncate">
@@ -328,6 +369,22 @@ c        <h1 className="text-2xl font-bold text-gray-900">Add Section</h1>
                       {branch.name} ({branch.code})
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Section Type *
+                </label>
+                <select
+                  name="sectionType"
+                  value={formData.sectionType}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#735dff] focus:border-transparent"
+                  required
+                >
+                  <option value="standard">Standard Section</option>
+                  <option value="branch-item">Branch Item Section</option>
                 </select>
               </div>
 

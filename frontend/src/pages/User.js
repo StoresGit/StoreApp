@@ -6,6 +6,7 @@ import api from '../services/api';
 const User = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [branches, setBranches] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -39,12 +40,14 @@ const User = () => {
 
  const fetchRolesAndBranches = async () => {
     try {
-  const [rolesRes] = await Promise.all([
-        api.get('/roles')
-  ]);
-  setRoles(rolesRes.data);
+      const [rolesRes, branchesRes] = await Promise.all([
+        api.get('/roles'),
+        api.get('/branch')
+      ]);
+      setRoles(rolesRes.data);
+      setBranches(branchesRes.data);
     } catch (err) {
-      console.error('Error fetching roles:', err);
+      console.error('Error fetching roles and branches:', err);
     }
 };
 
@@ -203,6 +206,7 @@ useEffect(() => {
           <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biometric ID</th>
@@ -238,6 +242,9 @@ useEffect(() => {
                     }`}>
                       {user.role}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {user.branch?.name || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -315,6 +322,23 @@ useEffect(() => {
                 {roles.map((role) => (
                     <option key={role._id} value={role.name}>
                     {role.name}
+                  </option>
+                ))}
+              </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+              <select
+                name="branch"
+                value={formData.branch}
+                onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Branch</option>
+                {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                    {branch.name}
                   </option>
                 ))}
               </select>

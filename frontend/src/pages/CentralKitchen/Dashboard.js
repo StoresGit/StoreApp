@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { apiService } from '../../services/api';
 
 const CentralKitchenDashboard = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   // Placeholder state for filters and orders
   const [filters, setFilters] = useState({ branch: '', date: '', status: '', urgency: '' });
-  const [orders, setOrders] = useState([]); // To be fetched from backend
 
   // Placeholder effect for fetching orders
   useEffect(() => {
     // TODO: Fetch orders from backend
-    setOrders([]);
+    setLoading(false);
   }, []);
 
   return (

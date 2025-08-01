@@ -5,12 +5,10 @@ import backend_url from '../../config/config';
 const CreateCategory = () => {
   const [formData, setFormData] = useState({
     mainCategoryName: '',
-    subCategoryName: '',
-    branchName: ''
+    subCategoryName: ''
   });
 
   const [categories, setCategories] = useState([]);
-  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCategory, setEditingCategory] = useState(null);
 
@@ -24,15 +22,11 @@ const CreateCategory = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [categoriesRes, branchesRes] = await Promise.all([
-        axios.get(`${backend_url}/item-categories`, { headers }),
-        axios.get(`${backend_url}/branch`, { headers })
-      ]);
+      const categoriesRes = await axios.get(`${backend_url}/item-categories`, { headers });
 
       // Show all categories initially
       const allCategories = categoriesRes.data;
       setCategories(allCategories);
-      setBranches(branchesRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Error loading data: ' + (error.response?.data?.error || error.message));
@@ -51,13 +45,12 @@ const CreateCategory = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.mainCategoryName && formData.subCategoryName && formData.branchName) {
+    if (formData.mainCategoryName && formData.subCategoryName) {
       try {
         const token = localStorage.getItem('token');
         const categoryData = {
           nameEn: formData.mainCategoryName,
-          nameUr: formData.subCategoryName,
-          branch: formData.branchName // Add branch reference
+          nameUr: formData.subCategoryName
         };
 
         if (editingCategory) {
@@ -76,8 +69,7 @@ const CreateCategory = () => {
         // Reset form and refresh categories
         setFormData({
           mainCategoryName: '',
-          subCategoryName: '',
-          branchName: ''
+          subCategoryName: ''
         });
         fetchData();
         
@@ -96,8 +88,7 @@ const CreateCategory = () => {
     setEditingCategory(category);
     setFormData({
       mainCategoryName: category.nameEn || '',
-      subCategoryName: category.nameUr || '',
-      branchName: category.branch?._id || ''
+      subCategoryName: category.nameUr || ''
     });
   };
 
@@ -105,8 +96,7 @@ const CreateCategory = () => {
     setEditingCategory(null);
     setFormData({
       mainCategoryName: '',
-      subCategoryName: '',
-      branchName: ''
+      subCategoryName: ''
     });
   };
 
@@ -142,33 +132,11 @@ const CreateCategory = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         {/* Create Category Section */}
         <div className="bg-green-200 p-4 rounded-lg mb-6">
-          <h1 className="text-2xl font-bold text-black">Create Category</h1>
+          <h1 className="text-2xl font-bold text-black">Branch Category</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="mb-8">
           <div className="grid grid-cols-1 gap-6">
-            {/* Branch Name */}
-            <div className="grid grid-cols-3 gap-4 items-center">
-              <div className="font-medium text-gray-700">Branch Name:</div>
-              <div className="col-span-2">
-                <select
-                  name="branchName"
-                  value={formData.branchName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  required
-                >
-                  <option value="">Select Branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
-            </div>
-
             {/* Main Category Name */}
             <div className="grid grid-cols-3 gap-4 items-center">
               <div className="font-medium text-gray-700">Main Category Name:</div>
@@ -230,8 +198,7 @@ const CreateCategory = () => {
           
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-300">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="font-semibold text-gray-700">BRANCH</div>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="font-semibold text-gray-700">CATEGORY NAME</div>
                 <div className="font-semibold text-gray-700">ACTIONS</div>
               </div>
@@ -240,8 +207,7 @@ const CreateCategory = () => {
             <div className="divide-y divide-gray-200">
               {categories.map((category) => (
                 <div key={category._id} className="px-4 py-3 hover:bg-gray-50">
-                  <div className="grid grid-cols-3 gap-4 items-center">
-                    <div className="text-gray-800">{category.branch?.name || 'N/A'}</div>
+                  <div className="grid grid-cols-2 gap-4 items-center">
                     <div className="font-medium text-gray-800">{category.nameEn || category.name}</div>
                     <div className="flex items-center gap-2">
                       <button
