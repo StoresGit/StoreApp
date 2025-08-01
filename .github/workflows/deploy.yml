@@ -127,7 +127,7 @@ jobs:
               sudo tee /etc/nginx/sites-available/gnrcontrol << 'EOF'
             server {
                 listen 80;
-                server_name _;
+                server_name gnrcontrol.com www.gnrcontrol.com;
                 root /var/www/html;
                 index index.html;
 
@@ -165,7 +165,8 @@ jobs:
                 sudo tee /etc/apache2/sites-available/gnrcontrol.conf << 'EOF'
             <VirtualHost *:80>
                 DocumentRoot /var/www/html
-                ServerName _
+                ServerName gnrcontrol.com
+                ServerAlias www.gnrcontrol.com
                 
                 <Directory /var/www/html>
                     AllowOverride All

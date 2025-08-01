@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🔧 Fixing DigitalOcean Deployment..."
+echo "🔧 Fixing DigitalOcean Deployment for gnrcontrol.com..."
 
 # Create necessary directories
 sudo mkdir -p /var/www/html
@@ -12,13 +12,13 @@ sudo chmod -R 755 /var/www/html
 
 # Check if nginx is installed and configure it
 if command -v nginx &> /dev/null; then
-    echo "📦 Configuring Nginx..."
+    echo "📦 Configuring Nginx for gnrcontrol.com..."
     
     # Create nginx configuration
     sudo tee /etc/nginx/sites-available/gnrcontrol << 'EOF'
 server {
     listen 80;
-    server_name _;
+    server_name gnrcontrol.com www.gnrcontrol.com;
     root /var/www/html;
     index index.html;
 
@@ -46,17 +46,18 @@ EOF
     sudo nginx -t
     sudo systemctl reload nginx
     
-    echo "✅ Nginx configured successfully"
+    echo "✅ Nginx configured successfully for gnrcontrol.com"
 else
     # Check if apache is installed
     if command -v apache2 &> /dev/null; then
-        echo "📦 Configuring Apache..."
+        echo "📦 Configuring Apache for gnrcontrol.com..."
         
         # Create apache configuration
         sudo tee /etc/apache2/sites-available/gnrcontrol.conf << 'EOF'
 <VirtualHost *:80>
     DocumentRoot /var/www/html
-    ServerName _
+    ServerName gnrcontrol.com
+    ServerAlias www.gnrcontrol.com
     
     <Directory /var/www/html>
         AllowOverride All
@@ -79,7 +80,7 @@ EOF
         sudo a2dissite 000-default
         sudo systemctl reload apache2
         
-        echo "✅ Apache configured successfully"
+        echo "✅ Apache configured successfully for gnrcontrol.com"
     else
         echo "❌ No web server (nginx/apache) found. Please install one first."
         exit 1
@@ -101,6 +102,6 @@ EOF
 sudo chown -R www-data:www-data /var/www/html
 sudo chmod -R 755 /var/www/html
 
-echo "✅ Deployment fixed! Your site should now be accessible."
-echo "🌐 Check your site at: http://your-server-ip"
-echo "🔧 Backend API at: http://your-server-ip/api" 
+echo "✅ Deployment fixed for gnrcontrol.com!"
+echo "🌐 Check your site at: https://gnrcontrol.com"
+echo "🔧 Backend API at: https://gnrcontrol.com/api" 
