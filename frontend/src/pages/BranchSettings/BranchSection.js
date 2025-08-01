@@ -158,7 +158,6 @@ const BranchSection = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
           </div>
 
           {/* Section Name */}
@@ -175,7 +174,6 @@ const BranchSection = () => {
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Section Name</div>
           </div>
 
           {/* Submit Button */}

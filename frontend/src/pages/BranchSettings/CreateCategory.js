@@ -166,7 +166,6 @@ const CreateCategory = () => {
                   ))}
                 </select>
               </div>
-              <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
             </div>
 
             {/* Main Category Name */}
@@ -183,7 +182,6 @@ const CreateCategory = () => {
                   required
                 />
               </div>
-              <div className="col-span-3 text-sm text-gray-600">Editable - Create Main Category</div>
             </div>
 
             {/* Sub Category Name */}
@@ -200,7 +198,6 @@ const CreateCategory = () => {
                   required
                 />
               </div>
-              <div className="col-span-3 text-sm text-gray-600">Editable - Create Sub Category</div>
             </div>
 
             {/* Submit Button */}

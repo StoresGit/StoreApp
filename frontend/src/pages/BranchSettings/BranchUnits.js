@@ -169,7 +169,6 @@ const BranchUnits = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
           </div>
 
           {/* Unit Name */}
@@ -186,7 +185,6 @@ const BranchUnits = () => {
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Unit name</div>
           </div>
 
           {/* Base Unit */}
@@ -206,7 +204,6 @@ const BranchUnits = () => {
                 <option value="pieces">Pieces (pieces)</option>
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select base units (kg / liter / pieces) (Selectable)</div>
           </div>
 
           {/* Symbol */}
@@ -223,7 +220,6 @@ const BranchUnits = () => {
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Symbol</div>
           </div>
 
           {/* Submit Button */}

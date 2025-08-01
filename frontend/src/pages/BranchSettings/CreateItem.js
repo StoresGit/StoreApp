@@ -154,7 +154,6 @@ const CreateItem = () => {
                 disabled
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Auto generated</div>
           </div>
 
           {/* Item Name */}
@@ -171,7 +170,6 @@ const CreateItem = () => {
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Item Name</div>
           </div>
 
           {/* Item Category */}
@@ -193,7 +191,6 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
           </div>
 
           {/* Unit */}
@@ -215,7 +212,6 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down Menu (Selectable)</div>
           </div>
 
           {/* Assign Branch */}
@@ -237,7 +233,6 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Assign branch (Selectable)</div>
           </div>
 
           {/* Assign Section */}
@@ -259,7 +254,6 @@ const CreateItem = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Assign Section (Selectable - Shows all available sections)</div>
           </div>
 
           {/* Submit Button */}
