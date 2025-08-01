@@ -1,38 +1,38 @@
-const Role = require('../models/Branch');
+const Branch = require('../models/Branch');
 
-exports.getRoles = async (req, res) => {
+exports.getBranches = async (req, res) => {
   try {
-    const roles = await Role.find();
-    res.status(200).json(roles);
+    const branches = await Branch.find();
+    res.status(200).json(branches);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch roles' });
+    res.status(500).json({ error: 'Failed to fetch branches' });
   }
 };
 
-exports.addRole = async (req, res) => {
+exports.addBranch = async (req, res) => {
   try {
-    const newRole = new Role({ name: req.body.name, code: req.body.code });
-    await newRole.save();
-    res.status(201).json(newRole);
+    const newBranch = new Branch({ name: req.body.name, code: req.body.code });
+    await newBranch.save();
+    res.status(201).json(newBranch);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to add role' });
+    res.status(500).json({ error: 'Failed to add branch' });
   }
 };
 
-exports.updateRole = async (req, res) => {
+exports.updateBranch = async (req, res) => {
   try {
-    const updatedRole = await Role.findByIdAndUpdate(req.params.id, { name: req.body.name,code: req.body.code }, { new: true });
-    res.status(200).json(updatedRole);
+    const updatedBranch = await Branch.findByIdAndUpdate(req.params.id, { name: req.body.name, code: req.body.code }, { new: true });
+    res.status(200).json(updatedBranch);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update role' });
+    res.status(500).json({ error: 'Failed to update branch' });
   }
 };
 
-exports.deleteRole = async (req, res) => {
+exports.deleteBranch = async (req, res) => {
   try {
-    await Role.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: 'Role deleted' });
+    await Branch.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: 'Branch deleted' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete role' });
+    res.status(500).json({ error: 'Failed to delete branch' });
   }
 };

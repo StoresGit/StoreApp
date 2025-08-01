@@ -39,7 +39,7 @@ import MenuCategory from './pages/MenuCategory';
 import BranchCategory from './pages/BranchCategory';
 
 // Import new Branch Order pages
-import BranchOrderBranch from './pages/BranchOrder/Branch';
+import Branch from './pages/BranchOrder/Branch';
 import BranchOrderCentralKitchen from './pages/BranchOrder/CentralKitchen';
 import BranchOrderReports from './pages/BranchOrder/Reports';
 import BranchOrderSettings from './pages/BranchOrder/Settings';
@@ -50,6 +50,19 @@ import InventoryControl from './pages/BranchOrder/InventoryControl';
 import ReceivingOrder from './pages/BranchOrder/ReceivingOrder';
 import StockCount from './pages/BranchOrder/StockCount';
 import Wastage from './pages/BranchOrder/Wastage';
+
+// Import Central Kitchen pages
+import CentralKitchenDashboard from './pages/CentralKitchen/Dashboard';
+import BranchOrdersHistory from './pages/CentralKitchen/BranchOrdersHistory';
+import PickList from './pages/CentralKitchen/PickList';
+import OrderProcessingPrep from './pages/CentralKitchen/OrderProcessingPrep';
+
+// Import new Branch Settings pages
+import CreateItem from './pages/BranchSettings/CreateItem';
+import CreateCategory from './pages/BranchSettings/CreateCategory';
+import BranchUnits from './pages/BranchSettings/BranchUnits';
+import BranchUsers from './pages/BranchSettings/BranchUsers';
+import BranchSection from './pages/BranchSettings/BranchSection';
 
 function App() {
   const menuItems = [
@@ -64,25 +77,47 @@ function App() {
       children: [
         { 
           label: 'Branch', 
-          path: '/branch-order/branch',
           children: [
             { label: 'Create Order', path: '/branch-order/create-order' },
             { label: 'Order Submission', path: '/branch-order/order-submission' },
-            { label: 'Order History', path: '/branch-order/order-history' },
+            { label: 'Order History & Tracking', path: '/branch-order/order-history' },
+            { 
+              label: 'Inventory Control', 
+              children: [
+                { label: 'Receiving Order', path: '/branch-order/receiving-order' },
+                { label: 'Stock Count', path: '/branch-order/stock-count' },
+                { label: 'Wastage', path: '/branch-order/wastage' },
+              ]
+            },
           ]
         },
         { 
-          label: 'Inventory Control', 
-          path: '/branch-order/inventory-control',
+          label: 'Central Kitchen', 
           children: [
-            { label: 'Receiving Order', path: '/branch-order/receiving-order' },
-            { label: 'Stock Count', path: '/branch-order/stock-count' },
-            { label: 'Wastage', path: '/branch-order/wastage' },
+            { label: 'Dashboard', path: '/central-kitchen/dashboard' },
+            { label: 'Branch Orders & History', path: '/central-kitchen/branch-orders-history' },
+            { label: 'Pick List', path: '/central-kitchen/pick-list' },
+            { label: 'Order Processing & Prep', path: '/central-kitchen/order-processing-prep' },
           ]
         },
-        { label: 'Central Kitchen', path: '/branch-order/central-kitchen' },
-        { label: 'Reports and Analysis', path: '/branch-order/reports' },
-        { label: 'Settings', path: '/branch-order/settings' },
+        { 
+          label: 'Reports & Analytics', 
+          children: [
+            { label: 'Order Patterns', path: '/reports/order-patterns' },
+            { label: 'Missing Item Analysis', path: '/reports/missing-item-analysis' },
+            { label: 'Wastage Reports', path: '/reports/wastage-reports' },
+          ]
+        },
+        { 
+          label: 'Branch Settings', 
+          children: [
+            { label: 'Create Item', path: '/branch-settings/create-item' },
+            { label: 'Create Category', path: '/branch-settings/create-category' },
+            { label: 'Branch Units', path: '/branch-settings/branch-units' },
+            { label: 'Branch Users', path: '/branch-settings/branch-users' },
+            { label: 'Branch Section', path: '/branch-settings/branch-section' },
+          ]
+        },
       ],
     },
     {
@@ -104,7 +139,7 @@ function App() {
         { label: 'Sections', path: '/sections' },
       ],
     },
-      {
+    {
       label: 'Item Category',
       icon: '📂',
       children: [
@@ -210,7 +245,7 @@ function App() {
                 <Route path="/branch-category" element={<BranchCategory />} />
                 
                 {/* Branch Order Routes */}
-                <Route path="/branch-order/branch" element={<BranchOrderBranch />} />
+                <Route path="/branch-order/branch" element={<Branch />} />
                 <Route path="/branch-order/central-kitchen" element={<BranchOrderCentralKitchen />} />
                 <Route path="/branch-order/reports" element={<BranchOrderReports />} />
                 <Route path="/branch-order/settings" element={<BranchOrderSettings />} />
@@ -221,6 +256,24 @@ function App() {
                 <Route path="/branch-order/receiving-order" element={<ReceivingOrder />} />
                 <Route path="/branch-order/stock-count" element={<StockCount />} />
                 <Route path="/branch-order/wastage" element={<Wastage />} />
+                
+                {/* Central Kitchen Routes */}
+                <Route path="/central-kitchen/dashboard" element={<CentralKitchenDashboard />} />
+                <Route path="/central-kitchen/branch-orders-history" element={<BranchOrdersHistory />} />
+                <Route path="/central-kitchen/pick-list" element={<PickList />} />
+                <Route path="/central-kitchen/order-processing-prep" element={<OrderProcessingPrep />} />
+                
+                {/* Reports & Analytics Routes */}
+                <Route path="/reports/order-patterns" element={<div className="p-6"><h1>Order Patterns</h1><p>Coming Soon...</p></div>} />
+                <Route path="/reports/missing-item-analysis" element={<div className="p-6"><h1>Missing Item Analysis</h1><p>Coming Soon...</p></div>} />
+                <Route path="/reports/wastage-reports" element={<div className="p-6"><h1>Wastage Reports</h1><p>Coming Soon...</p></div>} />
+                
+                {/* Branch Settings Routes */}
+                <Route path="/branch-settings/create-item" element={<CreateItem />} />
+                <Route path="/branch-settings/create-category" element={<CreateCategory />} />
+                <Route path="/branch-settings/branch-units" element={<BranchUnits />} />
+                <Route path="/branch-settings/branch-users" element={<BranchUsers />} />
+                <Route path="/branch-settings/branch-section" element={<BranchSection />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

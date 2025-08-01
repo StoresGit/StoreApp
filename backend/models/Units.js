@@ -18,6 +18,10 @@ const UnitSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  branch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Unit', UnitSchema);

@@ -26,69 +26,75 @@ const SidebarItem = ({ item, isActive, onSubMenuToggle, isCollapsed, isSubMenuOp
         return false;
     };
 
-    // Different styling based on level
-    const getItemStyles = () => {
+    // Get background color based on level and type
+    const getBackgroundColor = () => {
         if (level === 0) {
-            // Main menu items
-            return {
-                paddingLeft: '12px',
-                fontWeight: '600',
-                fontSize: '0.875rem',
-                color: isActive ? '#735dff' : '#374151'
-            };
+            // Main menu items - Yellow background for main title
+            return 'bg-yellow-200';
         } else if (level === 1) {
-            // First level sub-items
-            return {
-                paddingLeft: '28px',
-                fontWeight: '500',
-                fontSize: '0.8rem',
-                color: isActive ? '#735dff' : '#6b7280'
-            };
+            // First level sub-items - Orange background for main categories
+            return 'bg-orange-200';
+        } else if (level === 2) {
+            // Second level sub-items - Green background for primary sub-items
+            return 'bg-green-200';
         } else {
-            // Second level sub-items (nested)
-            return {
-                paddingLeft: '44px',
-                fontWeight: '400',
-                fontSize: '0.75rem',
-                color: isActive ? '#735dff' : '#9ca3af'
-            };
+            // Third level sub-items - Light blue background for secondary sub-items
+            return 'bg-blue-200';
         }
     };
 
-    const itemStyles = getItemStyles();
+    // Get text styling based on level
+    const getTextStyling = () => {
+        if (level === 0) {
+            return 'text-black font-bold text-lg';
+        } else if (level === 1) {
+            return 'text-black font-semibold';
+        } else if (level === 2) {
+            return 'text-black font-medium';
+        } else {
+            return 'text-black';
+        }
+    };
+
+    // Get padding based on level
+    const getPadding = () => {
+        if (level === 0) {
+            return 'px-4 py-3';
+        } else if (level === 1) {
+            return 'px-6 py-2';
+        } else if (level === 2) {
+            return 'px-8 py-2';
+        } else {
+            return 'px-10 py-2';
+        }
+    };
+
+    const bgColor = getBackgroundColor();
+    const textStyling = getTextStyling();
+    const padding = getPadding();
 
     return (
         <li className="mb-1">
             {item.path && !hasChildren ? (
                 <Link
                     to={item.path}
-                    className={`flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 ${
-                        isActive ? 'text-[#735dff] bg-gray-100 font-semibold' : 'text-gray-700'
-                    } ${isCollapsed && !isMobile ? 'justify-center' : ''}`}
-                    style={{ 
-                        paddingLeft: itemStyles.paddingLeft,
-                        fontWeight: itemStyles.fontWeight,
-                        fontSize: itemStyles.fontSize,
-                        color: itemStyles.color
-                    }}
+                    className={`flex items-center rounded-lg hover:opacity-80 transition-all duration-200 ${
+                        isActive ? 'ring-2 ring-blue-500' : ''
+                    } ${isCollapsed && !isMobile ? 'justify-center' : 'justify-between'} ${bgColor} ${textStyling} ${padding}`}
                 >
-                    {item.icon && level === 0 && <span className={`${isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'} text-lg`}>{item.icon}</span>}
-                    {level > 0 && <span className="mr-2 text-xs">•</span>}
-                    {(!isCollapsed || isMobile) && <span>{item.label}</span>}
+                    <div className="flex items-center">
+                        {item.icon && level === 0 && <span className={`${isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'} text-lg`}>{item.icon}</span>}
+                        {level > 0 && <span className="mr-2 text-xs">•</span>}
+                        {(!isCollapsed || isMobile) && <span>{item.label}</span>}
+                    </div>
                 </Link>
             ) : (
                 <div>
                     <button
                         onClick={toggleSubMenu}
-                        className={`w-full flex items-center p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 ${
-                            isActive ? 'text-[#735dff] bg-gray-100 font-semibold' : 'text-gray-700'
-                        } ${isCollapsed && !isMobile ? 'justify-center' : 'justify-between'}`}
-                        style={{ 
-                            paddingLeft: itemStyles.paddingLeft,
-                            fontWeight: itemStyles.fontWeight,
-                            fontSize: itemStyles.fontSize,
-                            color: itemStyles.color
-                        }}
+                        className={`w-full flex items-center rounded-lg hover:opacity-80 transition-all duration-200 ${
+                            isActive ? 'ring-2 ring-blue-500' : ''
+                        } ${isCollapsed && !isMobile ? 'justify-center' : 'justify-between'} ${bgColor} ${textStyling} ${padding}`}
                     >
                         <div className="flex items-center">
                             {item.icon && level === 0 && <span className={`${isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'} text-lg`}>{item.icon}</span>}

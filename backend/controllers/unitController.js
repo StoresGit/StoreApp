@@ -6,7 +6,8 @@ const Unit = require("../models/Units");
 // -------------------------
 exports.getUnit = async (req, res) => {
   try {
-    const units = await Unit.find();
+    const units = await Unit.find()
+      .populate('branch', 'name');
     return res.status(200).json(units);
   } catch (err) {
     console.error(err);

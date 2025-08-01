@@ -167,7 +167,10 @@ exports.updateProfile = async (req, res) => {
 // Get all users
 exports.getUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find()
+      .select('-password')
+      .populate('branch', 'name')
+      .populate('sections', 'name');
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -177,7 +180,7 @@ exports.getUsers = async (req, res) => {
 // Create new user
 exports.createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, branch, sections } = req.body;
 
     // Enforce @gmail.com for all new user emails
     if (!email.endsWith('@gmail.com')) {
@@ -195,7 +198,9 @@ exports.createUser = async (req, res) => {
       name,
       email,
       password,
-      role: role || 'user'
+      role: role || 'user',
+      branch,
+      sections: sections || []
     });
 
     // Generate token
@@ -206,6 +211,8 @@ exports.createUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      branch: user.branch,
+      sections: user.sections,
       token
     });
   } catch (error) {

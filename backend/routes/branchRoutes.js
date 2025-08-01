@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const roleController = require('../controllers/branchController');
+const branchController = require('../controllers/branchController');
+const auth = require('../middleware/auth');
 
-router.get('/', roleController.getRoles);
-router.post('/', roleController.addRole);
-router.put('/:id', roleController.updateRole);
-router.delete('/:id', roleController.deleteRole);
+router.get('/', auth, branchController.getBranches);
+router.post('/', auth, branchController.addBranch);
+router.put('/:id', auth, branchController.updateBranch);
+router.delete('/:id', auth, branchController.deleteBranch);
 
 module.exports = router;

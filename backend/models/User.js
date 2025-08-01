@@ -33,6 +33,14 @@ const userSchema = new mongoose.Schema({
     default: true
   },
   biometricId: { type: String },
+  branch: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch'
+  },
+  sections: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Section'
+  }],
   permissions: {
     canCreate: { type: Boolean, default: false },
     canEdit: { type: Boolean, default: false },

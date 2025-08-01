@@ -9,7 +9,8 @@ try {
 
 exports.getItemCategory = async (req, res) => {
   try {
-    const categories = await ItemCategory.find();
+    const categories = await ItemCategory.find()
+      .populate('branch', 'name');
 
     const withCounts = await Promise.all(
       categories.map(async (cat) => {
