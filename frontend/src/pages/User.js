@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { CanCreate, CanEdit, CanDelete } from '../components/PermissionGuard';
 import api from '../services/api';
@@ -38,7 +38,7 @@ const User = () => {
     }
   };
 
- const fetchRolesAndBranches = async () => {
+ const fetchRolesAndBranches = useCallback(async () => {
     try {
   const [rolesRes, branchesRes] = await Promise.all([
         api.get('/roles'),
@@ -61,12 +61,12 @@ const User = () => {
     } catch (err) {
       console.error('Error fetching roles:', err);
     }
-};
+}, [isMasterAdmin, currentUser]);
 
 useEffect(() => {
   fetchUsers();
   fetchRolesAndBranches();
-}, []);
+}, [fetchRolesAndBranches]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
