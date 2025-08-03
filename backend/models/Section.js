@@ -26,11 +26,6 @@ const sectionSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch'
   },
-  sectionType: {
-    type: String,
-    enum: ['standard', 'branch-item'],
-    default: 'standard'
-  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

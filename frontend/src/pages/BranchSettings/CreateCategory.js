@@ -13,23 +13,18 @@ const CreateCategory = () => {
   const [editingCategory, setEditingCategory] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    fetchCategories();
   }, []);
 
-  const fetchData = async () => {
+  const fetchCategories = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const categoriesRes = await axios.get(`${backend_url}/item-categories`, { headers });
-
-      // Show all categories initially
-      const allCategories = categoriesRes.data;
-      setCategories(allCategories);
+      const response = await axios.get(`${backend_url}/item-categories`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCategories(response.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Error loading data: ' + (error.response?.data?.error || error.message));
+      console.error('Error fetching categories:', error);
     } finally {
       setLoading(false);
     }
@@ -49,8 +44,8 @@ const CreateCategory = () => {
       try {
         const token = localStorage.getItem('token');
         const categoryData = {
-          nameEn: formData.mainCategoryName,
-          nameUr: formData.subCategoryName
+          nameEn: formData.mainCategoryName, // Use nameEn field
+          nameUr: formData.subCategoryName // Use nameUr for subcategory
         };
 
         if (editingCategory) {
@@ -71,7 +66,7 @@ const CreateCategory = () => {
           mainCategoryName: '',
           subCategoryName: ''
         });
-        fetchData();
+        fetchCategories();
         
         // Show success message
         alert(editingCategory ? 'Category updated successfully!' : 'Category created successfully!');
@@ -107,7 +102,7 @@ const CreateCategory = () => {
         await axios.delete(`${backend_url}/item-categories/${categoryId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        fetchData(); // Refresh the list
+        fetchCategories(); // Refresh the list
       } catch (error) {
         console.error('Error deleting category:', error);
       }
@@ -135,41 +130,38 @@ const CreateCategory = () => {
           <h1 className="text-2xl font-bold text-black">Branch Category</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="grid grid-cols-1 gap-6">
-            {/* Main Category Name */}
-            <div className="grid grid-cols-3 gap-4 items-center">
-              <div className="font-medium text-gray-700">Main Category Name:</div>
-              <div className="col-span-2">
-                <input
-                  type="text"
-                  name="mainCategoryName"
-                  value={formData.mainCategoryName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="Enter main category name"
-                  required
-                />
-              </div>
-              <div className="col-span-3 text-sm text-gray-600">Editable - Create Main Category</div>
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
+          {/* Main Category Name */}
+          <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700">Main Category Name:</div>
+            <div className="col-span-2">
+              <input
+                type="text"
+                name="mainCategoryName"
+                value={formData.mainCategoryName}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Enter main category name"
+                required
+              />
             </div>
+          </div>
 
-            {/* Sub Category Name */}
-            <div className="grid grid-cols-3 gap-4 items-center">
-              <div className="font-medium text-gray-700">Sub Category Name:</div>
-              <div className="col-span-2">
-                <input
-                  type="text"
-                  name="subCategoryName"
-                  value={formData.subCategoryName}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  placeholder="Enter sub category name"
-                  required
-                />
-              </div>
-              <div className="col-span-3 text-sm text-gray-600">Editable - Create Sub Category</div>
+          {/* Sub Category Name */}
+          <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="font-medium text-gray-700">Sub Category Name:</div>
+            <div className="col-span-2">
+              <input
+                type="text"
+                name="subCategoryName"
+                value={formData.subCategoryName}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                placeholder="Enter sub category name"
+                required
+              />
             </div>
+          </div>
 
             {/* Submit Button */}
             <div className="flex justify-end gap-2">
@@ -189,17 +181,16 @@ const CreateCategory = () => {
                 {editingCategory ? 'Update Category' : 'Create Category'}
               </button>
             </div>
-          </div>
         </form>
 
         {/* Item Categories List */}
         <div className="mt-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Branch Categories</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Item Categories</h2>
           
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-300">
               <div className="grid grid-cols-2 gap-4">
-                <div className="font-semibold text-gray-700">CATEGORY NAME</div>
+                <div className="font-semibold text-gray-700">ITEM CATEGORY NAME</div>
                 <div className="font-semibold text-gray-700">ACTIONS</div>
               </div>
             </div>

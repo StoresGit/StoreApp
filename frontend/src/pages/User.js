@@ -40,14 +40,26 @@ const User = () => {
 
  const fetchRolesAndBranches = async () => {
     try {
-      const [rolesRes, branchesRes] = await Promise.all([
+  const [rolesRes, branchesRes] = await Promise.all([
         api.get('/roles'),
         api.get('/branch')
-      ]);
-      setRoles(rolesRes.data);
-      setBranches(branchesRes.data);
+  ]);
+  setRoles(rolesRes.data);
+  
+  // Filter branches based on user permissions
+  let availableBranches = branchesRes.data;
+  
+  // If user is not master admin, filter branches based on their access
+  if (!isMasterAdmin && currentUser?.branch) {
+    // For now, show all branches, but this can be customized based on user permissions
+    availableBranches = branchesRes.data.filter(branch => 
+      currentUser.branch === branch._id || isMasterAdmin
+    );
+  }
+  
+  setBranches(availableBranches);
     } catch (err) {
-      console.error('Error fetching roles and branches:', err);
+      console.error('Error fetching roles:', err);
     }
 };
 
@@ -115,14 +127,14 @@ useEffect(() => {
     setEditMode(true);
     setCurrentUserId(user._id);
     setFormData({
-      name: user.name,
+      name: user.name || '',
       email: user.email || '',
-      password: '', // leave blank for edit
-      role: user.role,
-      branch: user.branch,
-      departments: (user.departments || []).map(dep => (typeof dep === 'object' ? dep._id : dep)),
-      loginPin: user.loginPin,
-      biometricId: user.biometricId
+      password: '',
+      role: user.role || '',
+      branch: user.branch || '',
+      departments: user.departments || [],
+      loginPin: user.loginPin || '',
+      biometricId: user.biometricId || ''
     });
     setShowModal(true);
   };
@@ -206,7 +218,6 @@ useEffect(() => {
           <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Branch</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biometric ID</th>
@@ -242,9 +253,6 @@ useEffect(() => {
                     }`}>
                       {user.role}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {user.branch?.name || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -328,23 +336,6 @@ useEffect(() => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
-              <select
-                name="branch"
-                value={formData.branch}
-                onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Select Branch</option>
-                {branches.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
                 type="email"
@@ -369,6 +360,23 @@ useEffect(() => {
                   />
                 </div>
               )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                <select
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Biometric ID</label>

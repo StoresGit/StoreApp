@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import backend_url from '../../config/config';
-import { useAuth } from '../../context/AuthContext';
 
 const BranchUsers = () => {
-  const { isMasterAdmin } = useAuth();
   const [formData, setFormData] = useState({
     branchName: '',
     employeeName: '',
@@ -14,39 +12,52 @@ const BranchUsers = () => {
   });
 
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [branches, setBranches] = useState([]);
   const [sections, setSections] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
+  // Fetch users from database
   useEffect(() => {
-    fetchData();
+    fetchUsers();
+    fetchBranches();
+    fetchSections();
   }, []);
 
-  const fetchData = async () => {
+  const fetchUsers = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const [usersRes, branchesRes, sectionsRes] = await Promise.all([
-        axios.get(`${backend_url}/users`, { headers }),
-        axios.get(`${backend_url}/branch`, { headers }),
-        axios.get(`${backend_url}/sections`, { headers })
-      ]);
-
-      // Filter users to only show branch-specific users (not master admin)
-      const branchUsers = usersRes.data.filter(user => user.branch && !user.isMasterAdmin);
-      setUsers(branchUsers);
-      setBranches(branchesRes.data);
-      
-      // Filter sections to only show branch-specific sections from BranchSection page
-      const branchSections = sectionsRes.data.filter(section => section.branch);
-      setSections(branchSections);
+      const response = await axios.get(`${backend_url}/users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUsers(response.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${backend_url}/branch`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setBranches(response.data);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
+
+  const fetchSections = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${backend_url}/sections`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSections(response.data);
+    } catch (error) {
+      console.error('Error fetching sections:', error);
     }
   };
 
@@ -62,98 +73,68 @@ const BranchUsers = () => {
     const { value, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      section: checked
+      section: checked 
         ? [...prev.section, value]
-        : prev.section.filter(section => section !== value)
+        : prev.section.filter(s => s !== value)
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.employeeName || !formData.username || !formData.password || !formData.branchName) {
-      alert('Please fill in all required fields');
-      return;
-    }
+    if (formData.employeeName && formData.username && formData.password) {
+      try {
+        const token = localStorage.getItem('token');
+        const userData = {
+          name: formData.employeeName,
+          email: formData.username + '@gmail.com', // Enforce @gmail.com
+          password: formData.password,
+          role: 'user',
+          branch: formData.branchName,
+          sections: formData.section
+        };
 
-    try {
-      setSubmitting(true);
-      const token = localStorage.getItem('token');
-      const userData = {
-        name: formData.employeeName,
-        email: formData.username + '@gmail.com',
-        password: formData.password,
-        role: 'user',
-        branch: formData.branchName,
-        sections: formData.section
-      };
+        await axios.post(`${backend_url}/users`, userData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
-      await axios.post(`${backend_url}/users`, userData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      // Reset form
-      setFormData({
-        branchName: '',
-        employeeName: '',
-        username: '',
-        password: '',
-        section: []
-      });
-      
-      // Refresh data
-      await fetchData();
-      
-      alert('User created successfully!');
-    } catch (error) {
-      console.error('Error creating user:', error);
-      alert('Error creating user: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setSubmitting(false);
+        // Reset form and refresh users
+        setFormData({
+          branchName: '',
+          employeeName: '',
+          username: '',
+          password: '',
+          section: []
+        });
+        fetchUsers();
+      } catch (error) {
+        console.error('Error creating user:', error);
+      }
     }
   };
 
   const deleteUser = async (userId) => {
-    if (!isMasterAdmin()) {
-      alert('Only Master Admin can delete users');
-      return;
-    }
-
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`${backend_url}/users/${userId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        await fetchData();
-        alert('User deleted successfully!');
-      } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Error deleting user: ' + (error.response?.data?.error || error.message));
-      }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${backend_url}/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error deleting user:', error);
     }
   };
 
   const updateUserStatus = async (userId, isActive) => {
-    if (!isMasterAdmin()) {
-      alert('Only Master Admin can deactivate users');
-      return;
-    }
-
-    if (window.confirm(`Are you sure you want to ${isActive ? 'deactivate' : 'activate'} this user?`)) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.put(`${backend_url}/users/${userId}`, {
-          isActive: !isActive
-        }, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        await fetchData();
-        alert(`User ${isActive ? 'deactivated' : 'activated'} successfully!`);
-      } catch (error) {
-        console.error('Error updating user status:', error);
-        alert('Error updating user status: ' + (error.response?.data?.error || error.message));
-      }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${backend_url}/users/${userId}`, {
+        isActive: !isActive
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating user status:', error);
     }
   };
 
@@ -197,7 +178,7 @@ const BranchUsers = () => {
                 ))}
               </select>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Drop down menu to select branch</div>
           </div>
 
           {/* Employee Name */}
@@ -214,7 +195,7 @@ const BranchUsers = () => {
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Employee name</div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Employee Name</div>
           </div>
 
           {/* Username */}
@@ -227,11 +208,11 @@ const BranchUsers = () => {
                 value={formData.username}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="Enter username (will add @gmail.com)"
+                placeholder="Create username"
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Username (will be username@gmail.com)</div>
+            <div className="col-span-3 text-sm text-gray-600">Create Username (will be username@gmail.com)</div>
           </div>
 
           {/* Password */}
@@ -244,57 +225,57 @@ const BranchUsers = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                placeholder="Enter password"
+                placeholder="Create password"
                 required
               />
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Password</div>
+            <div className="col-span-3 text-sm text-gray-600">Create Password</div>
           </div>
 
-          {/* Section Selection */}
+          {/* Section */}
           <div className="grid grid-cols-3 gap-4 items-start">
             <div className="font-medium text-gray-700">Section:</div>
             <div className="col-span-2">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 {sections.map((section) => (
-                  <label key={section._id} className="flex items-center space-x-2">
+                  <label key={section._id} className="flex items-center">
                     <input
                       type="checkbox"
+                      name="section"
                       value={section._id}
                       checked={formData.section.includes(section._id)}
                       onChange={handleSectionChange}
-                      className="rounded"
+                      className="mr-2"
                     />
-                    <span className="text-sm">{section.name} ({section.branch?.name})</span>
+                    <span className="text-gray-600">{section.name}</span>
                   </label>
                 ))}
               </div>
             </div>
-            <div className="col-span-3 text-sm text-gray-600">Editable - Select sections for this user</div>
+            <div className="col-span-3 text-sm text-gray-600">Editable - Select multiple sections to give access to employee</div>
           </div>
 
           {/* Submit Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end mt-6">
             <button 
               type="submit"
-              disabled={submitting}
-              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-400"
+              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
             >
-              {submitting ? 'Creating...' : 'Create User'}
+              Create User
             </button>
           </div>
         </form>
 
-        {/* Users List */}
+        {/* Existing Users Table */}
         <div className="mt-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Branch Users</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Existing Users</h2>
           
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-300">
               <div className="grid grid-cols-6 gap-4">
-                <div className="font-semibold text-gray-700">NAME</div>
-                <div className="font-semibold text-gray-700">EMAIL</div>
                 <div className="font-semibold text-gray-700">BRANCH</div>
+                <div className="font-semibold text-gray-700">EMPLOYEE NAME</div>
+                <div className="font-semibold text-gray-700">USERNAME</div>
                 <div className="font-semibold text-gray-700">SECTIONS</div>
                 <div className="font-semibold text-gray-700">STATUS</div>
                 <div className="font-semibold text-gray-700">ACTIONS</div>
@@ -305,38 +286,33 @@ const BranchUsers = () => {
               {users.map((user) => (
                 <div key={user._id} className="px-4 py-3 hover:bg-gray-50">
                   <div className="grid grid-cols-6 gap-4 items-center">
+                    <div className="text-gray-800">{user.branch?.name || 'N/A'}</div>
                     <div className="text-gray-800">{user.name}</div>
                     <div className="text-gray-600">{user.email}</div>
-                    <div className="text-gray-600">{user.branch?.name || 'N/A'}</div>
                     <div className="text-gray-600">
-                      {user.sections?.map(section => section.name).join(', ') || 'N/A'}
+                      {user.sections?.map(section => section.name).join(', ') || 'No sections'}
                     </div>
-                    <div className={`text-sm ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
                       {user.isActive ? 'Active' : 'Inactive'}
                     </div>
                     <div className="flex items-center gap-2">
-                      {isMasterAdmin() && (
-                        <>
-                          <button
-                            onClick={() => updateUserStatus(user._id, user.isActive)}
-                            className={`text-sm px-2 py-1 rounded ${
-                              user.isActive 
-                                ? 'bg-red-500 text-white hover:bg-red-600' 
-                                : 'bg-green-500 text-white hover:bg-green-600'
-                            }`}
-                            title={user.isActive ? 'Deactivate' : 'Activate'}
-                          >
-                            {user.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                          <button
-                            onClick={() => deleteUser(user._id)}
-                            className="text-red-500 hover:text-red-700"
-                            title="Delete user"
-                          >
-                            🗑️
-                          </button>
-                        </>
-                      )}
+                      <button 
+                        onClick={() => updateUserStatus(user._id, user.isActive)}
+                        className={`px-2 py-1 rounded text-xs ${
+                          user.isActive 
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                            : 'bg-green-100 text-green-600 hover:bg-green-200'
+                        }`}
+                      >
+                        {user.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button 
+                        onClick={() => deleteUser(user._id)}
+                        className="text-red-500 hover:text-red-700"
+                        title="Delete user"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 </div>

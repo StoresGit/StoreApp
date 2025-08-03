@@ -4,13 +4,11 @@ import backend_url from '../config/config';
 
 const Units = () => {
   const [units, setUnits] = useState([]);
-  const [branches, setBranches] = useState([]);
   const [formData, setFormData] = useState({ 
     name: '', 
     baseUnit: '', 
-    standardUnit: '', 
-    symbol: '',
-    unitType: '' // New field for unit type
+    unitType: '', // Changed from standardUnit to unitType
+    symbol: ''
   });
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -18,27 +16,22 @@ const Units = () => {
 
   // Base units that are allowed
   const baseUnits = ['kg', 'liter', 'pieces'];
+  
+  // Unit types
+  const unitTypes = ['Branch Unit', 'Standard Unit'];
 
   useEffect(() => {
     fetchUnits();
-    fetchBranches();
   }, []);
 
   const fetchUnits = async () => {
     try {
-      const res = await axios.get(`${backend_url}/units`);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${backend_url}/units`, { headers });
       setUnits(res.data);
     } catch (err) {
       console.error('Failed to fetch units:', err);
-    }
-  };
-
-  const fetchBranches = async () => {
-    try {
-      const res = await axios.get(`${backend_url}/branch`);
-      setBranches(res.data);
-    } catch (err) {
-      console.error('Failed to fetch branches:', err);
     }
   };
 
@@ -48,84 +41,36 @@ const Units = () => {
   };
 
   const handleAddUnit = async () => {
-    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim() && formData.unitType.trim()) {
+    if (formData.name.trim() && formData.baseUnit.trim() && formData.unitType.trim() && formData.symbol.trim()) {
       try {
-        // If branch unit is selected, redirect to Create Item page
-        if (formData.unitType.startsWith('branch-')) {
-          // Store the unit data in localStorage for Create Item page
-          localStorage.setItem('pendingUnitData', JSON.stringify({
-            name: formData.name,
-            baseUnit: formData.baseUnit,
-            symbol: formData.symbol,
-            standardUnit: formData.standardUnit,
-            unitType: formData.unitType
-          }));
-          
-          // Redirect to Create Item page
-          window.location.href = '/branch-settings/create-item';
-          return;
-        }
-        
-        // For standard units, show confirmation
-        if (formData.unitType === 'standard') {
-          const confirmed = window.confirm('Are you sure you want to create a Standard Unit? Operations are running.');
-          if (!confirmed) {
-            return;
-          }
-        }
-        
-        await axios.post(`${backend_url}/units`, formData);
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        await axios.post(`${backend_url}/units`, formData, { headers });
         closeModal();
         fetchUnits();
-        alert('Unit created successfully!');
       } catch (err) {
         console.error('Failed to add unit:', err);
         alert('Failed to add unit. Please check your input.');
       }
     } else {
-      alert('Name, Base Unit, Symbol, and Unit Type are required fields.');
+      alert('Name, Base Unit, Unit Type, and Symbol are required fields.');
     }
   };
 
   const handleUpdateUnit = async () => {
-    if (formData.name.trim() && formData.baseUnit.trim() && formData.symbol.trim() && formData.unitType.trim() && currentUnitId) {
+    if (formData.name.trim() && formData.baseUnit.trim() && formData.unitType.trim() && formData.symbol.trim() && currentUnitId) {
       try {
-        // If branch unit is selected, redirect to Create Item page
-        if (formData.unitType.startsWith('branch-')) {
-          // Store the unit data in localStorage for Create Item page
-          localStorage.setItem('pendingUnitData', JSON.stringify({
-            name: formData.name,
-            baseUnit: formData.baseUnit,
-            symbol: formData.symbol,
-            standardUnit: formData.standardUnit,
-            unitType: formData.unitType,
-            isUpdate: true,
-            unitId: currentUnitId
-          }));
-          
-          // Redirect to Create Item page
-          window.location.href = '/branch-settings/create-item';
-          return;
-        }
-        
-        // For standard units, show confirmation
-        if (formData.unitType === 'standard') {
-          const confirmed = window.confirm('Are you sure you want to update to Standard Unit? Operations are running.');
-          if (!confirmed) {
-            return;
-          }
-        }
-        
-        await axios.put(`${backend_url}/units/${currentUnitId}`, formData);
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        await axios.put(`${backend_url}/units/${currentUnitId}`, formData, { headers });
         closeModal();
         fetchUnits();
-        alert('Unit updated successfully!');
       } catch (err) {
         console.error('Failed to update unit:', err);
         alert('Failed to update unit. Please check your input.');
       }
     } else {
-      alert('Name, Base Unit, Symbol, and Unit Type are required fields.');
+      alert('Name, Base Unit, Unit Type, and Symbol are required fields.');
     }
   };
 
@@ -133,7 +78,9 @@ const Units = () => {
     const confirmDelete = window.confirm("Are you sure you want to delete this unit?");
     if (confirmDelete) {
       try {
-        await axios.delete(`${backend_url}/units/${id}`);
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+        await axios.delete(`${backend_url}/units/${id}`, { headers });
         fetchUnits();
       } catch (err) {
         console.error('Failed to delete unit:', err);
@@ -148,9 +95,8 @@ const Units = () => {
     setFormData({ 
       name: unit.name, 
       baseUnit: unit.baseUnit, 
-      standardUnit: unit.standardUnit || '', 
-      symbol: unit.symbol || unit.Symbol, // Handle both old and new field names
-      unitType: unit.unitType || 'standard' // Default to standard if not set
+      unitType: unit.unitType || unit.standardUnit || '', // Handle both old and new field names
+      symbol: unit.symbol || unit.Symbol // Handle both old and new field names
     });
     setShowModal(true);
   };
@@ -159,9 +105,8 @@ const Units = () => {
     setFormData({ 
       name: '', 
       baseUnit: '', 
-      standardUnit: '', 
-      symbol: '',
-      unitType: ''
+      unitType: '', // Changed from standardUnit to unitType
+      symbol: ''
     });
     setShowModal(false);
     setEditMode(false);
@@ -193,7 +138,6 @@ const Units = () => {
               <th className="p-2 border text-left">Name</th>
               <th className="p-2 border text-left">Base Unit</th>
               <th className="p-2 border text-left">Unit Type</th>
-              <th className="p-2 border text-left">Standard Unit</th>
               <th className="p-2 border text-left">Symbol</th>
               <th className="p-2 border text-left">Actions</th>
             </tr>
@@ -211,15 +155,7 @@ const Units = () => {
                     {unit.baseUnit}
                   </span>
                 </td>
-                <td className="p-2 border">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    unit.unitType === 'branch' ? 'bg-purple-100 text-purple-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {unit.unitType || 'standard'}
-                  </span>
-                </td>
-                <td className="p-2 border">{unit.standardUnit || '-'}</td>
+                <td className="p-2 border">{unit.unitType || unit.standardUnit || '-'}</td>
                 <td className="p-2 border">{unit.symbol || unit.Symbol}</td>
                 <td className="p-2 border">
                   <button
@@ -239,7 +175,7 @@ const Units = () => {
             ))}
             {units.length === 0 && (
               <tr>
-                <td colSpan="6" className="p-4 text-center text-gray-500">
+                <td colSpan="5" className="p-4 text-center text-gray-500">
                   No units found. Add your first unit to get started.
                 </td>
               </tr>
@@ -301,30 +237,13 @@ const Units = () => {
                   className="w-full border p-2 rounded"
                 >
                   <option value="">Select Unit Type *</option>
-                  <option value="standard">Standard Unit</option>
-                  {branches.map(branch => (
-                    <option key={branch._id} value={`branch-${branch._id}`}>
-                      Branch Unit - {branch.name}
-                    </option>
+                  {unitTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Choose whether this is a standard unit or a branch-specific unit
+                  Choose if this unit is a Branch Unit or a Standard Unit.
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Standard Unit (Optional)
-                </label>
-                <input
-                  type="text"
-                  name="standardUnit"
-                  value={formData.standardUnit}
-                  onChange={handleChange}
-                  placeholder="Standard Unit (optional)"
-                  className="w-full border p-2 rounded"
-                />
               </div>
               
               <div>

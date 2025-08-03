@@ -20,7 +20,9 @@ const Branches = () => {
   const fetchBranches = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${backend_url}/branch`);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      const res = await axios.get(`${backend_url}/branch`, { headers });
       setBranches(res.data);
     } catch (error) {
       console.error('Error fetching branches:', error);
@@ -43,11 +45,13 @@ const Branches = () => {
 
     try {
       setFormLoading(true);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
       
       if (editMode) {
-        await axios.put(`${backend_url}/branch/${currentBranchId}`, newBranch);
+        await axios.put(`${backend_url}/branch/${currentBranchId}`, newBranch, { headers });
       } else {
-        await axios.post(`${backend_url}/branch`, newBranch);
+        await axios.post(`${backend_url}/branch`, newBranch, { headers });
       }
       
       setNewBranch({ name: '', code: '' });
@@ -70,7 +74,9 @@ const Branches = () => {
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(`${backend_url}/branch/${deleteBranchId}`);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      await axios.delete(`${backend_url}/branch/${deleteBranchId}`, { headers });
       fetchBranches();
       setShowDeleteModal(false);
       setDeleteBranchId(null);

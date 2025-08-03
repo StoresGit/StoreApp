@@ -3,11 +3,12 @@ import React, { useState, useEffect } from 'react';
 const CentralKitchenDashboard = () => {
   // Placeholder state for filters and orders
   const [filters, setFilters] = useState({ branch: '', date: '', status: '', urgency: '' });
-  
+  const [orders, setOrders] = useState([]); // To be fetched from backend
+
   // Placeholder effect for fetching orders
   useEffect(() => {
     // TODO: Fetch orders from backend
-    // setLoading(false); // Removed since loading state is not used
+    setOrders([]);
   }, []);
 
   return (

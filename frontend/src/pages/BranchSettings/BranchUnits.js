@@ -6,37 +6,26 @@ const BranchUnits = () => {
   const [formData, setFormData] = useState({
     unitName: '',
     baseUnit: '',
-    symbol: '',
-    branchName: ''
+    symbol: ''
   });
 
   const [units, setUnits] = useState([]);
-  const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingUnit, setEditingUnit] = useState(null);
 
   useEffect(() => {
-    fetchData();
+    fetchUnits();
   }, []);
 
-  const fetchData = async () => {
+  const fetchUnits = async () => {
     try {
-      setLoading(true);
       const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const [unitsRes, branchesRes] = await Promise.all([
-        axios.get(`${backend_url}/units`, { headers }),
-        axios.get(`${backend_url}/branch`, { headers })
-      ]);
-
-      // Show all units initially, but prefer branch-specific ones
-      const allUnits = unitsRes.data;
-      setUnits(allUnits);
-      setBranches(branchesRes.data);
+      const response = await axios.get(`${backend_url}/units`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUnits(response.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
-      alert('Error loading data: ' + (error.response?.data?.error || error.message));
+      console.error('Error fetching units:', error);
     } finally {
       setLoading(false);
     }
@@ -52,14 +41,13 @@ const BranchUnits = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.unitName && formData.baseUnit && formData.symbol && formData.branchName) {
+    if (formData.unitName && formData.baseUnit && formData.symbol) {
       try {
         const token = localStorage.getItem('token');
         const unitData = {
           name: formData.unitName,
           baseUnit: formData.baseUnit,
-          symbol: formData.symbol,
-          branch: formData.branchName
+          symbol: formData.symbol
         };
 
         if (editingUnit) {
@@ -79,10 +67,9 @@ const BranchUnits = () => {
         setFormData({
           unitName: '',
           baseUnit: '',
-          symbol: '',
-          branchName: ''
+          symbol: ''
         });
-        fetchData();
+        fetchUnits();
         
         // Show success message
         alert(editingUnit ? 'Unit updated successfully!' : 'Unit created successfully!');
@@ -100,8 +87,7 @@ const BranchUnits = () => {
     setFormData({
       unitName: unit.name,
       baseUnit: unit.baseUnit || '',
-      symbol: unit.symbol,
-      branchName: unit.branch?._id || ''
+      symbol: unit.symbol
     });
   };
 
@@ -110,8 +96,7 @@ const BranchUnits = () => {
     setFormData({
       unitName: '',
       baseUnit: '',
-      symbol: '',
-      branchName: ''
+      symbol: ''
     });
   };
 
@@ -122,7 +107,7 @@ const BranchUnits = () => {
         await axios.delete(`${backend_url}/units/${unitId}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        fetchData(); // Refresh the list
+        fetchUnits(); // Refresh the list
       } catch (error) {
         console.error('Error deleting unit:', error);
       }
@@ -150,28 +135,6 @@ const BranchUnits = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6">
-          {/* Branch Name */}
-          <div className="grid grid-cols-3 gap-4 items-center">
-            <div className="font-medium text-gray-700">Branch Name:</div>
-            <div className="col-span-2">
-              <select
-                name="branchName"
-                value={formData.branchName}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">Select Branch</option>
-                {branches.map((branch) => (
-                  <option key={branch._id} value={branch._id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-span-3 text-sm text-gray-600">Non-Editable - Drop down menu to select branch (Selectable)</div>
-          </div>
-
           {/* Unit Name */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Unit Name:</div>
@@ -248,12 +211,11 @@ const BranchUnits = () => {
 
         {/* Existing Units Table */}
         <div className="mt-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4">Branch Units</h2>
+          <h2 className="text-xl font-bold text-gray-800 mb-4">Existing Units</h2>
           
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             <div className="bg-gray-50 px-4 py-3 border-b border-gray-300">
-              <div className="grid grid-cols-5 gap-4">
-                <div className="font-semibold text-gray-700">BRANCH</div>
+              <div className="grid grid-cols-4 gap-4">
                 <div className="font-semibold text-gray-700">UNIT NAME</div>
                 <div className="font-semibold text-gray-700">BASE UNIT</div>
                 <div className="font-semibold text-gray-700">SYMBOL</div>
@@ -264,8 +226,7 @@ const BranchUnits = () => {
             <div className="divide-y divide-gray-200">
               {units.map((unit) => (
                 <div key={unit._id} className="px-4 py-3 hover:bg-gray-50">
-                  <div className="grid grid-cols-5 gap-4 items-center">
-                    <div className="text-gray-800">{unit.branch?.name || 'N/A'}</div>
+                  <div className="grid grid-cols-4 gap-4 items-center">
                     <div className="text-gray-800">{unit.name}</div>
                     <div className="text-gray-600">{unit.baseUnit || 'N/A'}</div>
                     <div className="text-gray-600">{unit.symbol}</div>

@@ -109,7 +109,7 @@ function App() {
           label: 'Branch Settings', 
           children: [
             { label: 'Create Item', path: '/branch-settings/create-item' },
-            { label: 'Branch Category', path: '/branch-settings/create-category' }
+            { label: 'Branch Category', path: '/branch-settings/create-category' },
           ]
         },
       ],
