@@ -37,8 +37,8 @@ const app = express();
 app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://gnrcontrol.com', 'https://www.gnrcontrol.com',"https://digital-ocean-olive.vercel.app"] 
-    : ['http://localhost:3000', 'http://gnrcontrol.com', 'https://gnrcontrol.com'],
+    ? ['https://gnrcontrol.com', 'https://www.gnrcontrol.com'] 
+    : ['http://localhost:3000', 'http://gnrcontrol.com', 'https://gnrcontrol.com',"https://digital-ocean-olive.vercel.app"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
