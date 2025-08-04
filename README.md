@@ -763,13 +763,13 @@ Content-Type: application/json
    ```
 
 2. **Environment Variables**
-   ```env
-   MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
-   JWT_SECRET=production_jwt_secret
-   CLOUDINARY_CLOUD_NAME=your_cloudinary_name
-   CLOUDINARY_API_KEY=your_cloudinary_key
-   CLOUDINARY_API_SECRET=your_cloudinary_secret
-   NODE_ENV=production
+```env
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+JWT_SECRET=production_jwt_secret
+CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+CLOUDINARY_API_KEY=your_cloudinary_key
+CLOUDINARY_API_SECRET=your_cloudinary_secret
+NODE_ENV=production
    ```
 
 ## 🐛 Troubleshooting Guide
@@ -779,16 +779,16 @@ Content-Type: application/json
 #### 1. Authentication Issues
 **Problem**: Login fails or token expires
 **Solution**: 
-- Check backend server is running
-- Verify database connection
-- Ensure correct credentials
+   - Check backend server is running
+   - Verify database connection
+   - Ensure correct credentials
 - Check JWT secret configuration
 
 #### 2. Permission Errors
 **Problem**: 401 Unauthorized or 403 Forbidden
 **Solution**:
-- Verify user role and permissions
-- Check JWT token validity
+   - Verify user role and permissions
+   - Check JWT token validity
 - Ensure proper authentication headers
 - Validate user permissions on server
 
@@ -805,7 +805,7 @@ Content-Type: application/json
 **Solution**:
 - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
 - Check for ESLint errors: `npm run lint`
-- Verify all dependencies are installed
+   - Verify all dependencies are installed
 - Check for syntax errors in components
 
 #### 5. API Connection Issues
@@ -908,5 +908,5 @@ This project is proprietary software developed for restaurant management. All ri
 
 **Last Updated**: December 2024  
 **Version**: 2.0.0  
-**Status**: Production Ready  
+**Status**: Production Ready 
 **Maintained By**: Development Team 
