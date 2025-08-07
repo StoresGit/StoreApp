@@ -42,19 +42,6 @@ const CreateCategory = () => {
     }
   };
 
-  const fetchSubCategories = async (parentId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${backend_url}/item-categories/subcategories/${parentId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching sub-categories:', error);
-      return [];
-    }
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
