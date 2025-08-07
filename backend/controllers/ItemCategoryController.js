@@ -9,7 +9,13 @@ try {
 
 exports.getItemCategory = async (req, res) => {
   try {
-    const categories = await ItemCategory.find();
+    // Get all main categories (those without parentId or with parentId = null)
+    const categories = await ItemCategory.find({ 
+      $or: [
+        { parentId: null },
+        { parentId: { $exists: false } }
+      ]
+    });
 
     const withCounts = await Promise.all(
       categories.map(async (cat) => {
@@ -37,7 +43,25 @@ exports.getItemCategory = async (req, res) => {
 
 exports.createItemCategory = async (req, res) => {
   try {
-    const category = new ItemCategory(req.body);
+    const { nameEn, nameUr, parentId } = req.body;
+    
+    let categoryData = {
+      nameEn,
+      nameUr
+    };
+
+    if (parentId) {
+      // Creating a sub-category
+      categoryData.parentId = parentId;
+      categoryData.isSubCategory = true;
+      categoryData.level = 1;
+    } else {
+      // Creating a main category
+      categoryData.isSubCategory = false;
+      categoryData.level = 0;
+    }
+
+    const category = new ItemCategory(categoryData);
     await category.save();
     res.json(category);
   } catch (error) {
@@ -58,10 +82,25 @@ exports.updateItemCategory = async (req, res) => {
 
 exports.deleteItemCategory = async (req, res) => {
   try {
+    // First, delete all sub-categories
+    await ItemCategory.deleteMany({ parentId: req.params.id });
+    // Then delete the main category
     await ItemCategory.findByIdAndDelete(req.params.id);
     res.sendStatus(204);
   } catch (error) {
     console.error('Error deleting category:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+// Get sub-categories for a specific parent
+exports.getSubCategories = async (req, res) => {
+  try {
+    const { parentId } = req.params;
+    const subCategories = await ItemCategory.find({ parentId });
+    res.json(subCategories);
+  } catch (error) {
+    console.error('Error fetching sub-categories:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
