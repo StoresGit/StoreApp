@@ -7,7 +7,6 @@ import { MasterAdminOnly } from '../../components/PermissionGuard';
 import { useAuth } from '../../context/AuthContext';
 
 const ORDER_TYPES = ['Urgent', 'Routine', 'Schedule'];
-const ORDER_STATUSES = ['Draft', 'Under Review', 'Sent to CK', 'Shipped', 'Received', 'Rejected'];
 
 const CreateOrder = () => {
   const { user } = useAuth();
@@ -20,13 +19,13 @@ const CreateOrder = () => {
   const [scheduleDate, setScheduleDate] = useState(null);
 
   // Sections
-  const userSectionIds = Array.isArray(user?.sections) ? user.sections : [];
   const [sections, setSections] = useState([]);
   const allowedSections = useMemo(() => {
+    const userSectionIds = Array.isArray(user?.sections) ? user.sections : [];
     if (userSectionIds.length === 0) return sections;
     const ids = new Set(userSectionIds.map(s => (typeof s === 'string' ? s : s?._id)));
     return sections.filter(s => ids.has(s._id));
-  }, [sections, userSectionIds]);
+  }, [sections, user]);
   const [sectionId, setSectionId] = useState('');
 
   // Branches (multi-select)
