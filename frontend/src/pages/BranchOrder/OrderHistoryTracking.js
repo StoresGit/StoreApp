@@ -6,6 +6,8 @@ const OrderHistoryTracking = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
   const [filters, setFilters] = useState({
     status: '',
     dateFrom: '',
@@ -35,9 +37,10 @@ const OrderHistoryTracking = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'Draft': return 'bg-gray-100 text-gray-800';
-      case 'Confirmed': return 'bg-blue-100 text-blue-800';
+      case 'Under Review': return 'bg-blue-100 text-blue-800';
+      case 'Sent to CK': return 'bg-purple-100 text-purple-800';
       case 'Shipped': return 'bg-yellow-100 text-yellow-800';
-      case 'Delivered': return 'bg-green-100 text-green-800';
+      case 'Received': return 'bg-green-100 text-green-800';
       case 'Rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -52,8 +55,33 @@ const OrderHistoryTracking = () => {
     return true;
   }) : [];
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
+
+  const deleteHistory = async () => {
+    if (!window.confirm('This will permanently delete all orders in the current view. Continue?')) return;
+    try {
+      setDeleting(true);
+      const toDelete = filteredOrders.length > 0 ? filteredOrders : orders;
+      await Promise.all(toDelete.map(o => apiService.orders.delete(o._id)));
+      setOrders(prev => prev.filter(o => !toDelete.some(d => d._id === o._id)));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete history');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deleteOne = async (id) => {
+    if (!window.confirm('Delete this order permanently?')) return;
+    try {
+      setDeletingId(id);
+      await apiService.orders.delete(id);
+      setOrders(prev => prev.filter(o => o._id !== id));
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete order');
+    } finally {
+      setDeletingId('');
+    }
   };
 
   if (loading) {
@@ -69,9 +97,12 @@ const OrderHistoryTracking = () => {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Order History & Tracking</h1>
-            <p className="text-gray-600">Monitor order status and track delivery progress</p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Order History & Tracking</h1>
+              <p className="text-gray-600">Monitor order status and track delivery progress</p>
+            </div>
+            <button onClick={deleteHistory} disabled={deleting} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400">{deleting ? 'Deleting...' : 'Delete History (Clean)'}</button>
           </div>
 
           {error && (
@@ -93,9 +124,10 @@ const OrderHistoryTracking = () => {
                 >
                   <option value="">All Status</option>
                   <option value="Draft">Draft</option>
-                  <option value="Confirmed">Confirmed</option>
+                  <option value="Under Review">Under Review</option>
+                  <option value="Sent to CK">Sent to CK</option>
                   <option value="Shipped">Shipped</option>
-                  <option value="Delivered">Delivered</option>
+                  <option value="Received">Received</option>
                   <option value="Rejected">Rejected</option>
                 </select>
               </div>
@@ -191,8 +223,9 @@ const OrderHistoryTracking = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">View Details</button>
-                        <button className="text-green-600 hover:text-green-900">Track</button>
+                        <button onClick={() => deleteOne(order._id)} className={`px-3 py-1 rounded text-white ${deletingId === order._id ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'}`} disabled={!!deletingId && deletingId === order._id}>
+                          {deletingId === order._id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </td>
                     </tr>
                   ))}

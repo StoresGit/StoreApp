@@ -40,7 +40,7 @@ app.use(cors({
     ? ['https://gnrcontrol.com', 'https://www.gnrcontrol.com'] 
     : ['http://localhost:3000', 'http://gnrcontrol.com', 'https://gnrcontrol.com'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 

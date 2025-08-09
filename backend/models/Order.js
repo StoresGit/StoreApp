@@ -10,7 +10,11 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
-  status: { type: String, enum: ['Draft', 'Confirmed', 'Shipped', 'Delivered', 'Rejected'], default: 'Draft' },
+  status: { 
+    type: String, 
+    enum: ['Draft', 'Under Review', 'Sent to CK', 'Shipped', 'Received', 'Rejected'], 
+    default: 'Draft' 
+  },
   orderNo: { type: String, required: true, unique: true },
   section: { type: String, required: true },
   userName: { type: String, required: true },

@@ -1,277 +1,232 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
+import backend_url from '../../config/config';
 import { apiService } from '../../services/api';
 import { MasterAdminOnly } from '../../components/PermissionGuard';
 
-const ORDER_STATUS_OPTIONS = [
-  'Draft',
-  'Confirmed',
-  'Shipped',
-  'Delivered',
-  'Rejected',
-];
-
-const CATEGORIES = [
-  'Meat',
-  'Vegetables',
-  'Dairy',
-  'Bakery',
-  'Beverages',
-  'Other',
-];
-
-const UNITS = ['kg', 'g', 'L', 'ml', 'pcs'];
-
-function generateOrderNo() {
-  const now = new Date();
-  return `ORD-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}-${Math.floor(Math.random()*900+100)}`;
-}
-
-function generateItemCode(index) {
-  return `ITM-${Date.now()}-${index+1}`;
-}
+const TARGET_STATUS = 'Under Review';
 
 const OrderSubmission = () => {
-  const [sections, setSections] = useState([]);
-  const [form, setForm] = useState({
-    status: 'Draft',
-    orderNo: generateOrderNo(),
-    section: '',
-    userName: '',
-    dateTime: new Date().toISOString().slice(0,16),
-    scheduleDate: '',
-    items: [
-      { itemCode: generateItemCode(0), itemName: '', unit: '', category: '', orderQty: '' },
-    ],
-  });
-  const [showSchedule, setShowSchedule] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [submitError, setSubmitError] = useState('');
 
-  // Fetch sections on component mount
+  const [branchCategories, setBranchCategories] = useState([]);
+  const [branchUnits, setBranchUnits] = useState([]);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeOrder, setActiveOrder] = useState(null); // original
+  const [editOrder, setEditOrder] = useState(null); // editable clone
+  const [saving, setSaving] = useState(false);
+
+  // Fetch reference data and orders
   useEffect(() => {
-    const fetchSections = async () => {
+    const fetchAll = async () => {
       try {
-        const response = await apiService.sections.getActive();
-        // Ensure sections is always an array
-        const sectionsData = Array.isArray(response.data) ? response.data : [];
-        setSections(sectionsData);
-      } catch (error) {
-        console.error('Error fetching sections:', error);
-        setError('Failed to load sections');
-        setSections([]); // Set empty array on error
+        setLoading(true);
+        setError('');
+        const [ordersRes, catRes, unitsRes] = await Promise.all([
+          apiService.orders.getAll(),
+          apiService.branchCategories.getAll().catch(() => ({ data: [] })),
+          axios.get(`${backend_url}/units/branch`).catch(() => ({ data: [] })),
+        ]);
+        const underReview = Array.isArray(ordersRes?.data)
+          ? ordersRes.data.filter(o => o.status === TARGET_STATUS)
+          : [];
+        setOrders(underReview);
+        setBranchCategories(Array.isArray(catRes.data) ? catRes.data : []);
+        setBranchUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
+      } catch (e) {
+        setError(e.response?.data?.error || e.message || 'Failed to load orders');
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchSections();
+    fetchAll();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
-    if (name === 'status') {
-      setShowSchedule(value === 'Draft');
-    }
+  const openModal = (order) => {
+    setActiveOrder(order);
+    // Deep clone for editing
+    setEditOrder(JSON.parse(JSON.stringify(order)));
+    setModalOpen(true);
   };
 
-  const handleItemChange = (idx, e) => {
-    const { name, value } = e.target;
-    setForm(prev => ({
+  const closeModal = () => {
+    setModalOpen(false);
+    setActiveOrder(null);
+    setEditOrder(null);
+  };
+
+  const handleItemChange = (idx, field, value) => {
+    setEditOrder(prev => ({
       ...prev,
-      items: prev.items.map((item, i) => i === idx ? { ...item, [name]: value } : item),
+      items: prev.items.map((it, i) => i === idx ? { ...it, [field]: value } : it)
     }));
   };
 
-  const addItem = () => {
-    setForm(prev => ({
-      ...prev,
-      items: [
-        ...prev.items,
-        { itemCode: generateItemCode(prev.items.length), itemName: '', unit: '', category: '', orderQty: '' },
-      ],
-    }));
-  };
+  const branchCategoryOptions = useMemo(() => branchCategories.map(c => ({ id: c._id, name: c.nameEn })), [branchCategories]);
+  const branchUnitOptions = useMemo(() => branchUnits.map(u => ({ id: u._id, name: u.name })), [branchUnits]);
 
-  const removeItem = (idx) => {
-    setForm(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== idx),
-    }));
-  };
-
-  // Validate all fields before submit
-  const validateForm = () => {
-    if (!form.section || !form.userName || !form.dateTime || !Array.isArray(form.items) || form.items.length === 0) return false;
-    for (const item of form.items) {
-      if (!item.itemName || !item.unit || !item.category || !item.orderQty) return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitError('');
-    if (!validateForm()) {
-      setSubmitError('All required fields must be filled and at least one item must be added.');
-      return;
-    }
-    setLoading(true);
-    setError('');
-
+  const deleteOrder = async () => {
+    if (!editOrder?._id) return;
     try {
-      // Prepare order data for backend
-      const orderData = {
-        ...form,
-        dateTime: new Date(form.dateTime),
-        scheduleDate: form.scheduleDate ? new Date(form.scheduleDate) : null,
-        items: form.items.map(item => ({
-          ...item,
-          orderQty: parseFloat(item.orderQty) || 0
-        }))
-      };
-
-      // Send to backend
-      await apiService.orders.create(orderData);
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 2000);
-      
-      // Reset form
-      setForm({
-        status: 'Draft',
-        orderNo: generateOrderNo(),
-        section: '',
-        userName: '',
-        dateTime: new Date().toISOString().slice(0,16),
-        scheduleDate: '',
-        items: [
-          { itemCode: generateItemCode(0), itemName: '', unit: '', category: '', orderQty: '' },
-        ],
-      });
-    } catch (err) {
-      console.error('Error submitting order:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to submit order');
+      setSaving(true);
+      await apiService.orders.delete(editOrder._id);
+      setOrders(prev => prev.filter(o => o._id !== editOrder._id));
+      closeModal();
+    } catch (e) {
+      setError(e.response?.data?.error || e.message || 'Failed to delete order');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
+  };
+
+  const sendToCK = async () => {
+    if (!editOrder?._id) return;
+    try {
+      setSaving(true);
+      // Update straight to 'Shipped' so it appears in Receiving Orders page
+      const payload = { ...editOrder, status: 'Shipped' };
+      await apiService.orders.update(editOrder._id, payload);
+      // Remove from current view since it's no longer Under Review
+      setOrders(prev => prev.filter(o => o._id !== editOrder._id));
+      closeModal();
+    } catch (e) {
+      setError(e.response?.data?.error || e.message || 'Failed to send to CK');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderItemsSummary = (order) => {
+    const names = Array.isArray(order.items) ? order.items.map(i => i.itemName).filter(Boolean) : [];
+    const preview = names.slice(0, 2).join(', ');
+    const more = names.length > 2 ? ` +${names.length - 2} more` : '';
+    return `${names.length} item${names.length !== 1 ? 's' : ''}${names.length ? ` (${preview}${more})` : ''}`;
   };
 
   return (
     <MasterAdminOnly fallback={<div className="text-red-600 font-bold p-8">Access denied. Master admin only.</div>}>
       <div className="p-6 bg-gray-50 min-h-screen">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow p-8">
+        <div className="max-w-6xl mx-auto bg-white rounded-lg shadow p-8">
           <h1 className="text-2xl font-bold mb-6">Order Submission</h1>
-          
+          <p className="text-sm text-gray-600 mb-4">Orders submitted for approval appear here. You can review and edit item details, then send the order to Central Kitchen (CK).</p>
+
           {error && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-              {error}
-            </div>
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>
           )}
-          
-          {success && (
-            <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
-              Order submitted successfully!
-            </div>
-          )}
-          
-          {submitError && <div className="text-red-600 mb-2">{submitError}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-1">Order Status</label>
-                <select name="status" value={form.status} onChange={handleChange} className="w-full border rounded px-3 py-2">
-                  {ORDER_STATUS_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Order No</label>
-                <input type="text" name="orderNo" value={form.orderNo} readOnly className="w-full border rounded px-3 py-2 bg-gray-100" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Select Section</label>
-                <select name="section" value={form.section} onChange={handleChange} className="w-full border rounded px-3 py-2">
-                  <option value="">Select...</option>
-                  {Array.isArray(sections) && sections.map(section => (
-                    <option key={section._id} value={section.name}>
-                      {section.name}
-                    </option>
+          {loading ? (
+            <div className="text-blue-600">Loading orders...</div>
+          ) : orders.length === 0 ? (
+            <div className="text-gray-600">No orders in Under Review.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full border divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left">Order No</th>
+                    <th className="px-3 py-2 text-left">User</th>
+                    <th className="px-3 py-2 text-left">Section</th>
+                    <th className="px-3 py-2 text-left">Items</th>
+                    <th className="px-3 py-2 text-left">Created</th>
+                    <th className="px-3 py-2 text-left">Status</th>
+                    <th className="px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {orders.map(order => (
+                    <tr key={order._id} className="hover:bg-gray-50">
+                      <td className="px-3 py-2">{order.orderNo}</td>
+                      <td className="px-3 py-2">{order.userName}</td>
+                      <td className="px-3 py-2">{order.section}</td>
+                      <td className="px-3 py-2">{renderItemsSummary(order)}</td>
+                      <td className="px-3 py-2">{new Date(order.createdAt || order.dateTime).toLocaleString()}</td>
+                      <td className="px-3 py-2">{order.status}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" onClick={() => openModal(order)}>
+                          View / Edit
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">User Name</label>
-                <input type="text" name="userName" value={form.userName} onChange={handleChange} className="w-full border rounded px-3 py-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date & Time</label>
-                <input type="datetime-local" name="dateTime" value={form.dateTime} onChange={handleChange} className="w-full border rounded px-3 py-2" />
-              </div>
-              {showSchedule && (
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-yellow-700">Schedule Order Time & Date</label>
-                  <input type="datetime-local" name="scheduleDate" value={form.scheduleDate} onChange={handleChange} className="w-full border rounded px-3 py-2 bg-yellow-50" />
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
+          )}
+        </div>
 
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-2">Order Items</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full border divide-y divide-gray-200">
+        {modalOpen && activeOrder && editOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-xl font-semibold">Order #{activeOrder.orderNo}</h3>
+                <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                <div><span className="font-medium">Status:</span> {editOrder.status}</div>
+                <div><span className="font-medium">Date & Time:</span> {new Date(editOrder.dateTime).toLocaleString()}</div>
+                <div><span className="font-medium">User:</span> {editOrder.userName}</div>
+                <div><span className="font-medium">Order Type:</span> {editOrder.orderType || '-'}</div>
+                <div><span className="font-medium">Branch:</span> {editOrder.branchName || '-'}</div>
+                <div><span className="font-medium">Section:</span> {editOrder.section}</div>
+              </div>
+
+              <div className="overflow-x-auto mb-4">
+                <table className="min-w-full border text-xs">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium">Item Code</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium">Item Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium">Unit</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium">Category</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium">Order Qty</th>
-                      <th></th>
+                      <th className="border px-2 py-1">Item Code</th>
+                      <th className="border px-2 py-1">Item Name</th>
+                      <th className="border px-2 py-1">Item Category</th>
+                      <th className="border px-2 py-1">Unit</th>
+                      <th className="border px-2 py-1">Order Qty</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {form.items.map((item, idx) => (
-                      <tr key={item.itemCode}>
-                        <td className="px-3 py-2"><input type="text" value={item.itemCode} readOnly className="w-28 border rounded px-2 py-1 bg-gray-100" /></td>
-                        <td className="px-3 py-2"><input type="text" name="itemName" value={item.itemName} onChange={e => handleItemChange(idx, e)} className="w-32 border rounded px-2 py-1" /></td>
-                        <td className="px-3 py-2">
-                          <select name="unit" value={item.unit} onChange={e => handleItemChange(idx, e)} className="w-20 border rounded px-2 py-1">
+                    {editOrder.items.map((it, idx) => (
+                      <tr key={`${it.itemCode}-${idx}`}>
+                        <td className="border px-2 py-1">
+                          <input className="w-28 border rounded px-1 py-0.5 bg-gray-100" value={it.itemCode} readOnly />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input className="w-40 border rounded px-1 py-0.5" value={it.itemName} onChange={e => handleItemChange(idx, 'itemName', e.target.value)} />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <select className="w-36 border rounded px-1 py-0.5" value={it.category} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
                             <option value="">Select</option>
-                            {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
+                            {branchCategoryOptions.map(opt => (
+                              <option key={opt.id} value={opt.name}>{opt.name}</option>
+                            ))}
                           </select>
                         </td>
-                        <td className="px-3 py-2">
-                          <select name="category" value={item.category} onChange={e => handleItemChange(idx, e)} className="w-28 border rounded px-2 py-1">
+                        <td className="border px-2 py-1">
+                          <select className="w-28 border rounded px-1 py-0.5" value={it.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
                             <option value="">Select</option>
-                            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            {branchUnitOptions.map(opt => (
+                              <option key={opt.id} value={opt.name}>{opt.name}</option>
+                            ))}
                           </select>
                         </td>
-                        <td className="px-3 py-2"><input type="number" name="orderQty" value={item.orderQty} onChange={e => handleItemChange(idx, e)} className="w-20 border rounded px-2 py-1" min="1" /></td>
-                        <td className="px-3 py-2">
-                          {form.items.length > 1 && (
-                            <button type="button" onClick={() => removeItem(idx)} className="text-red-500 hover:underline">Remove</button>
-                          )}
+                        <td className="border px-2 py-1">
+                          <input type="number" min="0" className="w-20 border rounded px-1 py-0.5" value={it.orderQty} onChange={e => handleItemChange(idx, 'orderQty', e.target.value)} />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <button type="button" onClick={addItem} className="mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">+ Add Item</button>
-            </div>
 
-            <div className="flex justify-end">
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Submitting...' : 'Submit Order'}
-              </button>
+              <div className="flex justify-end gap-3">
+                <button onClick={closeModal} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={deleteOrder} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400">{saving ? 'Deleting...' : 'Delete'}</button>
+                <button onClick={sendToCK} disabled={saving} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400">{saving ? 'Processing...' : 'Send to Central Kitchen (CK)'}</button>
+              </div>
             </div>
-          </form>
-        </div>
+          </div>
+        )}
       </div>
     </MasterAdminOnly>
   );

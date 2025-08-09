@@ -117,6 +117,7 @@ export const apiService = {
   get: (url, config = {}) => makeRequest({ ...config, method: 'GET', url }),
   post: (url, data, config = {}) => makeRequest({ ...config, method: 'POST', url, data }),
   put: (url, data, config = {}) => makeRequest({ ...config, method: 'PUT', url, data }),
+  patch: (url, data, config = {}) => makeRequest({ ...config, method: 'PATCH', url, data }),
   delete: (url, config = {}) => makeRequest({ ...config, method: 'DELETE', url }),
   
   // Order-specific methods
@@ -124,9 +125,9 @@ export const apiService = {
     create: (orderData) => apiService.post('/orders', orderData),
     getAll: () => apiService.get('/orders'),
     getById: (id) => apiService.get(`/orders/${id}`),
-    update: (id, orderData) => apiService.put(`/orders/${id}`, orderData),
+    update: (id, orderData) => apiService.patch(`/orders/${id}`, orderData),
     delete: (id) => apiService.delete(`/orders/${id}`),
-    updateStatus: (id, status) => apiService.put(`/orders/${id}`, { status }),
+    updateStatus: (id, status) => apiService.patch(`/orders/${id}`, { status }),
   },
   
   // Section-specific methods
