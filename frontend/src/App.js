@@ -61,6 +61,7 @@ import OrderProcessingPrep from './pages/CentralKitchen/OrderProcessingPrep';
 // Import new Branch Settings pages
 import CreateItem from './pages/BranchSettings/CreateItem';
 import CreateCategory from './pages/BranchSettings/CreateCategory';
+import BranchSettingsItems from './pages/BranchSettings/Items';
 
 function App() {
   const menuItems = [
@@ -110,6 +111,7 @@ function App() {
           label: 'Branch Settings', 
           children: [
             { label: 'Create Item', path: '/branch-settings/create-item' },
+            { label: 'Items', path: '/branch-settings/items' },
             { label: 'Branch Category', path: '/branch-settings/create-category' },
           ]
         },
@@ -266,6 +268,7 @@ function App() {
                 {/* Branch Settings Routes */}
                 <Route path="/branch-settings/create-item" element={<CreateItem />} />
                 <Route path="/branch-settings/create-category" element={<CreateCategory />} />
+                <Route path="/branch-settings/items" element={<BranchSettingsItems />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

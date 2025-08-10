@@ -10,8 +10,8 @@ const api = axios.create({
 // Request queue to manage concurrent requests
 let requestQueue = [];
 let isProcessingQueue = false;
-const MAX_CONCURRENT_REQUESTS = 3;
-const REQUEST_DELAY = 200; // 200ms delay between requests
+const MAX_CONCURRENT_REQUESTS = 5; // Increased from 3
+const REQUEST_DELAY = 100; // Reduced from 200ms
 
 // Process request queue
 const processQueue = async () => {
@@ -23,8 +23,8 @@ const processQueue = async () => {
     const batch = requestQueue.splice(0, MAX_CONCURRENT_REQUESTS);
     
     try {
-      await Promise.all(batch.map(({ resolve, config }) => 
-        api(config).then(resolve).catch(resolve)
+      await Promise.all(batch.map(({ resolve, reject, config }) => 
+        api(config).then(resolve).catch(reject)
       ));
     } catch (error) {
       console.error('Batch request error:', error);
@@ -103,7 +103,7 @@ api.interceptors.response.use(
 // Wrapper function for making requests with queue management
 const makeRequest = (config) => {
   return new Promise((resolve, reject) => {
-    if (requestQueue.length < 10) { // Limit queue size
+    if (requestQueue.length < 20) { // Increased from 10
       requestQueue.push({ resolve, reject, config });
       processQueue();
     } else {
@@ -119,6 +119,33 @@ export const apiService = {
   put: (url, data, config = {}) => makeRequest({ ...config, method: 'PUT', url, data }),
   patch: (url, data, config = {}) => makeRequest({ ...config, method: 'PATCH', url, data }),
   delete: (url, config = {}) => makeRequest({ ...config, method: 'DELETE', url }),
+  
+  // Branch-specific methods
+  branches: {
+    create: (branchData) => apiService.post('/branch', branchData),
+    getAll: () => apiService.get('/branch'),
+    getById: (id) => apiService.get(`/branch/${id}`),
+    update: (id, branchData) => apiService.put(`/branch/${id}`, branchData),
+    delete: (id) => apiService.delete(`/branch/${id}`),
+  },
+  
+  // Item-specific methods
+  items: {
+    create: (itemData) => apiService.post('/items', itemData),
+    getAll: () => apiService.get('/items'),
+    getById: (id) => apiService.get(`/items/${id}`),
+    update: (id, itemData) => apiService.put(`/items/${id}`, itemData),
+    delete: (id) => apiService.delete(`/items/${id}`),
+  },
+  
+  // Wastage-specific methods
+  wastage: {
+    create: (wastageData) => apiService.post('/wastage', wastageData),
+    getAll: () => apiService.get('/wastage'),
+    getById: (id) => apiService.get(`/wastage/${id}`),
+    update: (id, wastageData) => apiService.put(`/wastage/${id}`, wastageData),
+    delete: (id) => apiService.delete(`/wastage/${id}`),
+  },
   
   // Order-specific methods
   orders: {
@@ -156,6 +183,60 @@ export const apiService = {
     getById: (id) => apiService.get(`/branch-categories/${id}`),
     update: (id, categoryData) => apiService.put(`/branch-categories/${id}`, categoryData),
     delete: (id) => apiService.delete(`/branch-categories/${id}`),
+  },
+
+  // Item Category methods
+  itemCategories: {
+    create: (categoryData) => apiService.post('/item-categories', categoryData),
+    getAll: () => apiService.get('/item-categories'),
+    getById: (id) => apiService.get(`/item-categories/${id}`),
+    update: (id, categoryData) => apiService.put(`/item-categories/${id}`, categoryData),
+    delete: (id) => apiService.delete(`/item-categories/${id}`),
+  },
+
+  // Sub Category methods
+  subCategories: {
+    create: (subCategoryData) => apiService.post('/sub-categories', subCategoryData),
+    getAll: () => apiService.get('/sub-categories'),
+    getById: (id) => apiService.get(`/sub-categories/${id}`),
+    update: (id, subCategoryData) => apiService.put(`/sub-categories/${id}`, subCategoryData),
+    delete: (id) => apiService.delete(`/sub-categories/${id}`),
+  },
+
+  // Unit methods
+  units: {
+    create: (unitData) => apiService.post('/units', unitData),
+    getAll: () => apiService.get('/units'),
+    getById: (id) => apiService.get(`/units/${id}`),
+    update: (id, unitData) => apiService.put(`/units/${id}`, unitData),
+    delete: (id) => apiService.delete(`/units/${id}`),
+  },
+
+  // Tax methods
+  taxes: {
+    create: (taxData) => apiService.post('/taxes', taxData),
+    getAll: () => apiService.get('/taxes'),
+    getById: (id) => apiService.get(`/taxes/${id}`),
+    update: (id, taxData) => apiService.put(`/taxes/${id}`, taxData),
+    delete: (id) => apiService.delete(`/taxes/${id}`),
+  },
+
+  // Brand methods
+  brands: {
+    create: (brandData) => apiService.post('/brands', brandData),
+    getAll: () => apiService.get('/brands'),
+    getById: (id) => apiService.get(`/brands/${id}`),
+    update: (id, brandData) => apiService.put(`/brands/${id}`, brandData),
+    delete: (id) => apiService.delete(`/brands/${id}`),
+  },
+
+  // Department methods
+  departments: {
+    create: (departmentData) => apiService.post('/departments', departmentData),
+    getAll: () => apiService.get('/departments'),
+    getById: (id) => apiService.get(`/departments/${id}`),
+    update: (id, departmentData) => apiService.put(`/departments/${id}`, departmentData),
+    delete: (id) => apiService.delete(`/departments/${id}`),
   }
 };
 

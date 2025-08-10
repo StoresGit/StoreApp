@@ -1,321 +1,440 @@
 import React, { useState, useEffect } from 'react';
-// import { apiService } from '../../services/api';
+import { apiService } from '../../services/api';
 
 const Wastage = () => {
-  const [wastageRecords, setWastageRecords] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [sections, setSections] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newWastage, setNewWastage] = useState({
-    date: new Date().toISOString().split('T')[0],
+  
+  const [formData, setFormData] = useState({
+    branches: [], // Changed to array for multiple selection
     section: '',
-    items: [],
-    reason: '',
-    notes: ''
+    eventDate: new Date().toISOString().split('T')[0],
+    eventName: '',
+    media: null,
+    itemName: '',
+    itemCode: '',
+    unit: '',
+    qty: '',
+    wastageType: ''
   });
-  // const [error, setError] = useState('');
 
-  // Mock data for demonstration (in real app, fetch from backend)
   useEffect(() => {
-    const mockItems = [
-      { id: 1, name: 'Chicken Breast', category: 'Meat', unit: 'kg' },
-      { id: 2, name: 'Rice', category: 'Grains', unit: 'kg' },
-      { id: 3, name: 'Tomatoes', category: 'Vegetables', unit: 'kg' },
-      { id: 4, name: 'Milk', category: 'Dairy', unit: 'liter' },
-    ];
-
-    const mockWastageRecords = [
-      {
-        id: 1,
-        date: '2024-01-20',
-        section: 'Main Kitchen',
-        items: [
-          { itemId: 1, name: 'Chicken Breast', quantity: 2, unit: 'kg', reason: 'Expired' },
-          { itemId: 3, name: 'Tomatoes', quantity: 1, unit: 'kg', reason: 'Spoiled' },
-        ],
-        reason: 'Spoilage/Expiration',
-        notes: 'Routine check, disposed of expired chicken and spoiled tomatoes.'
-      },
-      {
-        id: 2,
-        date: '2024-01-18',
-        section: 'Main Kitchen',
-        items: [
-          { itemId: 4, name: 'Milk', quantity: 0.5, unit: 'liter', reason: 'Spillage' },
-        ],
-        reason: 'Accidental Damage',
-        notes: 'Milk carton dropped during transfer.'
-      }
-    ];
-
-    setItems(mockItems);
-    setWastageRecords(mockWastageRecords);
-    setLoading(false);
+    fetchData();
   }, []);
 
-  const sections = ['Main Kitchen', 'Bakery', 'Pantry', 'Cold Storage', 'Freezer'];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Check if user is logged in
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to access this page');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Fetching data with token:', token ? 'Token exists' : 'No token');
+
+      // Fetch branches from the correct endpoint
+      console.log('Fetching branches...');
+      const branchesResponse = await apiService.branches.getAll();
+      console.log('Branches response:', branchesResponse);
+      setBranches(branchesResponse.data || []);
+
+      // Fetch sections
+      console.log('Fetching sections...');
+      const sectionsResponse = await apiService.sections.getAll();
+      console.log('Sections response:', sectionsResponse);
+      setSections(sectionsResponse.data || []);
+
+      // Fetch items from the correct endpoint
+      console.log('Fetching items...');
+      const itemsResponse = await apiService.items.getAll();
+      console.log('Items response:', itemsResponse);
+      setItems(itemsResponse.data || []);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      
+      if (error.response?.status === 401) {
+        alert('Authentication failed. Please log in again.');
+        // Optionally redirect to login page
+        // window.location.href = '/login';
+      } else if (error.response?.status >= 500) {
+        alert('Server error. Please try again later.');
+      } else {
+        alert('Error loading data. Please refresh the page.');
+      }
+      
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewWastage(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Auto-fill item code and unit when item is selected
+    if (name === 'itemName') {
+      console.log('Item selected:', value);
+      console.log('Available items:', items);
+      
+      const selectedItem = items.find(item => item._id === value);
+      console.log('Selected item:', selectedItem);
+      
+      if (selectedItem) {
+        // Item code - try different possible field names
+        const itemCode = selectedItem.itemCode || selectedItem.code || selectedItem.nameEn || selectedItem.name || '';
+        
+        // Unit - check for populated unit objects first, then fallback to string fields
+        let unit = '';
+        if (selectedItem.unit && selectedItem.unit.name) {
+          unit = selectedItem.unit.name;
+        } else if (selectedItem.baseUnit && selectedItem.baseUnit.name) {
+          unit = selectedItem.baseUnit.name;
+        } else if (selectedItem.unit) {
+          unit = selectedItem.unit;
+        } else if (selectedItem.baseUnit) {
+          unit = selectedItem.baseUnit;
+        } else {
+          // Fallback to string fields
+          unit = selectedItem.unitType || selectedItem.unitName || '';
+        }
+        
+        console.log('Auto-filling - Item Code:', itemCode, 'Unit:', unit);
+        console.log('Unit object:', selectedItem.unit);
+        console.log('Base Unit object:', selectedItem.baseUnit);
+        
+        setFormData(prev => ({
+          ...prev,
+          itemCode: itemCode,
+          unit: unit
+        }));
+      } else {
+        // Clear the fields if no item is selected
+        setFormData(prev => ({
+          ...prev,
+          itemCode: '',
+          unit: ''
+        }));
+      }
+    }
   };
 
-  const handleItemChange = (index, e) => {
-    const { name, value } = e.target;
-    const updatedItems = [...newWastage.items];
-    updatedItems[index] = { ...updatedItems[index], [name]: value };
-    setNewWastage(prev => ({ ...prev, items: updatedItems }));
-  };
-
-  const handleAddItem = () => {
-    setNewWastage(prev => ({
-      ...prev,
-      items: [...prev.items, { itemId: '', name: '', quantity: '', unit: '', reason: '' }]
-    }));
-  };
-
-  const handleRemoveItem = (index) => {
-    const updatedItems = newWastage.items.filter((_, i) => i !== index);
-    setNewWastage(prev => ({ ...prev, items: updatedItems }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // In a real app, you'd send this to a backend API
-    const newRecord = {
-      id: wastageRecords.length + 1,
-      ...newWastage,
-      items: newWastage.items.map(item => {
-        const selectedItem = items.find(i => i.id === parseInt(item.itemId));
+  const handleBranchChange = (e) => {
+    const { value, checked } = e.target;
+    setFormData(prev => {
+      if (checked) {
         return {
-          ...item,
-          name: selectedItem ? selectedItem.name : item.name,
-          unit: selectedItem ? selectedItem.unit : item.unit,
+          ...prev,
+          branches: [...prev.branches, value]
         };
-      })
-    };
-    setWastageRecords(prev => [...prev, newRecord]);
-    setNewWastage({
-      date: new Date().toISOString().split('T')[0],
-      section: '',
-      items: [],
-      reason: '',
-      notes: ''
+      } else {
+        return {
+          ...prev,
+          branches: prev.branches.filter(branch => branch !== value)
+        };
+      }
     });
-    setShowCreateForm(false);
-    alert('Wastage record added successfully!');
+  };
+
+  const handleFileChange = (e) => {
+    setFormData(prev => ({ ...prev, media: e.target.files[0] }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Create FormData for file upload
+      const submitData = new FormData();
+      submitData.append('branches', JSON.stringify(formData.branches));
+      submitData.append('section', formData.section);
+      submitData.append('eventDate', formData.eventDate);
+      submitData.append('eventName', formData.eventName);
+      submitData.append('itemName', formData.itemName);
+      submitData.append('itemCode', formData.itemCode);
+      submitData.append('unit', formData.unit);
+      submitData.append('qty', formData.qty);
+      submitData.append('wastageType', formData.wastageType);
+      
+      if (formData.media) {
+        submitData.append('media', formData.media);
+      }
+
+      console.log('Submitting wastage data:', formData);
+      
+      // Submit to backend API
+      const response = await apiService.wastage.create(submitData);
+      
+      console.log('Wastage submission response:', response);
+      
+      // Check if response exists and has success property
+      if (response && response.data && response.data.success) {
+        alert('Wastage record created successfully!');
+        
+        // Reset form
+        setFormData({
+          branches: [],
+          section: '',
+          eventDate: new Date().toISOString().split('T')[0],
+          eventName: '',
+          media: null,
+          itemName: '',
+          itemCode: '',
+          unit: '',
+          qty: '',
+          wastageType: ''
+        });
+      } else {
+        console.error('Unexpected response format:', response);
+        alert('Error: Unexpected response from server');
+      }
+    } catch (error) {
+      console.error('Error submitting wastage:', error);
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const errorMessage = error.response.data?.message || 'Server error occurred';
+        alert(`Error: ${errorMessage}`);
+      } else if (error.request) {
+        // Network error
+        alert('Error: Network connection failed. Please check your internet connection.');
+      } else {
+        // Other error
+        alert(`Error: ${error.message}`);
+      }
+    }
   };
 
   if (loading) {
-    return <div className="p-4">Loading wastage records...</div>;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
+      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Wastage Records</h1>
-          <p className="text-gray-600">Report wastage with a reason by section or by item</p>
-        </div>
-
-        {/* Action Button */}
         <div className="mb-6">
-          <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            {showCreateForm ? 'Cancel' : 'Add New Wastage Record'}
-          </button>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Wastage</h1>
         </div>
 
-
-
-        {/* Create Wastage Form */}
-        {showCreateForm && (
-          <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-            <h2 className="text-xl font-semibold mb-4">New Wastage Record</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
-                  <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    value={newWastage.date}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                    required
-                  />
+        {/* Wastage Form - Grid Layout */}
+        <div className="bg-white border border-gray-300 rounded-lg shadow-sm">
+          <form onSubmit={handleSubmit}>
+            {/* General Information Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-gray-300">
+              {/* Left Column */}
+              <div className="space-y-0">
+                <div className="flex border-b border-gray-300">
+                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
+                    <label className="text-sm font-medium text-gray-700">Select Branch</label>
+                  </div>
+                  <div className="w-2/3 p-3">
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {branches.map(branch => (
+                        <label key={branch._id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            value={branch._id}
+                            checked={formData.branches.includes(branch._id)}
+                            onChange={handleBranchChange}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">{branch.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label htmlFor="section" className="block text-sm font-medium text-gray-700">Section</label>
-                  <select
-                    id="section"
-                    name="section"
-                    value={newWastage.section}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                    required
-                  >
-                    <option value="">Select Section</option>
-                    {sections.map(section => (
-                      <option key={section} value={section}>{section}</option>
-                    ))}
-                  </select>
+                
+                <div className="flex border-b border-gray-300">
+                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
+                    <label className="text-sm font-medium text-gray-700">Event Date</label>
+                  </div>
+                  <div className="w-2/3 p-3">
+                    <input
+                      type="date"
+                      name="eventDate"
+                      value={formData.eventDate}
+                      onChange={handleInputChange}
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
-              <h3 className="text-lg font-medium mb-2">Wasted Items</h3>
-              {newWastage.items.map((item, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4 p-4 border rounded-md bg-gray-50">
-                  <div>
-                    <label htmlFor={`item-${index}`} className="block text-sm font-medium text-gray-700">Item</label>
+              {/* Right Column */}
+              <div className="space-y-0">
+                <div className="flex border-b border-gray-300">
+                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
+                    <label className="text-sm font-medium text-gray-700">Select Section</label>
+                  </div>
+                  <div className="w-2/3 p-3">
                     <select
-                      id={`item-${index}`}
-                      name="itemId"
-                      value={item.itemId}
-                      onChange={(e) => handleItemChange(index, e)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                      name="section"
+                      value={formData.section}
+                      onChange={handleInputChange}
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
                       required
                     >
-                      <option value="">Select Item</option>
-                      {items.map(i => (
-                        <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
+                      <option value="">Select Section</option>
+                      {sections.map(section => (
+                        <option key={section._id} value={section._id}>
+                          {section.name}
+                        </option>
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label htmlFor={`quantity-${index}`} className="block text-sm font-medium text-gray-700">Quantity</label>
-                    <input
-                      type="number"
-                      id={`quantity-${index}`}
-                      name="quantity"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(index, e)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                      min="0.01"
-                      step="0.01"
-                      required
-                    />
+                </div>
+                
+                <div className="flex border-b border-gray-300">
+                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
+                    <label className="text-sm font-medium text-gray-700">Event Name</label>
                   </div>
-                  <div>
-                    <label htmlFor={`unit-${index}`} className="block text-sm font-medium text-gray-700">Unit</label>
+                  <div className="w-2/3 p-3">
                     <input
                       type="text"
-                      id={`unit-${index}`}
-                      name="unit"
-                      value={items.find(i => i.id === parseInt(item.itemId))?.unit || item.unit}
-                      readOnly
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={`item-reason-${index}`} className="block text-sm font-medium text-gray-700">Reason</label>
-                    <input
-                      type="text"
-                      id={`item-reason-${index}`}
-                      name="reason"
-                      value={item.reason}
-                      onChange={(e) => handleItemChange(index, e)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
+                      name="eventName"
+                      value={formData.eventName}
+                      onChange={handleInputChange}
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                      placeholder="Enter event name"
                       required
                     />
-                  </div>
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItem(index)}
-                      className="bg-red-500 text-white px-3 py-2 rounded hover:bg-red-600 w-full"
-                    >
-                      Remove
-                    </button>
                   </div>
                 </div>
-              ))}
-              <button
-                type="button"
-                onClick={handleAddItem}
-                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mb-4"
-              >
-                Add Item
-              </button>
-
-              <div className="mb-4">
-                <label htmlFor="reason" className="block text-sm font-medium text-gray-700">Overall Reason for Wastage</label>
-                <input
-                  type="text"
-                  id="reason"
-                  name="reason"
-                  value={newWastage.reason}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                  placeholder="e.g., Spoilage, Accidental Damage, Expired"
-                  required
-                />
+                
+                <div className="flex">
+                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
+                    <label className="text-sm font-medium text-gray-700">Media</label>
+                  </div>
+                  <div className="w-2/3 p-3">
+                    <input
+                      type="file"
+                      name="media"
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent file:border-0 file:bg-transparent file:text-sm"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="mb-4">
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">Notes</label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  value={newWastage.notes}
-                  onChange={handleInputChange}
-                  rows="3"
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                  placeholder="Any additional details about the wastage..."
-                ></textarea>
+            </div>
+
+            {/* Item Wastage Details Section */}
+            <div className="border-b border-gray-300">
+              {/* Headers */}
+              <div className="grid grid-cols-5 bg-gray-50 border-b border-gray-300">
+                <div className="p-3 border-r border-gray-300">
+                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                </div>
+                <div className="p-3 border-r border-gray-300">
+                  <label className="text-sm font-medium text-gray-700">Item Code</label>
+                </div>
+                <div className="p-3 border-r border-gray-300">
+                  <label className="text-sm font-medium text-gray-700">Unit</label>
+                </div>
+                <div className="p-3 border-r border-gray-300">
+                  <label className="text-sm font-medium text-gray-700">Qty</label>
+                </div>
+                <div className="p-3">
+                  <label className="text-sm font-medium text-gray-700">Wastage Type</label>
+                </div>
               </div>
 
+              {/* Input Fields */}
+              <div className="grid grid-cols-5">
+                <div className="p-3 border-r border-gray-300">
+                  <select
+                    name="itemName"
+                    value={formData.itemName}
+                    onChange={handleInputChange}
+                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                    required
+                  >
+                    <option value="">Select Item</option>
+                    {items.map(item => (
+                      <option key={item._id} value={item._id}>
+                        {item.nameEn || item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div className="p-3 border-r border-gray-300">
+                  <input
+                    type="text"
+                    name="itemCode"
+                    value={formData.itemCode}
+                    readOnly
+                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
+                  />
+                </div>
+                
+                <div className="p-3 border-r border-gray-300">
+                  <input
+                    type="text"
+                    name="unit"
+                    value={formData.unit}
+                    readOnly
+                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
+                  />
+                </div>
+                
+                <div className="p-3 border-r border-gray-300">
+                  <input
+                    type="number"
+                    name="qty"
+                    value={formData.qty}
+                    onChange={handleInputChange}
+                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="Enter quantity"
+                    required
+                  />
+                </div>
+                
+                <div className="p-3">
+                  <select
+                    name="wastageType"
+                    value={formData.wastageType}
+                    onChange={handleInputChange}
+                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Expired">Expired</option>
+                    <option value="Unsold">Unsold</option>
+                    <option value="Spill Over">Spill Over</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div className="p-4 flex justify-end">
               <button
                 type="submit"
-                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 font-medium"
               >
-                Submit Wastage Record
+                Submit Wastage
               </button>
-            </form>
-          </div>
-        )}
-
-        {/* Wastage Records Table */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Existing Wastage Records</h2>
-          {wastageRecords.length === 0 ? (
-            <p>No wastage records found.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Section</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Reason</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items Wasted</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {wastageRecords.map((record) => (
-                    <tr key={record.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.section}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.reason}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {record.items.map((item, idx) => (
-                          <div key={idx}>{item.name} ({item.quantity} {item.unit}) - {item.reason}</div>
-                        ))}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{record.notes}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          )}
+          </form>
         </div>
       </div>
     </div>

@@ -30,6 +30,7 @@ const orderRoutes = require('./routes/orderRoutes');
 const sectionRoutes = require('./routes/sectionRoutes');
 const purchaseCategoryRoutes = require('./routes/purchaseCategoryRoutes');
 const branchCategoryRoutes = require('./routes/branchCategoryRoutes');
+const wastageRoutes = require('./routes/wastageRoutes');
 
 const app = express();
 
@@ -113,6 +114,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/sections', sectionRoutes);
 app.use('/api/purchase-categories', purchaseCategoryRoutes);
 app.use('/api/branch-categories', branchCategoryRoutes);
+app.use('/api/wastage', wastageRoutes);
 
 // Apply login rate limiting to login route
 app.use('/api/users/login', loginLimiter);
