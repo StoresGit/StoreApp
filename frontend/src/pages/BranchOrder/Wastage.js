@@ -4,6 +4,7 @@ import { apiService } from '../../services/api';
 const Wastage = () => {
   const [branches, setBranches] = useState([]);
   const [sections, setSections] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -23,6 +24,72 @@ const Wastage = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Filter sections based on selected branch
+  useEffect(() => {
+    if (formData.branch) {
+      console.log('Selected branch ID:', formData.branch);
+      console.log('All sections:', sections);
+      
+      // Filter sections that belong to the selected branch
+      const branchSections = sections.filter(section => {
+        // Check multiple possible field names and data structures
+        const sectionBranch = section.branch;
+        const sectionBranchId = section.branchId;
+        const sectionBranches = section.branches;
+        
+        console.log('Section:', section.name, 'Branch fields:', {
+          branch: sectionBranch,
+          branchId: sectionBranchId,
+          branches: sectionBranches
+        });
+        
+        // Check if section belongs to the selected branch
+        if (sectionBranch === formData.branch) {
+          console.log('Match found: direct branch reference');
+          return true;
+        }
+        
+        if (sectionBranchId === formData.branch) {
+          console.log('Match found: branchId reference');
+          return true;
+        }
+        
+        if (Array.isArray(sectionBranches) && sectionBranches.includes(formData.branch)) {
+          console.log('Match found: branches array');
+          return true;
+        }
+        
+        // Check if section has a branch object with _id
+        if (sectionBranch && typeof sectionBranch === 'object' && sectionBranch._id === formData.branch) {
+          console.log('Match found: branch object with _id');
+          return true;
+        }
+        
+        // Check if section has a branchId object with _id
+        if (sectionBranchId && typeof sectionBranchId === 'object' && sectionBranchId._id === formData.branch) {
+          console.log('Match found: branchId object with _id');
+          return true;
+        }
+        
+        return false;
+      });
+      
+      console.log('Filtered sections for branch:', branchSections);
+      setFilteredSections(branchSections);
+      
+      // Clear section selection if current section is not available for selected branch
+      if (!branchSections.find(s => s._id === formData.section)) {
+        console.log('Clearing section selection - current section not available for selected branch');
+        setFormData(prev => ({ ...prev, section: '' }));
+      }
+    } else {
+      // If no branch is selected, show all sections
+      console.log('No branch selected - showing all sections');
+      setFilteredSections(sections);
+      setFormData(prev => ({ ...prev, section: '' }));
+    }
+  }, [formData.branch, sections]);
 
   const fetchData = async () => {
     try {
@@ -46,9 +113,10 @@ const Wastage = () => {
 
       // Fetch sections
       console.log('Fetching sections...');
-      const sectionsResponse = await apiService.sections.getAll();
+      const sectionsResponse = await apiService.sections.getActive();
       console.log('Sections response:', sectionsResponse);
       setSections(sectionsResponse.data || []);
+      setFilteredSections(sectionsResponse.data || []);
 
       // Fetch items from the correct endpoint
       console.log('Fetching items...');
@@ -271,15 +339,21 @@ const Wastage = () => {
                       value={formData.section}
                       onChange={handleInputChange}
                       className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                      disabled={!formData.branch}
                       required
                     >
-                      <option value="">Select Section</option>
-                      {sections.map(section => (
+                      <option value="">
+                        {formData.branch ? 'Select Section' : 'Select Branch First'}
+                      </option>
+                      {filteredSections.map(section => (
                         <option key={section._id} value={section._id}>
                           {section.name}
                         </option>
                       ))}
                     </select>
+                    {formData.branch && filteredSections.length === 0 && (
+                      <p className="text-xs text-red-500 mt-1">No sections available for this branch</p>
+                    )}
                   </div>
                 </div>
                 
@@ -322,10 +396,10 @@ const Wastage = () => {
               {/* Headers */}
               <div className="grid grid-cols-5 bg-gray-50 border-b border-gray-300">
                 <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                  <label className="text-sm font-medium text-gray-700">Item Code</label>
                 </div>
                 <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Item Code</label>
+                  <label className="text-sm font-medium text-gray-700">Item Name</label>
                 </div>
                 <div className="p-3 border-r border-gray-300">
                   <label className="text-sm font-medium text-gray-700">Unit</label>
@@ -341,6 +415,16 @@ const Wastage = () => {
               {/* Input Fields */}
               <div className="grid grid-cols-5">
                 <div className="p-3 border-r border-gray-300">
+                  <input
+                    type="text"
+                    name="itemCode"
+                    value={formData.itemCode}
+                    readOnly
+                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
+                  />
+                </div>
+                
+                <div className="p-3 border-r border-gray-300">
                   <select
                     name="itemName"
                     value={formData.itemName}
@@ -355,16 +439,6 @@ const Wastage = () => {
                       </option>
                     ))}
                   </select>
-                </div>
-                
-                <div className="p-3 border-r border-gray-300">
-                  <input
-                    type="text"
-                    name="itemCode"
-                    value={formData.itemCode}
-                    readOnly
-                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
-                  />
                 </div>
                 
                 <div className="p-3 border-r border-gray-300">
