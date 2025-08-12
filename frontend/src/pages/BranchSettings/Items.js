@@ -214,7 +214,7 @@ const Items = () => {
         {/* Header */}
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Items</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Item List</h1>
             <p className="text-gray-600">Manage all items in the system</p>
           </div>
           <button

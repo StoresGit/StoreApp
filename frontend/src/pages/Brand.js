@@ -24,10 +24,13 @@ const Brand = () => {
 
   const fetchData = async () => {
     try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
       const [brandRes, branchRes, imageRes] = await Promise.all([
-        axios.get(`${backend_url}/brand`),
-        axios.get(`${backend_url}/branch`),
-        axios.get(`${backend_url}/gallery`)
+        axios.get(`${backend_url}/brand`, { headers }),
+        axios.get(`${backend_url}/branch`, { headers }),
+        axios.get(`${backend_url}/gallery`, { headers })
       ]);
       setBrands(brandRes.data);
       setBranches(branchRes.data);
@@ -48,10 +51,13 @@ const Brand = () => {
 
   const handleSubmit = async () => {
     try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
       if (editingId) {
-        await axios.put(`${backend_url}/brand/${editingId}`, formData);
+        await axios.put(`${backend_url}/brand/${editingId}`, formData, { headers });
       } else {
-        await axios.post(`${backend_url}/brand`, formData);
+        await axios.post(`${backend_url}/brand`, formData, { headers });
       }
       setFormData({ nameEn: '', nameAr: '', branch: '', type: '', logo: '' });
       setEditingId(null);
@@ -77,7 +83,10 @@ const Brand = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this brand?')) {
       try {
-        await axios.delete(`${backend_url}/brand/${id}`);
+        const token = localStorage.getItem('token');
+        const headers = { Authorization: `Bearer ${token}` };
+
+        await axios.delete(`${backend_url}/brand/${id}`, { headers });
         fetchData();
       } catch (error) {
         console.error('Error deleting brand:', error);

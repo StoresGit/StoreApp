@@ -61,7 +61,6 @@ import OrderProcessingPrep from './pages/CentralKitchen/OrderProcessingPrep';
 // Import new Branch Settings pages
 import CreateItem from './pages/BranchSettings/CreateItem';
 import CreateCategory from './pages/BranchSettings/CreateCategory';
-import BranchSettingsItems from './pages/BranchSettings/Items';
 
 function App() {
   const menuItems = [
@@ -111,7 +110,6 @@ function App() {
           label: 'Branch Settings', 
           children: [
             { label: 'Create Item', path: '/branch-settings/create-item' },
-            { label: 'Items', path: '/branch-settings/items' },
             { label: 'Branch Category', path: '/branch-settings/create-category' },
           ]
         },
@@ -265,10 +263,9 @@ function App() {
                 <Route path="/reports/missing-item-analysis" element={<div className="p-6"><h1>Missing Item Analysis</h1><p>Coming Soon...</p></div>} />
                 <Route path="/reports/wastage-reports" element={<div className="p-6"><h1>Wastage Reports</h1><p>Coming Soon...</p></div>} />
                 
-                {/* Branch Settings Routes */}
-                <Route path="/branch-settings/create-item" element={<CreateItem />} />
-                <Route path="/branch-settings/create-category" element={<CreateCategory />} />
-                <Route path="/branch-settings/items" element={<BranchSettingsItems />} />
+                                 {/* Branch Settings Routes */}
+                 <Route path="/branch-settings/create-item" element={<CreateItem />} />
+                 <Route path="/branch-settings/create-category" element={<CreateCategory />} />
               </Routes>
             </Layout>
               </ProtectedRoute>

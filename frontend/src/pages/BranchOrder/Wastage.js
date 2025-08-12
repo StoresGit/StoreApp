@@ -8,7 +8,7 @@ const Wastage = () => {
   const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState({
-    branches: [], // Changed to array for multiple selection
+    branch: '', // Changed from branches array to single branch string
     section: '',
     eventDate: new Date().toISOString().split('T')[0],
     eventName: '',
@@ -125,23 +125,6 @@ const Wastage = () => {
     }
   };
 
-  const handleBranchChange = (e) => {
-    const { value, checked } = e.target;
-    setFormData(prev => {
-      if (checked) {
-        return {
-          ...prev,
-          branches: [...prev.branches, value]
-        };
-      } else {
-        return {
-          ...prev,
-          branches: prev.branches.filter(branch => branch !== value)
-        };
-      }
-    });
-  };
-
   const handleFileChange = (e) => {
     setFormData(prev => ({ ...prev, media: e.target.files[0] }));
   };
@@ -151,7 +134,7 @@ const Wastage = () => {
     try {
       // Create FormData for file upload
       const submitData = new FormData();
-      submitData.append('branches', JSON.stringify(formData.branches));
+      submitData.append('branch', formData.branch); // Changed from branches array to single branch
       submitData.append('section', formData.section);
       submitData.append('eventDate', formData.eventDate);
       submitData.append('eventName', formData.eventName);
@@ -178,7 +161,7 @@ const Wastage = () => {
         
         // Reset form
         setFormData({
-          branches: [],
+          branch: '', // Reset to empty string
           section: '',
           eventDate: new Date().toISOString().split('T')[0],
           eventName: '',
@@ -242,20 +225,20 @@ const Wastage = () => {
                     <label className="text-sm font-medium text-gray-700">Select Branch</label>
                   </div>
                   <div className="w-2/3 p-3">
-                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                    <select
+                      name="branch"
+                      value={formData.branch}
+                      onChange={handleInputChange}
+                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                      required
+                    >
+                      <option value="">Select Branch</option>
                       {branches.map(branch => (
-                        <label key={branch._id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            value={branch._id}
-                            checked={formData.branches.includes(branch._id)}
-                            onChange={handleBranchChange}
-                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-gray-700">{branch.name}</span>
-                        </label>
+                        <option key={branch._id} value={branch._id}>
+                          {branch.name}
+                        </option>
                       ))}
-                    </div>
+                    </select>
                   </div>
                 </div>
                 

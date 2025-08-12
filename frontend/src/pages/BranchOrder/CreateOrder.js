@@ -20,24 +20,25 @@ const CreateOrder = () => {
 
   // Sections
   const [sections, setSections] = useState([]);
+  const [filteredSections, setFilteredSections] = useState([]);
   const allowedSections = useMemo(() => {
     const userSectionIds = Array.isArray(user?.sections) ? user.sections : [];
-    if (userSectionIds.length === 0) return sections;
+    if (userSectionIds.length === 0) return filteredSections;
     const ids = new Set(userSectionIds.map(s => (typeof s === 'string' ? s : s?._id)));
-    return sections.filter(s => ids.has(s._id));
-  }, [sections, user]);
+    return filteredSections.filter(s => ids.has(s._id));
+  }, [filteredSections, user]);
   const [sectionId, setSectionId] = useState('');
 
-  // Branches (multi-select)
+  // Branches (single-select)
   const [allBranches, setAllBranches] = useState([]);
-  const [selectedBranchIds, setSelectedBranchIds] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
 
   // Items / refs
   const [allItems, setAllItems] = useState([]);
   const [branchCategories, setBranchCategories] = useState([]);
   const [branchUnits, setBranchUnits] = useState([]);
   const [items, setItems] = useState([
-    { code: '', name: '', unit: '', category: '', qty: '' }
+    { code: '', name: '', unit: '', category: '', subCategory: '', qty: '' }
   ]);
 
   // UI state
@@ -68,6 +69,8 @@ const CreateOrder = () => {
           axios.get(`${backend_url}/branch`, { headers }).catch(() => ({ data: [] })),
         ]);
         setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
+        setFilteredSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
+        console.log('Sections fetched from API:', sectionsRes.data); // Temporary debug log
         setBranchCategories(Array.isArray(catRes.data) ? catRes.data : []);
         setAllItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
         setBranchUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
@@ -81,6 +84,72 @@ const CreateOrder = () => {
     bootstrap();
   }, []);
 
+  // Filter sections based on selected branch
+  useEffect(() => {
+    if (selectedBranchId) {
+      console.log('Selected branch ID:', selectedBranchId);
+      console.log('All sections:', sections);
+      
+      // Filter sections that belong to the selected branch
+      const branchSections = sections.filter(section => {
+        // Check multiple possible field names and data structures
+        const sectionBranch = section.branch;
+        const sectionBranchId = section.branchId;
+        const sectionBranches = section.branches;
+        
+        console.log('Section:', section.name, 'Branch fields:', {
+          branch: sectionBranch,
+          branchId: sectionBranchId,
+          branches: sectionBranches
+        });
+        
+        // Check if section belongs to the selected branch
+        if (sectionBranch === selectedBranchId) {
+          console.log('Match found: direct branch reference');
+          return true;
+        }
+        
+        if (sectionBranchId === selectedBranchId) {
+          console.log('Match found: branchId reference');
+          return true;
+        }
+        
+        if (Array.isArray(sectionBranches) && sectionBranches.includes(selectedBranchId)) {
+          console.log('Match found: branches array');
+          return true;
+        }
+        
+        // Check if section has a branch object with _id
+        if (sectionBranch && typeof sectionBranch === 'object' && sectionBranch._id === selectedBranchId) {
+          console.log('Match found: branch object with _id');
+          return true;
+        }
+        
+        // Check if section has a branchId object with _id
+        if (sectionBranchId && typeof sectionBranchId === 'object' && sectionBranchId._id === selectedBranchId) {
+          console.log('Match found: branchId object with _id');
+          return true;
+        }
+        
+        return false;
+      });
+      
+      console.log('Filtered sections for branch:', branchSections);
+      setFilteredSections(branchSections);
+      
+      // Clear section selection if current section is not available for selected branch
+      if (!branchSections.find(s => s._id === sectionId)) {
+        console.log('Clearing section selection - current section not available for selected branch');
+        setSectionId('');
+      }
+    } else {
+      // If no branch is selected, show all sections
+      console.log('No branch selected - showing all sections');
+      setFilteredSections(sections);
+      setSectionId('');
+    }
+  }, [selectedBranchId, sections, sectionId]);
+
   useEffect(() => {
     setOrderNo(generateOrderNo());
   }, []);
@@ -92,19 +161,48 @@ const CreateOrder = () => {
     setItems(prev => {
       const next = [...prev];
       if (chosen) {
-        const autoUnitName = chosen.unit?.name || chosen.baseUnit?.name || chosen.unit || '';
-        const allowedUnitNames = new Set(branchUnits.map(u => u.name));
-        const autoCategoryName = chosen.category?.nameEn || chosen.category?.name || '';
-        const allowedCategoryNames = new Set(branchCategories.map(c => c.nameEn));
+        // Get unit name from the item
+        let unitName = '';
+        if (chosen.unit && chosen.unit.name) {
+          unitName = chosen.unit.name;
+        } else if (chosen.baseUnit && chosen.baseUnit.name) {
+          unitName = chosen.baseUnit.name;
+        } else if (chosen.unit) {
+          unitName = chosen.unit;
+        } else if (chosen.baseUnit) {
+          unitName = chosen.baseUnit;
+        }
+
+        // Get category name from the item
+        let categoryName = '';
+        if (chosen.category && chosen.category.nameEn) {
+          categoryName = chosen.category.nameEn;
+        } else if (chosen.category && chosen.category.name) {
+          categoryName = chosen.category.name;
+        } else if (chosen.subCategory && chosen.subCategory.nameEn) {
+          categoryName = chosen.subCategory.nameEn;
+        } else if (chosen.subCategory && chosen.subCategory.name) {
+          categoryName = chosen.subCategory.name;
+        }
+
+        // Get sub-category name from the item
+        let subCategoryName = '';
+        if (chosen.subCategory && chosen.subCategory.nameEn) {
+          subCategoryName = chosen.subCategory.nameEn;
+        } else if (chosen.subCategory && chosen.subCategory.name) {
+          subCategoryName = chosen.subCategory.name;
+        }
+
         next[idx] = {
           ...next[idx],
           name: chosen.nameEn || chosen.name || name,
           code: chosen.itemCode || chosen.item_code || '',
-          unit: allowedUnitNames.has(autoUnitName) ? autoUnitName : '',
-          category: allowedCategoryNames.has(autoCategoryName) ? autoCategoryName : '',
+          unit: unitName,
+          category: categoryName,
+          subCategory: subCategoryName,
         };
       } else {
-        next[idx] = { ...next[idx], name, code: '', unit: '', category: '' };
+        next[idx] = { ...next[idx], name, code: '', unit: '', category: '', subCategory: '' };
       }
       return next;
     });
@@ -118,23 +216,23 @@ const CreateOrder = () => {
     });
   };
 
-  const toggleBranch = (id) => {
-    setSelectedBranchIds(prev => prev.includes(id) ? prev.filter(b => b !== id) : [...prev, id]);
+  const handleBranchChange = (e) => {
+    setSelectedBranchId(e.target.value);
   };
 
-  const addItemRow = () => setItems(prev => [...prev, { code: '', name: '', unit: '', category: '', qty: '' }]);
+  const addItemRow = () => setItems(prev => [...prev, { code: '', name: '', unit: '', category: '', subCategory: '', qty: '' }]);
   const removeItemRow = (idx) => setItems(prev => (prev.length === 1 ? prev : prev.filter((_, i) => i !== idx)));
 
   const isValid = useMemo(() => {
     if (!dateTime || !orderNo) return false;
     if (!sectionId) return false;
-    if (selectedBranchIds.length === 0) return false;
+    if (!selectedBranchId) return false;
     if (!Array.isArray(items) || items.length === 0) return false;
     for (const it of items) {
       if (!it.name || !it.code || !it.unit || !it.category || !it.qty || Number(it.qty) <= 0) return false;
     }
     return true;
-  }, [dateTime, orderNo, sectionId, items, selectedBranchIds]);
+  }, [dateTime, orderNo, sectionId, items, selectedBranchId]);
 
   const doSubmit = async (finalStatus) => {
     try {
@@ -150,12 +248,13 @@ const CreateOrder = () => {
         userName: user?.name || '',
         dateTime,
         scheduleDate: orderType === 'Schedule' ? scheduleDate : null,
-        branches: selectedBranchIds, // new field
+        branches: [selectedBranchId], // Convert single branch to array for backend compatibility
         items: items.map(it => ({
           itemCode: it.code,
           itemName: it.name,
           unit: it.unit,
           category: it.category,
+          subCategory: it.subCategory,
           orderQty: Number(it.qty)
         }))
       };
@@ -163,13 +262,13 @@ const CreateOrder = () => {
       await axios.post(`${backend_url}/orders`, payload, { headers });
       setSubmitSuccess('Order saved successfully');
       setSubmitError('');
-      setItems([{ code: '', name: '', unit: '', category: '', qty: '' }]);
+      setItems([{ code: '', name: '', unit: '', category: '', subCategory: '', qty: '' }]);
       setSectionId('');
       setOrderType('Urgent');
       setOrderStatus('Draft');
       setDateTime(new Date());
       setScheduleDate(null);
-      setSelectedBranchIds([]);
+      setSelectedBranchId('');
       setOrderNo(generateOrderNo());
     } catch (e) {
       setSubmitError(e.response?.data?.error || e.message || 'Failed to save order');
@@ -223,12 +322,8 @@ const CreateOrder = () => {
             </div>
             </div>
 
-          {/* Row 2: User / Order No / Order Type */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">User</label>
-              <input className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" value={user?.name || ''} readOnly />
-            </div>
+          {/* Row 2: Order No / Order Type */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Order No</label>
               <input className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" value={orderNo} readOnly />
@@ -241,29 +336,44 @@ const CreateOrder = () => {
             </div>
           </div>
 
-          {/* Row 3: Branches / Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Branches</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-40 overflow-y-auto border rounded p-2">
+          {/* Row 3: Branch / Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Branch</label>
+              <select 
+                className="w-full border rounded px-2 py-1" 
+                value={selectedBranchId}
+                onChange={handleBranchChange}
+                required
+              >
+                <option value="">Select Branch</option>
                 {allBranches.map(b => (
-                  <label key={b._id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={selectedBranchIds.includes(b._id)} onChange={() => toggleBranch(b._id)} />
-                    <span>{b.name}</span>
-                  </label>
+                  <option key={b._id} value={b._id}>
+                    {b.name}
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Section</label>
-              <select className="w-full border rounded px-2 py-1" value={sectionId} onChange={e => setSectionId(e.target.value)}>
-                <option value="">Select Section</option>
+              <select 
+                className="w-full border rounded px-2 py-1" 
+                value={sectionId} 
+                onChange={e => setSectionId(e.target.value)}
+                disabled={!selectedBranchId}
+              >
+                <option value="">
+                  {selectedBranchId ? 'Select Section' : 'Select Branch First'}
+                </option>
                 {allowedSections.map(sec => (
                   <option key={sec._id} value={sec._id}>{sec.name}</option>
                 ))}
               </select>
+              {selectedBranchId && allowedSections.length === 0 && (
+                <p className="text-xs text-red-500 mt-1">No sections available for this branch</p>
+              )}
             </div>
-            </div>
+          </div>
 
           {/* Row 4: Schedule (if applicable) */}
           {orderType === 'Schedule' && (
@@ -287,8 +397,10 @@ const CreateOrder = () => {
                     <th className="border px-2 py-1">Item Code</th>
                     <th className="border px-2 py-1">Item Name</th>
                     <th className="border px-2 py-1">Item Category</th>
+                    <th className="border px-2 py-1">Sub Category</th>
                     <th className="border px-2 py-1">Unit</th>
                     <th className="border px-2 py-1">Order Qty</th>
+                    <th className="border px-2 py-1">Created By</th>
                     <th className="border px-2 py-1">Action</th>
                   </tr>
                 </thead>
@@ -307,23 +419,37 @@ const CreateOrder = () => {
                         </datalist>
                       </td>
                       <td className="border px-2 py-1">
-                        <select className="w-full border rounded px-1 py-0.5" value={item.category} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
-                          <option value="">Select Category</option>
-                          {branchCategories.map(cat => (
-                            <option key={cat._id} value={cat.nameEn}>{cat.nameEn}</option>
-                          ))}
-                        </select>
+                        <input 
+                          type="text" 
+                          className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" 
+                          value={item.category} 
+                          readOnly 
+                          placeholder="Auto-filled"
+                        />
                       </td>
                       <td className="border px-2 py-1">
-                        <select className="w-full border rounded px-1 py-0.5" value={item.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
-                          <option value="">Select Unit</option>
-                          {branchUnits.map(u => (
-                            <option key={u._id} value={u.name}>{u.name}</option>
-                          ))}
-                        </select>
+                        <input 
+                          type="text" 
+                          className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" 
+                          value={item.subCategory} 
+                          readOnly 
+                          placeholder="Auto-filled"
+                        />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <input 
+                          type="text" 
+                          className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" 
+                          value={item.unit} 
+                          readOnly 
+                          placeholder="Auto-filled"
+                        />
                       </td>
                       <td className="border px-2 py-1">
                         <input type="number" min="0" className="w-full border rounded px-1 py-0.5" value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
+                      </td>
+                      <td className="border px-2 py-1">
+                        <input className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={user?.name || ''} readOnly />
                       </td>
                       <td className="border px-2 py-1 text-center">
                         <button type="button" className="text-red-500 font-bold px-2" onClick={() => removeItemRow(idx)} disabled={items.length === 1}>-</button>
@@ -349,16 +475,15 @@ const CreateOrder = () => {
         {/* Confirmation Modal */}
         {showConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl p-6">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl p-6">
               <h3 className="text-xl font-semibold mb-4">Confirm Order Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div><span className="font-medium">Status:</span> {orderStatus}</div>
                 <div><span className="font-medium">Date & Time:</span> {new Date(dateTime).toLocaleString()}</div>
-                <div><span className="font-medium">User:</span> {user?.name || ''}</div>
                 <div><span className="font-medium">Order No:</span> {orderNo}</div>
                 <div><span className="font-medium">Order Type:</span> {orderType}</div>
-                <div className="md:col-span-2"><span className="font-medium">Section:</span> {sections.find(s => s._id === sectionId)?.name || ''}</div>
-                <div className="md:col-span-2"><span className="font-medium">Branches:</span> {allBranches.filter(b => selectedBranchIds.includes(b._id)).map(b => b.name).join(', ') || '-'}</div>
+                <div><span className="font-medium">Section:</span> {sections.find(s => s._id === sectionId)?.name || ''}</div>
+                <div><span className="font-medium">Branch:</span> {allBranches.find(b => b._id === selectedBranchId)?.name || ''}</div>
               </div>
               <div className="mt-4">
                 <table className="min-w-full border text-xs">
@@ -367,8 +492,10 @@ const CreateOrder = () => {
                       <th className="border px-2 py-1">Item Code</th>
                       <th className="border px-2 py-1">Item Name</th>
                       <th className="border px-2 py-1">Category</th>
+                      <th className="border px-2 py-1">Sub Category</th>
                       <th className="border px-2 py-1">Unit</th>
                       <th className="border px-2 py-1">Qty</th>
+                      <th className="border px-2 py-1">Created By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -377,8 +504,10 @@ const CreateOrder = () => {
                         <td className="border px-2 py-1">{it.code}</td>
                         <td className="border px-2 py-1">{it.name}</td>
                         <td className="border px-2 py-1">{it.category}</td>
+                        <td className="border px-2 py-1">{it.subCategory}</td>
                         <td className="border px-2 py-1">{it.unit}</td>
                         <td className="border px-2 py-1">{it.qty}</td>
+                        <td className="border px-2 py-1">{user?.name || ''}</td>
                       </tr>
                     ))}
                   </tbody>
