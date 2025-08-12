@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '../../services/api';
 
 const Wastage = () => {
@@ -21,16 +21,16 @@ const Wastage = () => {
     wastageType: ''
   });
 
+  // Use ref to track current section without creating dependency
+  const currentSectionRef = useRef(formData.section);
+
+  // Update ref when formData.section changes
+  useEffect(() => {
+    currentSectionRef.current = formData.section;
+  }, [formData.section]);
+
   useEffect(() => {
     fetchData();
-  }, []);
-
-  // Memoized function to clear section if not available
-  const clearSectionIfNotAvailable = useCallback((branchSections, currentSection) => {
-    if (!branchSections.find(s => s._id === currentSection)) {
-      console.log('Clearing section selection - current section not available for selected branch');
-      setFormData(prev => ({ ...prev, section: '' }));
-    }
   }, []);
 
   // Filter sections based on selected branch
@@ -87,14 +87,17 @@ const Wastage = () => {
       setFilteredSections(branchSections);
       
       // Clear section selection if current section is not available for selected branch
-      clearSectionIfNotAvailable(branchSections, formData.section);
+      if (!branchSections.find(s => s._id === currentSectionRef.current)) {
+        console.log('Clearing section selection - current section not available for selected branch');
+        setFormData(prev => ({ ...prev, section: '' }));
+      }
     } else {
       // If no branch is selected, show all sections
       console.log('No branch selected - showing all sections');
       setFilteredSections(sections);
       setFormData(prev => ({ ...prev, section: '' }));
     }
-  }, [formData.branch, sections, clearSectionIfNotAvailable]);
+  }, [formData.branch, sections]);
 
   const fetchData = async () => {
     try {
