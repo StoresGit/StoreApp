@@ -35,8 +35,6 @@ const CreateOrder = () => {
 
   // Items / refs
   const [allItems, setAllItems] = useState([]);
-  const [branchCategories, setBranchCategories] = useState([]);
-  const [branchUnits, setBranchUnits] = useState([]);
   const [items, setItems] = useState([
     { code: '', name: '', unit: '', category: '', subCategory: '', qty: '' }
   ]);
@@ -61,19 +59,15 @@ const CreateOrder = () => {
         setLoading(true);
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const [sectionsRes, catRes, itemsRes, unitsRes, branchesRes] = await Promise.all([
+        const [sectionsRes, itemsRes, branchesRes] = await Promise.all([
           axios.get(`${backend_url}/sections/active`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${backend_url}/branch-categories`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${backend_url}/items`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${backend_url}/units/branch`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${backend_url}/branch`, { headers }).catch(() => ({ data: [] })),
         ]);
         setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
         setFilteredSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
         console.log('Sections fetched from API:', sectionsRes.data); // Temporary debug log
-        setBranchCategories(Array.isArray(catRes.data) ? catRes.data : []);
         setAllItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
-        setBranchUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
         setAllBranches(Array.isArray(branchesRes.data) ? branchesRes.data : []);
       } catch (e) {
         setError('Failed to load required data');
