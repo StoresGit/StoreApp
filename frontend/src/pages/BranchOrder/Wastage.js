@@ -89,7 +89,7 @@ const Wastage = () => {
       setFilteredSections(sections);
       setFormData(prev => ({ ...prev, section: '' }));
     }
-  }, [formData.branch, sections]);
+  }, [formData.branch, formData.section, sections]);
 
   const fetchData = async () => {
     try {
