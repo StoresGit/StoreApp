@@ -83,9 +83,9 @@ const SidebarItem = ({ item, isActive, onSubMenuToggle, isCollapsed, isSubMenuOp
                     } ${isCollapsed && !isMobile ? 'justify-center' : 'justify-between'} ${bgColor} ${textStyling} ${padding}`}
                 >
                     <div className="flex items-center">
-                        {item.icon && level === 0 && <span className={`${isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'} text-lg`}>{item.icon}</span>}
-                        {level > 0 && <span className="mr-2 text-xs">•</span>}
-                        {(!isCollapsed || isMobile) && <span>{item.label}</span>}
+                    {item.icon && level === 0 && <span className={`${isCollapsed && !isMobile ? 'mx-auto' : 'mr-3'} text-lg`}>{item.icon}</span>}
+                    {level > 0 && <span className="mr-2 text-xs">•</span>}
+                    {(!isCollapsed || isMobile) && <span>{item.label}</span>}
                     </div>
                 </Link>
             ) : (

@@ -34,7 +34,6 @@ const CreateOrder = () => {
   const [allBranches, setAllBranches] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
@@ -61,7 +60,7 @@ const CreateOrder = () => {
         setAllItems(Array.isArray(itemsRes.data) ? itemsRes.data : []);
         setAllBranches(Array.isArray(branchesRes.data) ? branchesRes.data : []);
       } catch (e) {
-        setError('Failed to load required data');
+        console.error('Failed to load required data:', e);
       } finally {
         setLoading(false);
       }
@@ -220,10 +219,10 @@ const CreateOrder = () => {
 
   const resetForm = () => {
     setItems([{ code: '', name: '', unit: '', category: '', subCategory: '', qty: '' }]);
-    setOrderType('Urgent');
-    setOrderStatus('Draft');
-    setDateTime(new Date());
-    setScheduleDate(null);
+      setOrderType('Urgent');
+      setOrderStatus('Draft');
+      setDateTime(new Date());
+      setScheduleDate(null);
     setShowOrderModal(false);
     setSelectedBranch(null);
     setSelectedSection(null);
@@ -372,32 +371,32 @@ const CreateOrder = () => {
                   >
                     ×
                   </button>
-                </div>
+            </div>
 
                 <form className="space-y-6">
                   {/* Pre-filled Branch and Section */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+            <div>
                       <label className="block text-sm font-medium mb-1">Branch</label>
                       <input 
                         className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" 
                         value={selectedBranch?.name || ''} 
                         readOnly 
                       />
-                    </div>
-                    <div>
+            </div>
+            <div>
                       <label className="block text-sm font-medium mb-1">Section</label>
                       <input 
                         className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" 
                         value={selectedSection?.name || ''} 
                         readOnly 
                       />
-                    </div>
-                  </div>
+            </div>
+          </div>
 
                   {/* Order Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
                       <label className="block text-sm font-medium mb-1">Status</label>
                       <input className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" value={orderStatus} readOnly />
                     </div>
@@ -405,52 +404,52 @@ const CreateOrder = () => {
                       <label className="block text-sm font-medium mb-1">Date & Time</label>
                       <DatePicker selected={dateTime} onChange={() => {}} showTimeSelect dateFormat="Pp" className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" readOnly />
                     </div>
-                  </div>
+            </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
+            <div>
                       <label className="block text-sm font-medium mb-1">Order No</label>
                       <input className="w-full border rounded px-2 py-1 bg-gray-100 cursor-not-allowed" value={orderNo} readOnly />
-                    </div>
-                    <div>
+            </div>
+            <div>
                       <label className="block text-sm font-medium mb-1">Order Type</label>
                       <select className="w-full border rounded px-2 py-1" value={orderType} onChange={e => setOrderType(e.target.value)}>
                         {ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                       </select>
-                    </div>
-                  </div>
+            </div>
+          </div>
 
                   {/* Schedule (if applicable) */}
-                  {orderType === 'Schedule' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="md:col-start-3">
+          {orderType === 'Schedule' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-start-3">
                         <label className="block text-sm font-medium mb-1">Schedule Time & Date</label>
                         <DatePicker selected={scheduleDate} onChange={date => setScheduleDate(date)} showTimeSelect dateFormat="Pp" className="w-full border rounded px-2 py-1" placeholderText="Select schedule time" />
-                      </div>
-                    </div>
-                  )}
+              </div>
+            </div>
+          )}
 
                   {/* Items */}
-                  <div>
-                    <label className="block text-lg font-semibold mb-2">Order Items</label>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full border text-sm">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border px-2 py-1">Item Code</th>
-                            <th className="border px-2 py-1">Item Name</th>
+          <div>
+            <label className="block text-lg font-semibold mb-2">Order Items</label>
+            <div className="overflow-x-auto">
+              <table className="min-w-full border text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border px-2 py-1">Item Code</th>
+                    <th className="border px-2 py-1">Item Name</th>
                             <th className="border px-2 py-1">Item Category</th>
                             <th className="border px-2 py-1">Sub Category</th>
-                            <th className="border px-2 py-1">Unit</th>
-                            <th className="border px-2 py-1">Order Qty</th>
+                    <th className="border px-2 py-1">Unit</th>
+                    <th className="border px-2 py-1">Order Qty</th>
                             <th className="border px-2 py-1">Created By</th>
-                            <th className="border px-2 py-1">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {items.map((item, idx) => (
-                            <tr key={idx}>
-                              <td className="border px-2 py-1">
+                    <th className="border px-2 py-1">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td className="border px-2 py-1">
                                 <input className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={item.code} readOnly />
                               </td>
                               <td className="border px-2 py-1">
@@ -460,43 +459,43 @@ const CreateOrder = () => {
                                     <option key={it._id} value={it.nameEn || it.name} />
                                   ))}
                                 </datalist>
-                              </td>
-                              <td className="border px-2 py-1">
+                      </td>
+                      <td className="border px-2 py-1">
                                 <input type="text" className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={item.category} readOnly placeholder="Auto-filled" />
-                              </td>
-                              <td className="border px-2 py-1">
+                      </td>
+                      <td className="border px-2 py-1">
                                 <input type="text" className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={item.subCategory} readOnly placeholder="Auto-filled" />
-                              </td>
-                              <td className="border px-2 py-1">
+                      </td>
+                      <td className="border px-2 py-1">
                                 <input type="text" className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={item.unit} readOnly placeholder="Auto-filled" />
-                              </td>
-                              <td className="border px-2 py-1">
-                                <input type="number" min="0" className="w-full border rounded px-1 py-0.5" value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
-                              </td>
+                      </td>
+                      <td className="border px-2 py-1">
+                        <input type="number" min="0" className="w-full border rounded px-1 py-0.5" value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
+                      </td>
                               <td className="border px-2 py-1">
                                 <input className="w-full border rounded px-1 py-0.5 bg-gray-100 cursor-not-allowed" value={user?.name || ''} readOnly />
                               </td>
-                              <td className="border px-2 py-1 text-center">
-                                <button type="button" className="text-red-500 font-bold px-2" onClick={() => removeItemRow(idx)} disabled={items.length === 1}>-</button>
-                                <button type="button" className="text-green-500 font-bold px-2" onClick={addItemRow}>+</button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                      <td className="border px-2 py-1 text-center">
+                        <button type="button" className="text-red-500 font-bold px-2" onClick={() => removeItemRow(idx)} disabled={items.length === 1}>-</button>
+                        <button type="button" className="text-green-500 font-bold px-2" onClick={addItemRow}>+</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
-                  {submitError && <div className="text-red-600 mb-2">{submitError}</div>}
-                  {submitSuccess && <div className="text-green-600 mb-2">{submitSuccess}</div>}
+          {submitError && <div className="text-red-600 mb-2">{submitError}</div>}
+          {submitSuccess && <div className="text-green-600 mb-2">{submitSuccess}</div>}
 
                   {/* Actions */}
                   <div className="flex justify-end gap-3">
                     <button onClick={closeModal} className="bg-gray-500 text-white px-6 py-2 rounded font-semibold hover:bg-gray-600" type="button">Cancel</button>
                     <button onClick={onSaveDraft} className="bg-gray-500 text-white px-6 py-2 rounded font-semibold hover:bg-gray-600" type="button">Save As Draft</button>
                     <button onClick={onSubmitForApproval} className="bg-blue-600 text-white px-6 py-2 rounded font-semibold hover:bg-blue-700" type="button">Submit Order For Approval</button>
-                  </div>
-                </form>
+          </div>
+        </form>
               </div>
             </div>
           </div>
