@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-import backend_url from '../../config/config';
 import { apiService } from '../../services/api';
 import { MasterAdminOnly } from '../../components/PermissionGuard';
 
