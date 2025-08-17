@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 const subCategoryController = require('../controllers/subCategoryController');
 
-router.get('/', subCategoryController.getSubCategories);
-router.get('/:id', subCategoryController.getSubCategoryById);
-router.post('/', subCategoryController.createSubCategory);
-router.put('/:id', subCategoryController.updateSubCategory);
-router.delete('/:id', subCategoryController.deleteSubCategory);
+router.get('/', auth, subCategoryController.getSubCategories);
+router.get('/:id', auth, subCategoryController.getSubCategoryById);
+router.post('/', auth, subCategoryController.createSubCategory);
+router.put('/:id', auth, subCategoryController.updateSubCategory);
+router.delete('/:id', auth, subCategoryController.deleteSubCategory);
 
 module.exports = router; 

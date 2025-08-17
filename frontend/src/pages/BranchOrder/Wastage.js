@@ -7,6 +7,8 @@ const Wastage = () => {
   const [filteredSections, setFilteredSections] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [wastageList, setWastageList] = useState([]);
+  const [wastageLoading, setWastageLoading] = useState(true);
   
   const [formData, setFormData] = useState({
     branch: '', // Changed from branches array to single branch string
@@ -31,6 +33,7 @@ const Wastage = () => {
 
   useEffect(() => {
     fetchData();
+    fetchWastageList();
   }, []);
 
   // Filter sections based on selected branch
@@ -150,6 +153,27 @@ const Wastage = () => {
     }
   };
 
+  // Fetch wastage records
+  const fetchWastageList = async () => {
+    try {
+      setWastageLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setWastageLoading(false);
+        return;
+      }
+
+      const response = await apiService.wastage.getAll();
+      console.log('Fetched wastage records:', response);
+      setWastageList(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('Error fetching wastage records:', error);
+      setWastageList([]);
+    } finally {
+      setWastageLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -248,6 +272,9 @@ const Wastage = () => {
           qty: '',
           wastageType: ''
         });
+        
+        // Refresh wastage list
+        fetchWastageList();
       } else {
         console.error('Unexpected response format:', response);
         alert('Error: Unexpected response from server');
@@ -500,6 +527,97 @@ const Wastage = () => {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Wastage List Section */}
+        <div className="mt-8">
+          <div className="bg-white border border-gray-300 rounded-lg shadow-sm">
+            <div className="px-6 py-4 border-b border-gray-300">
+              <h2 className="text-lg font-semibold text-gray-900">Wastage Records</h2>
+              <p className="text-sm text-gray-600 mt-1">Showing {Array.isArray(wastageList) ? wastageList.length : 0} records</p>
+            </div>
+            
+            {wastageLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span className="ml-2">Loading wastage records...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Event Details
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Branch & Section
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Item Details
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Wastage Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Media
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {Array.isArray(wastageList) && wastageList.map((wastage) => (
+                      <tr key={wastage._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{wastage.eventName}</div>
+                            <div className="text-sm text-gray-500">{new Date(wastage.eventDate).toLocaleDateString()}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {Array.isArray(wastage.branches) && wastage.branches.length > 0 
+                              ? wastage.branches[0]?.name || '-' 
+                              : '-'}
+                          </div>
+                          <div className="text-sm text-gray-500">{wastage.section?.name || '-'}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">
+                            {wastage.itemName?.nameEn || wastage.itemName?.name || wastage.itemName || '-'}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {wastage.itemCode} • {wastage.qty} {wastage.unit}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            {wastage.wastageType}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {wastage.media ? (
+                            <img 
+                              src={wastage.media} 
+                              alt="Wastage" 
+                              className="h-12 w-12 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-gray-400">No image</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {(!Array.isArray(wastageList) || wastageList.length === 0) && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No wastage records found</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

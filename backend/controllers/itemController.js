@@ -19,8 +19,8 @@ exports.getItems = async (req, res) => {
       .populate('unit', 'name')
       .populate('baseUnit', 'name')
       .populate('tax', 'name')
-      .populate('assignBranch', 'name')
-      .populate('assignBrand', 'name')
+      .populate('assignBranch', 'name') // This will populate all branches in the array
+      .populate('assignBrand', 'nameEn')
       .populate('image', 'url');
     res.json(items);
   } catch (error) {
@@ -74,7 +74,7 @@ exports.createItem = async (req, res) => {
       baseUnit,
       category,
       tax,
-      assignBranch,
+      assignBranch: assignBranch || [], // Ensure assignBranch is always an array
       assignBrand,
       departments: departments || [],
       unit,

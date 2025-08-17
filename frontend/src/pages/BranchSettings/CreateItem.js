@@ -27,6 +27,11 @@ const CreateItem = () => {
   const [items, setItems] = useState([]); // Added items state
   const [itemsLoading, setItemsLoading] = useState(true); // Added items loading state
   const [brands, setBrands] = useState([]); // Added brands state
+  const [editingItem, setEditingItem] = useState(null); // Add editing state
+  const [editFormData, setEditFormData] = useState({}); // Add edit form data
+  
+  // Edit functionality states
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -97,6 +102,8 @@ const CreateItem = () => {
       
       const response = await axios.get(`${backend_url}/items`, { headers });
       console.log('Fetched items:', response.data); // Debug log
+      console.log('Sample item with brand:', response.data?.[0]); // Debug specific item
+      console.log('Brands available:', brands); // Debug brands state
       setItems(response.data || []);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -148,50 +155,72 @@ const CreateItem = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.itemName && formData.itemCategory && formData.unit) {
-      try {
-        const token = localStorage.getItem('token');
-        const itemData = {
-          nameEn: formData.itemName, // Changed from name to nameEn
-          name: formData.itemName, // Keep name for compatibility
-          category: formData.itemCategory,
-          subCategory: formData.subCategory || formData.itemCategory, // Use sub-category if selected, otherwise use category
-          unit: formData.unit,
-          baseUnit: formData.unit, // Add baseUnit field
-          assignBranch: formData.assignBranch.length > 0 ? formData.assignBranch : undefined,
-          assignBrand: formData.assignBrand || undefined, // Add assign brand
-          departments: formData.assignSection ? [formData.assignSection] : []
-        };
-
-        await axios.post(`${backend_url}/items`, itemData, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-
-        // Reset form
-        setFormData({
-          itemCode: '',
-          itemName: '',
-          itemCategory: '',
-          subCategory: '', // Reset sub-category
-          unit: '',
-          assignBranch: [],
-          assignSection: '',
-          assignBrand: '' // Reset assign brand
-        });
-        setSearchCategory('');
-        setSubCategories([]); // Reset sub-categories
-        
-        // Refresh items list
-        fetchItems();
-        
-        // Show success message
-        alert('Item created successfully!');
-      } catch (error) {
-        console.error('Error creating item:', error);
-        alert('Error creating item: ' + (error.response?.data?.message || error.message));
+    
+    // Enhanced validation
+    const requiredFields = {
+      itemName: formData.itemName,
+      itemCategory: formData.itemCategory,
+      unit: formData.unit
+    };
+    
+    const missingFields = Object.keys(requiredFields).filter(field => !requiredFields[field]);
+    
+    if (missingFields.length > 0) {
+      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Ensure subcategory is properly set
+      let subCategoryValue = formData.subCategory;
+      if (!subCategoryValue || subCategoryValue === '') {
+        // If no subcategory is selected, use the main category as subcategory
+        subCategoryValue = formData.itemCategory;
       }
-    } else {
-      alert('Please fill in all required fields');
+      
+      const itemData = {
+        nameEn: formData.itemName, // Changed from name to nameEn
+        name: formData.itemName, // Keep name for compatibility
+        category: formData.itemCategory,
+        subCategory: subCategoryValue, // Use the validated subcategory
+        unit: formData.unit,
+        baseUnit: formData.unit, // Add baseUnit field - backend expects this
+        assignBranch: formData.assignBranch.length > 0 ? formData.assignBranch : undefined, // Send all selected branches
+        assignBrand: formData.assignBrand || undefined, // Add assign brand
+        departments: formData.assignSection ? [formData.assignSection] : []
+      };
+
+      console.log('Submitting item data:', itemData); // Debug log
+
+      await axios.post(`${backend_url}/items`, itemData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Reset form
+      setFormData({
+        itemCode: '',
+        itemName: '',
+        itemCategory: '',
+        subCategory: '', // Reset sub-category
+        unit: '',
+        assignBranch: [],
+        assignSection: '',
+        assignBrand: '' // Reset assign brand
+      });
+      setSearchCategory('');
+      setSubCategories([]); // Reset sub-categories
+      
+      // Refresh items list
+      fetchItems();
+      
+      // Show success message
+      alert('Item created successfully!');
+    } catch (error) {
+      console.error('Error creating item:', error);
+      console.error('Error response:', error.response?.data); // Debug log
+      alert('Error creating item: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -208,6 +237,72 @@ const CreateItem = () => {
         console.error('Error deleting item:', error);
         alert('Error deleting item. Please try again.');
       }
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditingItem(item._id);
+    setEditFormData({
+      nameEn: item.nameEn || item.name,
+      category: item.category?._id || item.category,
+      subCategory: item.subCategory?._id || item.subCategory,
+      unit: item.unit?._id || item.baseUnit?._id || item.unit,
+      assignBrand: item.assignBrand?._id || item.assignBrand,
+      assignBranch: item.assignBranch || [],
+      assignSection: item.departments?.[0] || item.assignSection
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    setEditFormData({});
+  };
+
+  const handleSaveEdit = async (itemId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const updateData = {
+        nameEn: editFormData.nameEn,
+        name: editFormData.nameEn, // Keep name for compatibility
+        category: editFormData.category,
+        subCategory: editFormData.subCategory || editFormData.category,
+        unit: editFormData.unit,
+        baseUnit: editFormData.unit,
+        assignBrand: editFormData.assignBrand,
+        assignBranch: editFormData.assignBranch.length > 0 ? editFormData.assignBranch : undefined,
+        departments: editFormData.assignSection ? [editFormData.assignSection] : []
+      };
+
+      await axios.put(`${backend_url}/items/${itemId}`, updateData, { headers });
+      alert('Item updated successfully');
+      setEditingItem(null);
+      setEditFormData({});
+      fetchItems(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating item:', error);
+      alert('Error updating item: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (type === 'checkbox') {
+      if (name === 'assignBranch') {
+        setEditFormData(prev => ({
+          ...prev,
+          [name]: checked 
+            ? [...prev[name], value]
+            : prev[name].filter(item => item !== value)
+        }));
+      }
+    } else {
+      setEditFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
     }
   };
 
@@ -442,12 +537,20 @@ const CreateItem = () => {
                           <h3 className="font-medium text-gray-900">{item.nameEn}</h3>
                           <p className="text-sm text-gray-500">{item.itemCode}</p>
                         </div>
-                        <button
-                          onClick={() => handleDeleteItem(item._id)}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditItem(item)}
+                            className="text-blue-600 hover:text-blue-900 text-sm"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item._id)}
+                            className="text-red-600 hover:text-red-900 text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
@@ -502,6 +605,9 @@ const CreateItem = () => {
                           Brand
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Branch
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
@@ -513,27 +619,149 @@ const CreateItem = () => {
                             {item.itemCode}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.nameEn}
+                            {editingItem === item._id ? (
+                              <input
+                                type="text"
+                                value={editFormData.nameEn || ''}
+                                onChange={(e) => handleEditInputChange({ target: { name: 'nameEn', value: e.target.value } })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              />
+                            ) : (
+                              item.nameEn
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.category?.nameEn || '-'}
+                            {editingItem === item._id ? (
+                              <select
+                                value={editFormData.category || ''}
+                                onChange={(e) => handleEditInputChange({ target: { name: 'category', value: e.target.value } })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              >
+                                <option value="">Select Category</option>
+                                {categories.map((category) => (
+                                  <option key={category._id} value={category._id}>
+                                    {category.nameEn || category.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              item.category?.nameEn || '-'
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.subCategory?.nameEn || item.subCategory?.name || (item.subCategory === item.category ? '-' : item.subCategory) || '-'}
+                            {editingItem === item._id ? (
+                              <select
+                                value={editFormData.subCategory || ''}
+                                onChange={(e) => handleEditInputChange({ target: { name: 'subCategory', value: e.target.value } })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                                disabled={!editFormData.category}
+                              >
+                                <option value="">Select Sub Category</option>
+                                {subCategories.map((subCategory) => (
+                                  <option key={subCategory._id} value={subCategory._id}>
+                                    {subCategory.nameEn || subCategory.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              item.subCategory?.nameEn || item.subCategory?.name || (item.subCategory === item.category ? '-' : item.subCategory) || '-'
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.unit?.name || item.baseUnit?.name || '-'}
+                            {editingItem === item._id ? (
+                              <select
+                                value={editFormData.unit || ''}
+                                onChange={(e) => handleEditInputChange({ target: { name: 'unit', value: e.target.value } })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              >
+                                <option value="">Select Unit</option>
+                                {units.map((unit) => (
+                                  <option key={unit._id} value={unit._id}>
+                                    {unit.name} ({unit.symbol})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              item.unit?.name || item.baseUnit?.name || '-'
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {item.assignBrand?.nameEn || '-'}
+                            {editingItem === item._id ? (
+                              <select
+                                value={editFormData.assignBrand || ''}
+                                onChange={(e) => handleEditInputChange({ target: { name: 'assignBrand', value: e.target.value } })}
+                                className="w-full px-2 py-1 border border-gray-300 rounded"
+                              >
+                                <option value="">Select Brand</option>
+                                {brands.map((brand) => (
+                                  <option key={brand._id} value={brand._id}>
+                                    {brand.nameEn} {brand.nameAr && `(${brand.nameAr})`}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              item.assignBrand?.nameEn || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {editingItem === item._id ? (
+                              <div className="space-y-1">
+                                {branches.map((branch) => (
+                                  <label key={branch._id} className="flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      checked={editFormData.assignBranch?.includes(branch._id) || false}
+                                      onChange={(e) => {
+                                        const newBranches = e.target.checked
+                                          ? [...(editFormData.assignBranch || []), branch._id]
+                                          : (editFormData.assignBranch || []).filter(id => id !== branch._id);
+                                        handleEditInputChange({ target: { name: 'assignBranch', value: newBranches } });
+                                      }}
+                                      className="mr-2"
+                                    />
+                                    {branch.name}
+                                  </label>
+                                ))}
+                              </div>
+                            ) : (
+                              // Display branches - handle both single and multiple
+                              Array.isArray(item.assignBranch) 
+                                ? item.assignBranch.map(branch => branch.name).join(', ') || '-'
+                                : item.assignBranch?.name || '-'
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleDeleteItem(item._id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
+                            {editingItem === item._id ? (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleSaveEdit(item._id)}
+                                  className="text-green-600 hover:text-green-900"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="text-gray-600 hover:text-gray-900"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex space-x-2">
+                                <button
+                                  onClick={() => handleEditItem(item)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteItem(item._id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}

@@ -58,10 +58,10 @@ const OrderHistoryTracking = () => {
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
   const deleteHistory = async () => {
-    if (!window.confirm('This will permanently delete all orders in the current view. Continue?')) return;
+    if (!window.confirm('This will permanently delete all orders in the current view (excluding "Sent to CK" orders). Continue?')) return;
     try {
       setDeleting(true);
-      const toDelete = filteredOrders.length > 0 ? filteredOrders : orders;
+      const toDelete = (filteredOrders.length > 0 ? filteredOrders : orders).filter(order => order.status !== 'Sent to CK');
       await Promise.all(toDelete.map(o => apiService.orders.delete(o._id)));
       setOrders(prev => prev.filter(o => !toDelete.some(d => d._id === o._id)));
     } catch (err) {
@@ -72,6 +72,12 @@ const OrderHistoryTracking = () => {
   };
 
   const deleteOne = async (id) => {
+    const order = orders.find(o => o._id === id);
+    if (order && order.status === 'Sent to CK') {
+      alert('Cannot delete orders with "Sent to CK" status');
+      return;
+    }
+    
     if (!window.confirm('Delete this order permanently?')) return;
     try {
       setDeletingId(id);
@@ -82,6 +88,16 @@ const OrderHistoryTracking = () => {
     } finally {
       setDeletingId('');
     }
+  };
+
+  const canDeleteOrder = (order) => {
+    return order.status !== 'Sent to CK';
+  };
+
+  const handleViewOrder = (order) => {
+    // For now, just show an alert with order details
+    // In a real implementation, this could open a modal or navigate to a detail page
+    alert(`Order Details:\nOrder No: ${order.orderNo}\nStatus: ${order.status}\nSection: ${order.section}\nItems: ${order.items?.length || 0} items`);
   };
 
   if (loading) {
@@ -222,11 +238,20 @@ const OrderHistoryTracking = () => {
                           {Array.isArray(order.items) && order.items.length > 2 && '...'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button onClick={() => deleteOne(order._id)} className={`px-3 py-1 rounded text-white ${deletingId === order._id ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'}`} disabled={!!deletingId && deletingId === order._id}>
-                          {deletingId === order._id ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </td>
+                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                         {order.status === 'Sent to CK' ? (
+                           <button 
+                             onClick={() => handleViewOrder(order)} 
+                             className="px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700"
+                           >
+                             View
+                           </button>
+                         ) : (
+                           <button onClick={() => deleteOne(order._id)} className={`px-3 py-1 rounded text-white ${deletingId === order._id ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'}`} disabled={!!deletingId && deletingId === order._id}>
+                             {deletingId === order._id ? 'Deleting...' : 'Delete'}
+                           </button>
+                         )}
+                       </td>
                     </tr>
                   ))}
                 </tbody>

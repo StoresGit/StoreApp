@@ -112,7 +112,7 @@ const OrderSubmission = () => {
         <div className="max-w-6xl mx-auto bg-white rounded-lg shadow p-8">
           <h1 className="text-2xl font-bold mb-6">Order Submission</h1>
           <p className="text-sm text-gray-600 mb-4">Orders submitted for approval appear here. You can review and edit item details, then send the order to Central Kitchen (CK).</p>
-
+          
           {error && (
             <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>
           )}
@@ -172,7 +172,7 @@ const OrderSubmission = () => {
                 <div><span className="font-medium">Order Type:</span> {editOrder.orderType || '-'}</div>
                 <div><span className="font-medium">Branch:</span> {editOrder.branchName || '-'}</div>
                 <div><span className="font-medium">Section:</span> {editOrder.section}</div>
-              </div>
+            </div>
 
               <div className="overflow-x-auto mb-4">
                 <table className="min-w-full border text-xs">
@@ -223,9 +223,9 @@ const OrderSubmission = () => {
                 <button onClick={closeModal} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
                 <button onClick={deleteOrder} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400">{saving ? 'Deleting...' : 'Delete'}</button>
                 <button onClick={sendToCK} disabled={saving} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400">{saving ? 'Processing...' : 'Send to Central Kitchen (CK)'}</button>
-              </div>
             </div>
-          </div>
+            </div>
+        </div>
         )}
       </div>
     </MasterAdminOnly>
