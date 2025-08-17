@@ -17,14 +17,13 @@ const CreateOrder = () => {
 
   // Order form state (for modal)
   const [orderType, setOrderType] = useState('Urgent');
-  const [orderStatus, setOrderStatus] = useState('Draft');
+  const [orderStatus] = useState('Draft');
   const [orderNo, setOrderNo] = useState('');
-  const [dateTime, setDateTime] = useState(new Date());
-  const [scheduleDate, setScheduleDate] = useState(null);
+  const [dateTime] = useState(new Date());
+  const [scheduleDate] = useState(null);
   const [selectedItems, setSelectedItems] = useState({});
 
   // Data state
-  const [sections, setSections] = useState([]);
   const [allBranches, setAllBranches] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -112,8 +111,7 @@ const CreateOrder = () => {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
-        const [sectionsRes, itemsRes, branchesRes, categoriesRes] = await Promise.all([
-          axios.get(`${backend_url}/sections/active`, { headers }).catch(() => ({ data: [] })),
+        const [itemsRes, branchesRes, categoriesRes] = await Promise.all([
           axios.get(`${backend_url}/items`, { headers }).catch((error) => {
             console.error('Error fetching items:', error);
             return { data: [] };
@@ -123,13 +121,10 @@ const CreateOrder = () => {
         ]);
         
         console.log('API Responses:', {
-          sections: sectionsRes.data,
           items: itemsRes.data,
           branches: branchesRes.data,
           categories: categoriesRes.data
         });
-        
-        setSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
         setAllItems(Array.isArray(itemsRes.data) ? itemsRes.data.filter(item => item && item._id && typeof item === 'object') : []);
         setAllBranches(Array.isArray(branchesRes.data) ? branchesRes.data : []);
         setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data.filter(cat => cat && cat._id) : []);
