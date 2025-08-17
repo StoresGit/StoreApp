@@ -32,6 +32,52 @@ const CreateItem = () => {
   
 
 
+  // Fetch items
+  const fetchItems = useCallback(async () => {
+    try {
+      setItemsLoading(true);
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(`${backend_url}/items`, { headers });
+      console.log('Fetched items:', response.data); // Debug log
+      console.log('Sample item with brand:', response.data?.[0]); // Debug specific item
+      console.log('Brands available:', brands); // Debug brands state
+      setItems(response.data || []);
+    } catch (error) {
+      console.error('Error fetching items:', error);
+      setItems([]);
+    } finally {
+      setItemsLoading(false);
+    }
+  }, [brands]);
+
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+
+      const [categoriesRes, unitsRes, branchesRes, sectionsRes, brandsRes] = await Promise.all([
+        axios.get(`${backend_url}/item-categories`, { headers }),
+        axios.get(`${backend_url}/units/branch`, { headers }), // Changed to fetch only branch units
+        axios.get(`${backend_url}/branch`, { headers }),
+        axios.get(`${backend_url}/sections`, { headers }),
+        axios.get(`${backend_url}/brand`, { headers }) // Added brands API call
+      ]);
+
+      setCategories(categoriesRes.data);
+      setUnits(unitsRes.data);
+      setBranches(branchesRes.data);
+      setSections(sectionsRes.data);
+      setBrands(brandsRes.data); // Set brands data
+      setFilteredCategories(categoriesRes.data); // Initialize filtered categories
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
     fetchItems(); // Fetch items separately
@@ -65,52 +111,6 @@ const CreateItem = () => {
       setFormData(prev => ({ ...prev, subCategory: '' }));
     }
   }, [formData.itemCategory]);
-
-  const fetchData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
-      const [categoriesRes, unitsRes, branchesRes, sectionsRes, brandsRes] = await Promise.all([
-        axios.get(`${backend_url}/item-categories`, { headers }),
-        axios.get(`${backend_url}/units/branch`, { headers }), // Changed to fetch only branch units
-        axios.get(`${backend_url}/branch`, { headers }),
-        axios.get(`${backend_url}/sections`, { headers }),
-        axios.get(`${backend_url}/brand`, { headers }) // Added brands API call
-      ]);
-
-      setCategories(categoriesRes.data);
-      setUnits(unitsRes.data);
-      setBranches(branchesRes.data);
-      setSections(sectionsRes.data);
-      setBrands(brandsRes.data); // Set brands data
-      setFilteredCategories(categoriesRes.data); // Initialize filtered categories
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch items
-  const fetchItems = useCallback(async () => {
-    try {
-      setItemsLoading(true);
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const response = await axios.get(`${backend_url}/items`, { headers });
-      console.log('Fetched items:', response.data); // Debug log
-      console.log('Sample item with brand:', response.data?.[0]); // Debug specific item
-      console.log('Brands available:', brands); // Debug brands state
-      setItems(response.data || []);
-    } catch (error) {
-      console.error('Error fetching items:', error);
-      setItems([]);
-    } finally {
-      setItemsLoading(false);
-    }
-  }, [brands]);
 
   // Fetch sub-categories for selected category
   const fetchSubCategories = async (categoryId) => {
