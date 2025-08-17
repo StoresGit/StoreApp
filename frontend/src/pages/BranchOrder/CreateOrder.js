@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
 import backend_url from '../../config/config';
 import { MasterAdminOnly } from '../../components/PermissionGuard';
@@ -15,7 +13,6 @@ const CreateOrder = () => {
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
   const [showBranchDropdown, setShowBranchDropdown] = useState(false);
-  const [showSectionDropdown, setShowSectionDropdown] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
   // Order form state (for modal)
@@ -28,7 +25,6 @@ const CreateOrder = () => {
 
   // Data state
   const [sections, setSections] = useState([]);
-  const [filteredSections, setFilteredSections] = useState([]);
   const [allBranches, setAllBranches] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -39,8 +35,6 @@ const CreateOrder = () => {
   const [pendingAction, setPendingAction] = useState('');
 
   // Filter states
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Subcategory selection modal state
@@ -49,7 +43,6 @@ const CreateOrder = () => {
   const [subCategoriesForModal, setSubCategoriesForModal] = useState([]);
   const [loadingSubCategories, setLoadingSubCategories] = useState(false);
   const [allSubCategories, setAllSubCategories] = useState([]);
-  const [subCategoryNames, setSubCategoryNames] = useState({});
 
   const generateOrderNo = () => {
     const now = new Date();
@@ -155,27 +148,7 @@ const CreateOrder = () => {
     bootstrap();
   }, []);
 
-  // Filter sections when branch is selected
-  useEffect(() => {
-    if (selectedBranch) {
-      const branchSections = sections.filter(section => {
-        const sectionBranch = section.branch;
-        const sectionBranchId = section.branchId;
-        const sectionBranches = section.branches;
-        
-        if (sectionBranch === selectedBranch._id) return true;
-        if (sectionBranchId === selectedBranch._id) return true;
-        if (Array.isArray(sectionBranches) && sectionBranches.includes(selectedBranch._id)) return true;
-        if (sectionBranch && typeof sectionBranch === 'object' && sectionBranch._id === selectedBranch._id) return true;
-        if (sectionBranchId && typeof sectionBranchId === 'object' && sectionBranchId._id === selectedBranch._id) return true;
-        
-        return false;
-      });
-      setFilteredSections(branchSections);
-    } else {
-      setFilteredSections([]);
-    }
-  }, [selectedBranch, sections]);
+
 
   // Generate order number when modal opens
   useEffect(() => {
@@ -253,21 +226,9 @@ const CreateOrder = () => {
     setShowOrderModal(true);
   };
 
-  const handleSectionSelect = (section) => {
-    setSelectedSection(section);
-    setShowSectionDropdown(false);
-    setShowOrderModal(true);
-  };
 
-  const isValid = useMemo(() => {
-    if (!dateTime || !orderNo) return false;
-    if (!selectedBranch) return false;
-    if (Object.keys(selectedItems).length === 0) return false;
-    for (const selectedItem of Object.values(selectedItems)) {
-      if (!selectedItem.item || !selectedItem.qty || Number(selectedItem.qty) <= 0) return false;
-    }
-    return true;
-  }, [dateTime, orderNo, selectedItems, selectedBranch]);
+
+
 
   const doSubmit = async (finalStatus) => {
     try {
@@ -366,20 +327,7 @@ const CreateOrder = () => {
     setSelectedSection(null);
   };
 
-  const resetForm = () => {
-    setSelectedItems({});
-    setOrderType('Urgent');
-    setOrderStatus('Draft');
-    setDateTime(new Date());
-    setScheduleDate(null);
-    setShowOrderModal(false);
-    setSelectedBranch(null);
-    setSelectedSection(null);
-    setShowSectionDropdown(false);
-    setSearchTerm('');
-    setSelectedCategory('');
-    setSelectedSubCategory('');
-  };
+
 
   const handleSelectAll = () => {
     if (Object.keys(selectedItems).length === filteredItems.length && filteredItems.length > 0) {
@@ -421,7 +369,6 @@ const CreateOrder = () => {
   };
 
   const handleQuantityChange = (itemId, newQty) => {
-    console.log('handleQuantityChange called:', { itemId, newQty, selectedItems: selectedItems[itemId] });
     if (newQty > 0) {
       setSelectedItems(prev => {
         const currentItem = prev[itemId];
@@ -556,103 +503,7 @@ const CreateOrder = () => {
 
         </div>
 
-        {/* Instructions */}
-        {!selectedBranch && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800">
-              <strong>Step 1:</strong> Click on the "Select Branch" box to choose a branch and create an order
-            </p>
-            <button 
-              onClick={async () => {
-                try {
-                  const token = localStorage.getItem('token');
-                  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                  const response = await axios.get(`${backend_url}/items`, { headers });
-                  console.log('Manual items fetch:', response.data);
-                  alert(`Fetched ${response.data.length} items`);
-                } catch (error) {
-                  console.error('Manual fetch error:', error);
-                  alert('Error fetching items: ' + error.message);
-                }
-              }}
-              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Test Items API
-            </button>
-            <button 
-              onClick={() => {
-                console.log('All items with branch info:', allItems.map(item => ({
-                  name: item.nameEn || item.name,
-                  assignBranch: item.assignBranch?.name || item.assignBranch?._id,
-                  branch: item.branch?.name || item.branch?._id,
-                  branches: item.branches,
-                  category: item.category?.nameEn || item.category?.name
-                })));
-                alert(`Showing ${allItems.length} items in console. Check console for branch details.`);
-              }}
-              className="mt-2 ml-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-            >
-              Debug Items & Branches
-            </button>
-            <button 
-              onClick={() => {
-                console.log('Categories debug:', {
-                  totalCategories: categories.length,
-                  categories: categories.map(cat => ({
-                    _id: cat._id,
-                    name: cat.nameEn || cat.name,
-                    isSubCategory: cat.isSubCategory,
-                    parentId: cat.parentId,
-                    level: cat.level
-                  }))
-                });
-                alert(`Showing categories debug info in console. Total: ${categories.length}`);
-              }}
-              className="mt-2 ml-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700"
-            >
-              Debug Categories
-            </button>
-            <button 
-              onClick={async () => {
-                try {
-                  const token = localStorage.getItem('token');
-                  const headers = token ? { Authorization: `Bearer ${token}` } : {};
-                  const response = await axios.get(`${backend_url}/sub-categories`, { headers });
-                  console.log('Manual subcategories fetch:', response.data);
-                  alert(`Fetched ${response.data.length} subcategories. Check console for details.`);
-                } catch (error) {
-                  console.error('Manual subcategories fetch error:', error);
-                  alert('Error fetching subcategories: ' + error.message);
-                }
-              }}
-              className="mt-2 ml-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Test Subcategories API
-            </button>
-            <button 
-              onClick={() => {
-                console.log('Category ID Comparison Debug:', {
-                  items: allItems.slice(0, 3).map(item => ({
-                    name: item.nameEn || item.name,
-                    category: item.category,
-                    categoryId: item.category?._id || item.category,
-                    categoryType: typeof (item.category?._id || item.category)
-                  })),
 
-                  categories: categories.slice(0, 3).map(cat => ({
-                    name: cat.nameEn || cat.name,
-                    _id: cat._id,
-                    idType: typeof cat._id
-                  }))
-                });
-                alert('Category ID comparison debug info shown in console');
-              }}
-              className="mt-2 ml-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-            >
-              Debug Category IDs
-            </button>
-          </div>
-        )}
 
         {/* Order Creation Modal */}
         {showOrderModal && (
