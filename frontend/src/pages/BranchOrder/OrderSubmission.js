@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import backend_url from '../../config/config';
 import { apiService } from '../../services/api';
@@ -11,8 +11,7 @@ const OrderSubmission = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const [branchCategories, setBranchCategories] = useState([]);
-  const [branchUnits, setBranchUnits] = useState([]);
+
 
   const [modalOpen, setModalOpen] = useState(false);
   const [activeOrder, setActiveOrder] = useState(null);
@@ -29,17 +28,11 @@ const OrderSubmission = () => {
       try {
         setLoading(true);
         setError('');
-        const [ordersRes, catRes, unitsRes] = await Promise.all([
-          apiService.orders.getAll(),
-          apiService.branchCategories.getAll().catch(() => ({ data: [] })),
-          axios.get(`${backend_url}/units/branch`).catch(() => ({ data: [] })),
-        ]);
+        const ordersRes = await apiService.orders.getAll();
         const underReview = Array.isArray(ordersRes?.data)
           ? ordersRes.data.filter(o => o.status === TARGET_STATUS)
           : [];
         setOrders(underReview);
-        setBranchCategories(Array.isArray(catRes.data) ? catRes.data : []);
-        setBranchUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
       } catch (e) {
         setError(e.response?.data?.error || e.message || 'Failed to load orders');
       } finally {
@@ -91,8 +84,7 @@ const OrderSubmission = () => {
     }
   };
 
-  const branchCategoryOptions = useMemo(() => branchCategories.map(c => ({ id: c._id, name: c.nameEn })), [branchCategories]);
-  const branchUnitOptions = useMemo(() => branchUnits.map(u => ({ id: u._id, name: u.name })), [branchUnits]);
+
 
 
 
