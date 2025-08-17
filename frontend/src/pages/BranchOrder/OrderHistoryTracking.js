@@ -90,9 +90,7 @@ const OrderHistoryTracking = () => {
     }
   };
 
-  const canDeleteOrder = (order) => {
-    return order.status !== 'Sent to CK';
-  };
+
 
   const handleViewOrder = (order) => {
     // For now, just show an alert with order details

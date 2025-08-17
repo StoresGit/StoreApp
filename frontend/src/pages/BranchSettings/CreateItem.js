@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import backend_url from '../../config/config';
 
@@ -30,13 +30,12 @@ const CreateItem = () => {
   const [editingItem, setEditingItem] = useState(null); // Add editing state
   const [editFormData, setEditFormData] = useState({}); // Add edit form data
   
-  // Edit functionality states
-  const [showEditModal, setShowEditModal] = useState(false);
+
 
   useEffect(() => {
     fetchData();
     fetchItems(); // Fetch items separately
-  }, []);
+  }, [fetchItems]);
 
   // Filter sections when branch changes
   useEffect(() => {
@@ -94,7 +93,7 @@ const CreateItem = () => {
   };
 
   // Fetch items
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     try {
       setItemsLoading(true);
       const token = localStorage.getItem('token');
@@ -111,7 +110,7 @@ const CreateItem = () => {
     } finally {
       setItemsLoading(false);
     }
-  };
+  }, [brands]);
 
   // Fetch sub-categories for selected category
   const fetchSubCategories = async (categoryId) => {
