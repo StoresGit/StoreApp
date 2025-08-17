@@ -240,6 +240,8 @@ const CreateOrder = () => {
         dateTime: dateTime.toISOString(),
         scheduleDate: scheduleDate ? scheduleDate.toISOString() : null,
         status: finalStatus,
+        orderType: orderType, // Add order type
+        branch: selectedBranch?.name, // Add branch name
         section: selectedSection?.name || 'General', // Use 'General' as default if no section selected
         userName: user?.name || 'Unknown User', // Send user name as string
         items: Object.values(selectedItems).filter(selectedItem => selectedItem && selectedItem.item).map(selectedItem => ({
@@ -379,7 +381,7 @@ const CreateOrder = () => {
             [itemId]: { 
               qty: newQty,
               item: { ...item },
-              subCategory: ''
+              subCategory: currentItem?.subCategory || '' // Preserve existing subcategory if any
             }
           };
         }
@@ -709,8 +711,8 @@ const CreateOrder = () => {
                                  {(() => {
                                    const selectedSubCategoryId = selectedItems[item._id]?.subCategory;
                                    if (!selectedSubCategoryId) return 'Select Subcategory';
-                                   // Find the subcategory in the modal's subcategories
-                                   const subCategory = subCategoriesForModal.find(sub => sub._id === selectedSubCategoryId);
+                                   // Find the subcategory in all subcategories (not just modal's)
+                                   const subCategory = allSubCategories.find(sub => sub._id === selectedSubCategoryId);
                                    return subCategory ? (subCategory.nameEn || subCategory.name) : 'Select Subcategory';
                                  })()}
                                </button>
@@ -810,7 +812,7 @@ const CreateOrder = () => {
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-y-auto">
               <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-900">Confirm Order Details</h3>
+                <h3 className="text-xl font-semibold text-gray-900">Order #{orderNo}</h3>
               </div>
               
               <div className="p-6">
@@ -828,12 +830,16 @@ const CreateOrder = () => {
                         <span className="font-medium">{pendingAction === 'draft' ? 'Draft' : 'Under Review'}</span>
                       </div>
                       <div className="flex justify-between">
+                        <span className="text-gray-600">User:</span>
+                        <span className="font-medium">{user?.name || 'Unknown User'}</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-gray-600">Type:</span>
                         <span className="font-medium">{orderType}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="font-medium">{new Date(dateTime).toLocaleDateString()}</span>
+                        <span className="text-gray-600">Date & Time:</span>
+                        <span className="font-medium">{new Date(dateTime).toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
@@ -843,11 +849,11 @@ const CreateOrder = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Branch:</span>
-                        <span className="font-medium">{selectedBranch?.name}</span>
+                        <span className="font-medium">{selectedBranch?.name || '-'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Section:</span>
-                        <span className="font-medium">{selectedSection?.name}</span>
+                        <span className="font-medium">{selectedSection?.name || 'General'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Items Count:</span>
@@ -874,7 +880,7 @@ const CreateOrder = () => {
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sub Category</th>
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order Qty</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -892,28 +898,65 @@ const CreateOrder = () => {
                           }
                           
                           return true;
-                        }).map((selectedItem, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 text-sm text-gray-900">
-                              {selectedItem?.item?.itemCode || selectedItem?.item?.code || '-'}
-                            </td>
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                              {selectedItem?.item?.nameEn || selectedItem?.item?.name || 'Unknown Item'}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-500">
-                              {selectedItem?.item?.category?.nameEn || selectedItem?.item?.category?.name || '-'}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-500">
-                              {getSubCategoryName(selectedItem?.subCategory)}
-                            </td>
-                            <td className="px-4 py-2 text-sm text-gray-500">
-                              {selectedItem?.item?.unit?.name || selectedItem?.item?.baseUnit?.name || '-'}
-                            </td>
-                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
-                              {selectedItem.qty}
-                            </td>
-                          </tr>
-                        ))}
+                        }).map((selectedItem, index) => {
+                          // Get the subcategory name
+                          const subCategoryName = selectedItem?.subCategory ? 
+                            getSubCategoryName(selectedItem.subCategory) : 
+                            (selectedItem?.item?.subCategory?.nameEn || selectedItem?.item?.subCategory?.name || '-');
+                          
+                          return (
+                            <tr key={index} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 text-sm text-gray-900">
+                                <input 
+                                  type="text" 
+                                  value={selectedItem?.item?.itemCode || selectedItem?.item?.code || '-'} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-900 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                <input 
+                                  type="text" 
+                                  value={selectedItem?.item?.nameEn || selectedItem?.item?.name || 'Unknown Item'} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-900 text-sm font-medium"
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <input 
+                                  type="text" 
+                                  value={selectedItem?.item?.category?.nameEn || selectedItem?.item?.category?.name || '-'} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <input 
+                                  type="text" 
+                                  value={subCategoryName} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-sm text-gray-500">
+                                <input 
+                                  type="text" 
+                                  value={selectedItem?.item?.unit?.name || selectedItem?.item?.baseUnit?.name || '-'} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-500 text-sm"
+                                />
+                              </td>
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                                <input 
+                                  type="number" 
+                                  value={selectedItem.qty} 
+                                  readOnly 
+                                  className="w-full bg-gray-100 border-none text-gray-900 text-sm font-medium"
+                                />
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -929,9 +972,9 @@ const CreateOrder = () => {
                   </button>
                   <button 
                     onClick={confirmAction} 
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
                   >
-                    {pendingAction === 'draft' ? 'Save as Draft' : 'Submit for Approval'}
+                    Send to Central Kitchen (CK)
                   </button>
                 </div>
               </div>

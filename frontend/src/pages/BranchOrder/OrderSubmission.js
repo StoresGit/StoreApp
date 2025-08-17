@@ -15,9 +15,13 @@ const OrderSubmission = () => {
   const [branchUnits, setBranchUnits] = useState([]);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [activeOrder, setActiveOrder] = useState(null); // original
-  const [editOrder, setEditOrder] = useState(null); // editable clone
+  const [activeOrder, setActiveOrder] = useState(null);
   const [saving, setSaving] = useState(false);
+  
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
 
   // Fetch reference data and orders
   useEffect(() => {
@@ -47,50 +51,60 @@ const OrderSubmission = () => {
 
   const openModal = (order) => {
     setActiveOrder(order);
-    // Deep clone for editing
-    setEditOrder(JSON.parse(JSON.stringify(order)));
     setModalOpen(true);
   };
 
   const closeModal = () => {
     setModalOpen(false);
     setActiveOrder(null);
-    setEditOrder(null);
   };
 
-  const handleItemChange = (idx, field, value) => {
-    setEditOrder(prev => ({
+  const openEditModal = (order) => {
+    setEditingOrder(JSON.parse(JSON.stringify(order))); // Deep clone for editing
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingOrder(null);
+  };
+
+  const handleEditItemChange = (idx, field, value) => {
+    setEditingOrder(prev => ({
       ...prev,
       items: prev.items.map((it, i) => i === idx ? { ...it, [field]: value } : it)
     }));
   };
 
-  const branchCategoryOptions = useMemo(() => branchCategories.map(c => ({ id: c._id, name: c.nameEn })), [branchCategories]);
-  const branchUnitOptions = useMemo(() => branchUnits.map(u => ({ id: u._id, name: u.name })), [branchUnits]);
-
-  const deleteOrder = async () => {
-    if (!editOrder?._id) return;
+  const saveEdit = async () => {
+    if (!editingOrder?._id) return;
     try {
-      setSaving(true);
-      await apiService.orders.delete(editOrder._id);
-      setOrders(prev => prev.filter(o => o._id !== editOrder._id));
-      closeModal();
+      setEditSaving(true);
+      await apiService.orders.update(editingOrder._id, editingOrder);
+      // Update the order in the local state
+      setOrders(prev => prev.map(o => o._id === editingOrder._id ? editingOrder : o));
+      closeEditModal();
     } catch (e) {
-      setError(e.response?.data?.error || e.message || 'Failed to delete order');
+      setError(e.response?.data?.error || e.message || 'Failed to update order');
     } finally {
-      setSaving(false);
+      setEditSaving(false);
     }
   };
 
+  const branchCategoryOptions = useMemo(() => branchCategories.map(c => ({ id: c._id, name: c.nameEn })), [branchCategories]);
+  const branchUnitOptions = useMemo(() => branchUnits.map(u => ({ id: u._id, name: u.name })), [branchUnits]);
+
+
+
   const sendToCK = async () => {
-    if (!editOrder?._id) return;
+    if (!activeOrder?._id) return;
     try {
       setSaving(true);
       // Update straight to 'Shipped' so it appears in Receiving Orders page
-      const payload = { ...editOrder, status: 'Shipped' };
-      await apiService.orders.update(editOrder._id, payload);
+      const payload = { ...activeOrder, status: 'Shipped' };
+      await apiService.orders.update(activeOrder._id, payload);
       // Remove from current view since it's no longer Under Review
-      setOrders(prev => prev.filter(o => o._id !== editOrder._id));
+      setOrders(prev => prev.filter(o => o._id !== activeOrder._id));
       closeModal();
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to send to CK');
@@ -145,9 +159,14 @@ const OrderSubmission = () => {
                       <td className="px-3 py-2">{new Date(order.createdAt || order.dateTime).toLocaleString()}</td>
                       <td className="px-3 py-2">{order.status}</td>
                       <td className="px-3 py-2 text-right">
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700" onClick={() => openModal(order)}>
-                          View / Edit
-                        </button>
+                        <div className="flex gap-2">
+                          <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs" onClick={() => openModal(order)}>
+                            View
+                          </button>
+                          <button className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 text-xs" onClick={() => openEditModal(order)}>
+                            Edit
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -157,7 +176,7 @@ const OrderSubmission = () => {
           )}
         </div>
 
-        {modalOpen && activeOrder && editOrder && (
+        {modalOpen && activeOrder && (
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6">
               <div className="flex items-start justify-between mb-4">
@@ -166,12 +185,12 @@ const OrderSubmission = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
-                <div><span className="font-medium">Status:</span> {editOrder.status}</div>
-                <div><span className="font-medium">Date & Time:</span> {new Date(editOrder.dateTime).toLocaleString()}</div>
-                <div><span className="font-medium">User:</span> {editOrder.userName}</div>
-                <div><span className="font-medium">Order Type:</span> {editOrder.orderType || '-'}</div>
-                <div><span className="font-medium">Branch:</span> {editOrder.branchName || '-'}</div>
-                <div><span className="font-medium">Section:</span> {editOrder.section}</div>
+                <div><span className="font-medium">Status:</span> {activeOrder.status}</div>
+                <div><span className="font-medium">Date & Time:</span> {new Date(activeOrder.dateTime).toLocaleString()}</div>
+                <div><span className="font-medium">User:</span> {activeOrder.userName}</div>
+                <div><span className="font-medium">Order Type:</span> {activeOrder.orderType || activeOrder.type || '-'}</div>
+                <div><span className="font-medium">Branch:</span> {activeOrder.branchName || activeOrder.branch || activeOrder.branchNameEn || activeOrder.branchNameAr || '-'}</div>
+                <div><span className="font-medium">Section:</span> {activeOrder.section}</div>
             </div>
 
               <div className="overflow-x-auto mb-4">
@@ -186,32 +205,22 @@ const OrderSubmission = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {editOrder.items.map((it, idx) => (
+                    {activeOrder.items.map((it, idx) => (
                       <tr key={`${it.itemCode}-${idx}`}>
                         <td className="border px-2 py-1">
                           <input className="w-28 border rounded px-1 py-0.5 bg-gray-100" value={it.itemCode} readOnly />
                         </td>
                         <td className="border px-2 py-1">
-                          <input className="w-40 border rounded px-1 py-0.5" value={it.itemName} onChange={e => handleItemChange(idx, 'itemName', e.target.value)} />
+                          <input className="w-40 border rounded px-1 py-0.5 bg-gray-100" value={it.itemName} readOnly />
                         </td>
                         <td className="border px-2 py-1">
-                          <select className="w-36 border rounded px-1 py-0.5" value={it.category} onChange={e => handleItemChange(idx, 'category', e.target.value)}>
-                            <option value="">Select</option>
-                            {branchCategoryOptions.map(opt => (
-                              <option key={opt.id} value={opt.name}>{opt.name}</option>
-                            ))}
-                          </select>
+                          <input className="w-36 border rounded px-1 py-0.5 bg-gray-100" value={it.category} readOnly />
                         </td>
                         <td className="border px-2 py-1">
-                          <select className="w-28 border rounded px-1 py-0.5" value={it.unit} onChange={e => handleItemChange(idx, 'unit', e.target.value)}>
-                            <option value="">Select</option>
-                            {branchUnitOptions.map(opt => (
-                              <option key={opt.id} value={opt.name}>{opt.name}</option>
-                            ))}
-                          </select>
+                          <input className="w-28 border rounded px-1 py-0.5 bg-gray-100" value={it.unit} readOnly />
                         </td>
                         <td className="border px-2 py-1">
-                          <input type="number" min="0" className="w-20 border rounded px-1 py-0.5" value={it.orderQty} onChange={e => handleItemChange(idx, 'orderQty', e.target.value)} />
+                          <input type="number" className="w-20 border rounded px-1 py-0.5 bg-gray-100" value={it.orderQty} readOnly />
                         </td>
                       </tr>
                     ))}
@@ -221,11 +230,79 @@ const OrderSubmission = () => {
 
               <div className="flex justify-end gap-3">
                 <button onClick={closeModal} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
-                <button onClick={deleteOrder} disabled={saving} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400">{saving ? 'Deleting...' : 'Delete'}</button>
                 <button onClick={sendToCK} disabled={saving} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400">{saving ? 'Processing...' : 'Send to Central Kitchen (CK)'}</button>
             </div>
             </div>
         </div>
+        )}
+
+        {/* Edit Modal */}
+        {editModalOpen && editingOrder && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <h3 className="text-xl font-semibold">Edit Order #{editingOrder.orderNo}</h3>
+                <button onClick={closeEditModal} className="text-gray-500 hover:text-gray-700">✕</button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-4">
+                <div><span className="font-medium">Status:</span> {editingOrder.status}</div>
+                <div><span className="font-medium">Date & Time:</span> {new Date(editingOrder.dateTime).toLocaleString()}</div>
+                <div><span className="font-medium">User:</span> {editingOrder.userName}</div>
+                <div><span className="font-medium">Order Type:</span> {editingOrder.orderType || editingOrder.type || '-'}</div>
+                <div><span className="font-medium">Branch:</span> {editingOrder.branchName || editingOrder.branch || editingOrder.branchNameEn || editingOrder.branchNameAr || '-'}</div>
+                <div><span className="font-medium">Section:</span> {editingOrder.section}</div>
+              </div>
+
+              <div className="overflow-x-auto mb-4">
+                <table className="min-w-full border text-xs">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="border px-2 py-1">Item Code</th>
+                      <th className="border px-2 py-1">Item Name</th>
+                      <th className="border px-2 py-1">Item Category</th>
+                      <th className="border px-2 py-1">Unit</th>
+                      <th className="border px-2 py-1">Order Qty</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {editingOrder.items.map((it, idx) => (
+                      <tr key={`${it.itemCode}-${idx}`}>
+                        <td className="border px-2 py-1">
+                          <input className="w-28 border rounded px-1 py-0.5 bg-gray-100" value={it.itemCode} readOnly />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input className="w-40 border rounded px-1 py-0.5 bg-gray-100" value={it.itemName} readOnly />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input className="w-36 border rounded px-1 py-0.5 bg-gray-100" value={it.category || '-'} readOnly />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input className="w-28 border rounded px-1 py-0.5 bg-gray-100" value={it.unit} readOnly />
+                        </td>
+                        <td className="border px-2 py-1">
+                          <input 
+                            type="number" 
+                            min="0" 
+                            className="w-20 border rounded px-1 py-0.5" 
+                            value={it.orderQty} 
+                            onChange={e => handleEditItemChange(idx, 'orderQty', parseInt(e.target.value) || 0)} 
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button onClick={closeEditModal} className="px-4 py-2 border rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button onClick={saveEdit} disabled={editSaving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400">
+                  {editSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </MasterAdminOnly>

@@ -16,6 +16,8 @@ const orderSchema = new mongoose.Schema({
     default: 'Draft' 
   },
   orderNo: { type: String, required: true, unique: true },
+  orderType: { type: String, default: 'Urgent' }, // Add order type field
+  branch: { type: String }, // Add branch field
   section: { type: String, required: true },
   userName: { type: String, required: true },
   dateTime: { type: Date, required: true },

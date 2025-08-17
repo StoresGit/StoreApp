@@ -15,7 +15,8 @@ const CreateItem = () => {
   });
 
   const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]); // Added sub-categories state
+  const [subCategories, setSubCategories] = useState([]); // Global sub-categories for form
+  const [itemSubCategories, setItemSubCategories] = useState({}); // Item-specific sub-categories for editing
   const [units, setUnits] = useState([]);
   const [branches, setBranches] = useState([]);
   const [sections, setSections] = useState([]);
@@ -123,6 +124,26 @@ const CreateItem = () => {
     } catch (error) {
       console.error('Error fetching sub-categories:', error);
       setSubCategories([]);
+    }
+  };
+
+  // Fetch sub-categories for a specific item (for editing)
+  const fetchItemSubCategories = async (itemId, categoryId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      const response = await axios.get(`${backend_url}/item-categories/subcategories/${categoryId}`, { headers });
+      setItemSubCategories(prev => ({
+        ...prev,
+        [itemId]: response.data
+      }));
+    } catch (error) {
+      console.error('Error fetching sub-categories for item:', error);
+      setItemSubCategories(prev => ({
+        ...prev,
+        [itemId]: []
+      }));
     }
   };
 
@@ -250,11 +271,25 @@ const CreateItem = () => {
       assignBranch: item.assignBranch || [],
       assignSection: item.departments?.[0] || item.assignSection
     });
+    
+    // Fetch subcategories for this specific item
+    const categoryId = item.category?._id || item.category;
+    if (categoryId) {
+      fetchItemSubCategories(item._id, categoryId);
+    }
   };
 
   const handleCancelEdit = () => {
     setEditingItem(null);
     setEditFormData({});
+    // Clean up item-specific subcategories for the cancelled edit
+    if (editingItem) {
+      setItemSubCategories(prev => {
+        const newState = { ...prev };
+        delete newState[editingItem];
+        return newState;
+      });
+    }
   };
 
   const handleSaveEdit = async (itemId) => {
@@ -278,6 +313,12 @@ const CreateItem = () => {
       alert('Item updated successfully');
       setEditingItem(null);
       setEditFormData({});
+      // Clean up item-specific subcategories after saving
+      setItemSubCategories(prev => {
+        const newState = { ...prev };
+        delete newState[itemId];
+        return newState;
+      });
       fetchItems(); // Refresh the list
     } catch (error) {
       console.error('Error updating item:', error);
@@ -298,10 +339,27 @@ const CreateItem = () => {
         }));
       }
     } else {
-      setEditFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setEditFormData(prev => {
+        const newData = {
+          ...prev,
+          [name]: value
+        };
+        
+        // If category changed, fetch subcategories for this item and reset subcategory
+        if (name === 'category' && editingItem) {
+          if (value) {
+            fetchItemSubCategories(editingItem, value);
+          } else {
+            setItemSubCategories(prev => ({
+              ...prev,
+              [editingItem]: []
+            }));
+          }
+          newData.subCategory = ''; // Reset subcategory when category changes
+        }
+        
+        return newData;
+      });
     }
   };
 
@@ -656,7 +714,7 @@ const CreateItem = () => {
                                 disabled={!editFormData.category}
                               >
                                 <option value="">Select Sub Category</option>
-                                {subCategories.map((subCategory) => (
+                                {(itemSubCategories[item._id] || []).map((subCategory) => (
                                   <option key={subCategory._id} value={subCategory._id}>
                                     {subCategory.nameEn || subCategory.name}
                                   </option>
