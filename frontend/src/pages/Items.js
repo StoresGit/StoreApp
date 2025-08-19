@@ -308,15 +308,7 @@ const Item = () => {
     }
   ];
 
-  // Custom actions for table
-  const customActions = [
-    {
-      icon: '📋',
-      title: 'Details',
-      onClick: (item) => navigate(`/items/${item._id}/edit`),
-      className: 'text-blue-600 hover:text-blue-800'
-    }
-  ];
+  // Removed unused customActions
 
   // Mobile card render function
   const mobileCardRender = (item, index) => (

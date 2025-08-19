@@ -16,7 +16,7 @@ const CreateItem = () => {
 
   const [categories, setCategories] = useState([]);
   const [subCategories, setSubCategories] = useState([]); // Global sub-categories for form
-  const [itemSubCategories, setItemSubCategories] = useState({}); // Item-specific sub-categories for editing
+  const [itemSubCategories] = useState({}); // Item-specific sub-categories for editing
   const [units, setUnits] = useState([]);
   const [branches, setBranches] = useState([]);
   const [sections, setSections] = useState([]);
@@ -104,7 +104,7 @@ const CreateItem = () => {
         setFormData(prev => ({ ...prev, assignSection: '' }));
       }
     }
-  }, [formData.assignBranch, sections]);
+  }, [formData.assignBranch, sections, formData.assignSection]);
 
   // Fetch subcategories when category changes
   useEffect(() => {
@@ -148,12 +148,7 @@ const CreateItem = () => {
     }
   };
 
-  const handleCategorySelect = (categoryId, categoryName) => {
-    setFormData(prev => ({
-      ...prev,
-      itemCategory: categoryId
-    }));
-  };
+  // Removed unused handleCategorySelect function
 
   const handleSubmit = async (e) => {
     e.preventDefault();
