@@ -21,6 +21,7 @@ exports.getItems = async (req, res) => {
       .populate('tax', 'name')
       .populate('assignBranch', 'name') // This will populate all branches in the array
       .populate('assignBrand', 'nameEn')
+      .populate('assignSection', 'nameEn name') // Added section population
       .populate('image', 'url');
     res.json(items);
   } catch (error) {
@@ -51,6 +52,7 @@ exports.createItem = async (req, res) => {
       tax, 
       assignBranch, 
       assignBrand, 
+      assignSection, // Added section field
       departments, 
       unit, 
       image,
@@ -76,7 +78,8 @@ exports.createItem = async (req, res) => {
       tax,
       assignBranch: assignBranch || [], // Ensure assignBranch is always an array
       assignBrand,
-      departments: departments || [],
+      assignSection, // Added section field
+      departments: departments || [], // Ensure departments is always an array
       unit,
       image,
       name: nameEn,
@@ -124,7 +127,7 @@ exports.createItem = async (req, res) => {
 // UPDATE an existing item
 exports.updateItem = async (req, res) => {
   try {
-    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, departments, unit, image, name, unitCount, subCategory, unitPrice, priceIncludesVAT } = req.body;
+    const { nameEn, nameAlt, baseUnit, category, tax, assignBranch, assignBrand, assignSection, departments, unit, image, name, unitCount, subCategory, unitPrice, priceIncludesVAT } = req.body;
     
     // Check required fields
     if (!baseUnit || !category || !unit || !nameEn) {
@@ -142,6 +145,7 @@ exports.updateItem = async (req, res) => {
       tax,
       assignBranch,
       assignBrand,
+      assignSection, // Added section field
       departments: departments || [],
       unit,
       image,
@@ -220,7 +224,8 @@ exports.getItemById = async (req, res) => {
       .populate('baseUnit', 'name')
       .populate('tax', 'name')
       .populate('assignBranch', 'name')
-      .populate('assignBrand', 'name')
+      .populate('assignBrand', 'nameEn')
+      .populate('assignSection', 'nameEn name')
       .populate('image', 'url');
     
     if (!item) {
@@ -260,7 +265,8 @@ exports.searchItems = async (req, res) => {
       .populate('baseUnit', 'name')
       .populate('tax', 'name')
       .populate('assignBranch', 'name')
-      .populate('assignBrand', 'name')
+      .populate('assignBrand', 'nameEn')
+      .populate('assignSection', 'nameEn name')
       .populate('image', 'url')
       .limit(20) // Limit results to 20 items
       .sort({ itemCode: 1 }); // Sort by item code
@@ -285,7 +291,8 @@ exports.getItemByCode = async (req, res) => {
       .populate('baseUnit', 'name')
       .populate('tax', 'name')
       .populate('assignBranch', 'name')
-      .populate('assignBrand', 'name')
+      .populate('assignBrand', 'nameEn')
+      .populate('assignSection', 'nameEn name')
       .populate('image', 'url');
     
     if (!item) {

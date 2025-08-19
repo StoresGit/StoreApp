@@ -16,6 +16,7 @@ const Items = () => {
   const [branches, setBranches] = useState([]);
   const [brands, setBrands] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [sections, setSections] = useState([]);
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAlt: '',
@@ -27,6 +28,7 @@ const Items = () => {
     tax: '',
     assignBranch: '',
     assignBrand: '',
+    assignSection: '', // Added section field
     departments: [],
     priceIncludesVAT: false
   });
@@ -67,7 +69,8 @@ const Items = () => {
         taxes,
         branches,
         brands,
-        departments
+         departments,
+         sections
       ] = await Promise.all([
         fetchWithErrorHandling(apiService.items.getAll),
         fetchWithErrorHandling(apiService.itemCategories.getAll),
@@ -76,7 +79,8 @@ const Items = () => {
         fetchWithErrorHandling(apiService.taxes.getAll),
         fetchWithErrorHandling(apiService.branches.getAll),
         fetchWithErrorHandling(apiService.brands.getAll),
-        fetchWithErrorHandling(apiService.departments.getAll)
+         fetchWithErrorHandling(apiService.departments.getAll),
+         fetchWithErrorHandling(apiService.sections.getAll)
       ]);
 
       setItems(items);
@@ -87,6 +91,7 @@ const Items = () => {
       setBranches(branches);
       setBrands(brands);
       setDepartments(departments);
+       setSections(sections);
 
       setLoading(false);
     } catch (error) {
@@ -117,6 +122,7 @@ const Items = () => {
       tax: item.tax?._id || '',
       assignBranch: item.assignBranch?._id || '',
       assignBrand: item.assignBrand?._id || '',
+      assignSection: item.assignSection?._id || '', // Added section field
       departments: item.departments?.map(dept => dept._id) || [],
       priceIncludesVAT: item.priceIncludesVAT || false
     });
@@ -166,6 +172,7 @@ const Items = () => {
       tax: '',
       assignBranch: '',
       assignBrand: '',
+      assignSection: '', // Added section field
       departments: [],
       priceIncludesVAT: false
     });
@@ -260,6 +267,10 @@ const Items = () => {
                     <span className="text-gray-500">Sub Category:</span>
                     <span className="ml-1 text-gray-900">{item.subCategory?.nameEn || '-'}</span>
                   </div>
+                   <div>
+                     <span className="text-gray-500">Section:</span>
+                     <span className="ml-1 text-gray-900">{item.assignSection?.nameEn || item.assignSection?.name || '-'}</span>
+                   </div>
                   <div>
                     <span className="text-gray-500">Unit:</span>
                     <span className="ml-1 text-gray-900">{item.unit?.name || item.baseUnit?.name || '-'}</span>
@@ -299,6 +310,9 @@ const Items = () => {
                     Sub Category
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Section
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Unit
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -326,6 +340,9 @@ const Items = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.subCategory?.nameEn || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                             {item.assignSection?.nameEn || item.assignSection?.name || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {item.unit?.name || item.baseUnit?.name || '-'}
@@ -549,6 +566,25 @@ const Items = () => {
                 {brands.map(brand => (
                   <option key={brand._id} value={brand._id}>
                     {brand.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Assign Section
+              </label>
+              <select
+                name="assignSection"
+                value={formData.assignSection}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Section</option>
+                                 {sections.map(section => (
+                   <option key={section._id} value={section._id}>
+                     {section.nameEn || section.name}
                   </option>
                 ))}
               </select>

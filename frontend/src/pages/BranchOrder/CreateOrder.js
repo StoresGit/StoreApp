@@ -12,7 +12,6 @@ const CreateOrder = () => {
   // Step-by-step selection state
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedSection, setSelectedSection] = useState(null);
-  const [showBranchDropdown, setShowBranchDropdown] = useState(false);
   const [showOrderModal, setShowOrderModal] = useState(false);
 
   // Order form state (for modal)
@@ -20,11 +19,13 @@ const CreateOrder = () => {
   const [orderStatus] = useState('Draft');
   const [orderNo, setOrderNo] = useState('');
   const [dateTime] = useState(new Date());
-  const [scheduleDate] = useState(null);
+  const [scheduleDate, setScheduleDate] = useState('');
+  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]); // Default to today
   const [selectedItems, setSelectedItems] = useState({});
 
   // Data state
   const [allBranches, setAllBranches] = useState([]);
+  const [allSections, setAllSections] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,8 @@ const CreateOrder = () => {
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState('');
+  const [branchSearchTerm, setBranchSearchTerm] = useState('');
 
   // Subcategory selection modal state
   const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
@@ -111,22 +114,25 @@ const CreateOrder = () => {
         const token = localStorage.getItem('token');
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         
-        const [itemsRes, branchesRes, categoriesRes] = await Promise.all([
+        const [itemsRes, branchesRes, categoriesRes, sectionsRes] = await Promise.all([
           axios.get(`${backend_url}/items`, { headers }).catch((error) => {
             console.error('Error fetching items:', error);
             return { data: [] };
           }),
           axios.get(`${backend_url}/branch`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${backend_url}/item-categories`, { headers }).catch(() => ({ data: [] })),
+          axios.get(`${backend_url}/sections`, { headers }).catch(() => ({ data: [] })),
         ]);
         
         console.log('API Responses:', {
           items: itemsRes.data,
           branches: branchesRes.data,
-          categories: categoriesRes.data
+          categories: categoriesRes.data,
+          sections: sectionsRes.data
         });
         setAllItems(Array.isArray(itemsRes.data) ? itemsRes.data.filter(item => item && item._id && typeof item === 'object') : []);
         setAllBranches(Array.isArray(branchesRes.data) ? branchesRes.data : []);
+        setAllSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
         setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data.filter(cat => cat && cat._id) : []);
         
         // Fetch all subcategories
@@ -134,6 +140,7 @@ const CreateOrder = () => {
         
         // Debug logging
         console.log('Loaded categories:', categoriesRes.data);
+        console.log('Loaded sections:', sectionsRes.data);
       } catch (e) {
         console.error('Failed to load required data:', e);
       } finally {
@@ -159,7 +166,7 @@ const CreateOrder = () => {
 
 
 
-  // Filter items based on search and branch
+  // Filter items based on search, branch, and section
   const filteredItems = useMemo(() => {
     const filtered = allItems.filter(item => {
       // Add null check for item
@@ -184,40 +191,37 @@ const CreateOrder = () => {
           return false;
         }));
       
+      // Section filter - show all items if no section selected, otherwise filter by section
+      const matchesSection = !selectedSectionFilter || selectedSectionFilter === '' || 
+        (item.assignSection && item.assignSection._id === selectedSectionFilter) ||
+        (item.section && item.section._id === selectedSectionFilter) ||
+        (item.sectionId && item.sectionId === selectedSectionFilter);
+      
       // Search filter
       const matchesSearch = !searchTerm || 
         (item.nameEn || item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.itemCode || item.code || '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      return matchesBranch && matchesSearch;
+      return matchesBranch && matchesSection && matchesSearch;
     });
     
-    console.log('Item filtering:', {
-      selectedBranch: selectedBranch?.name,
-      totalItems: allItems.length,
-      filteredItems: filtered.length,
-      searchTerm,
-      branchFilterApplied: !!selectedBranch,
-      sampleItems: allItems.slice(0, 3).map(item => ({
-        name: item.nameEn || item.name,
-        assignBranch: item.assignBranch,
-        assignBranchNames: Array.isArray(item.assignBranch) 
-          ? item.assignBranch.map(b => b.name).join(', ')
-          : item.assignBranch?.name || 'None',
-        branch: item.branch?.name || item.branch?._id,
-        branches: item.branches
-      }))
-    });
+
     
     return filtered;
-  }, [allItems, selectedBranch, searchTerm]);
+  }, [allItems, selectedBranch, searchTerm, selectedSectionFilter]);
 
-
-
+  // Filter branches based on search
+  const filteredBranches = useMemo(() => {
+    if (!branchSearchTerm) {
+      return allBranches;
+    }
+    return allBranches.filter(branch => 
+      branch.name.toLowerCase().includes(branchSearchTerm.toLowerCase())
+    );
+  }, [allBranches, branchSearchTerm]);
 
   const handleBranchSelect = (branch) => {
     setSelectedBranch(branch);
-    setShowBranchDropdown(false);
     setShowOrderModal(true);
   };
 
@@ -238,7 +242,8 @@ const CreateOrder = () => {
       const payload = {
         orderNo,
         dateTime: dateTime.toISOString(),
-        scheduleDate: scheduleDate ? scheduleDate.toISOString() : null,
+        scheduleDate: scheduleDate || null,
+        deliveryDate: deliveryDate, // Add delivery date
         status: finalStatus,
         orderType: orderType, // Add order type
         branch: selectedBranch?.name, // Add branch name
@@ -302,6 +307,14 @@ const CreateOrder = () => {
     const validItems = Object.values(selectedItems).filter(item => item && item.qty > 0);
     if (validItems.length === 0) {
       setSubmitError('Please ensure at least one item has quantity greater than 0.');
+      setShowConfirm(false);
+      setPendingAction('');
+      return;
+    }
+    
+    // Validate schedule date when order type is Schedule
+    if (orderType === 'Schedule' && !scheduleDate) {
+      setSubmitError('Please select a schedule date for scheduled orders.');
       setShowConfirm(false);
       setPendingAction('');
       return;
@@ -455,67 +468,130 @@ const CreateOrder = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading order creation...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <MasterAdminOnly fallback={<div className="text-red-600 font-bold p-8">Access denied. Master admin only.</div>}>
-      <div className="max-w-6xl mx-auto py-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Create Order</h1>
-
-        {/* Step-by-step selection interface */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Branch Selection Box */}
-          <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-            <h2 className="text-lg font-semibold mb-4 text-gray-800">Select Branch</h2>
-            <div className="relative">
-              <button
-                onClick={() => setShowBranchDropdown(!showBranchDropdown)}
-                className="w-full text-left p-3 border border-gray-300 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {selectedBranch ? selectedBranch.name : 'Click to select branch'}
-              </button>
-              
-              {showBranchDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  {allBranches.map(branch => (
-                    <button
-                      key={branch._id}
-                      onClick={() => handleBranchSelect(branch)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                    >
-                      {branch.name}
-                    </button>
-                  ))}
-                </div>
-              )}
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-6xl mx-auto py-8 px-4">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 shadow-2xl">
+              <h1 className="text-3xl md:text-4xl font-bold text-white mb-3 flex items-center">
+                <svg className="w-10 h-10 mr-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Create Order
+              </h1>
+              <p className="text-blue-100 text-lg">Select branch and create your order efficiently</p>
             </div>
           </div>
 
+        {/* Step-by-step selection interface */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+          {/* Branch Selection Box */}
+          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 hover:shadow-2xl transition-all duration-300">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                <svg className="w-6 h-6 mr-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                </svg>
+                Select Branch
+              </h2>
+            </div>
+                          <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search branches..."
+                    value={branchSearchTerm}
+                    onChange={(e) => setBranchSearchTerm(e.target.value)}
+                    className="w-full p-4 border-2 border-blue-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 font-medium shadow-sm"
+                  />
+                  <svg className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
 
+                {/* Branch List */}
+                <div className="max-h-80 overflow-y-auto border-2 border-blue-200 rounded-xl bg-white shadow-sm">
+                  {filteredBranches.length > 0 ? (
+                    filteredBranches.map(branch => (
+                      <button
+                        key={branch._id}
+                        onClick={() => handleBranchSelect(branch)}
+                        className={`w-full text-left p-4 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-all duration-200 ${
+                          selectedBranch?._id === branch._id ? 'bg-blue-100 border-blue-300' : ''
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 mr-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                            </svg>
+                            <span className="font-medium text-gray-900">{branch.name}</span>
+                          </div>
+                          {selectedBranch?._id === branch._id && (
+                            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-gray-500">
+                      {branchSearchTerm ? 'No branches found matching your search.' : 'No branches available.'}
+                    </div>
+                  )}
+                </div>
+
+                {/* Selected Branch Display */}
+                {selectedBranch && (
+                  <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 mr-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-semibold text-green-800">Selected: {selectedBranch.name}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </div>
         </div>
 
 
 
         {/* Order Creation Modal */}
         {showOrderModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl h-[90vh] flex flex-col">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden relative">
               {/* Header */}
-              <div className="p-6 border-b border-gray-200">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 border-b border-gray-200 rounded-t-xl">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Create Order</h2>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <h2 className="text-2xl font-bold text-white flex items-center">
+                      <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      Create Order
+                    </h2>
+                    <p className="text-blue-100 mt-1">
                       {selectedBranch?.name} {selectedSection ? `- ${selectedSection?.name}` : ''}
                     </p>
                   </div>
                   <button
                     onClick={closeModal}
-                    className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+                    className="text-white hover:text-blue-200 text-2xl font-bold transition-colors duration-200"
                   >
                     ×
                   </button>
@@ -525,11 +601,16 @@ const CreateOrder = () => {
               {/* Main Content - Two Panel Layout */}
               <div className="flex-1 flex overflow-hidden">
                 {/* Left Panel - Filters and Categories */}
-                <div className="w-1/3 border-r border-gray-200 p-6 overflow-y-auto">
+                <div className="w-1/3 border-r border-gray-200 p-6 overflow-y-auto bg-gray-50">
                   <div className="space-y-6">
                     {/* Order Details */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Order Details</h3>
+                    <div className="modern-card p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                        </svg>
+                        Order Details
+                      </h3>
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600">Order No:</span>
@@ -553,9 +634,32 @@ const CreateOrder = () => {
                             {ORDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
+                        {orderType === 'Schedule' && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Schedule Date:</span>
+                            <input
+                              type="date"
+                              value={scheduleDate}
+                              onChange={(e) => setScheduleDate(e.target.value)}
+                              className="border rounded px-2 py-1 text-sm"
+                              min={new Date().toISOString().split('T')[0]}
+                              required
+                            />
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-gray-600">Date:</span>
                           <span className="font-medium">{new Date(dateTime).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Delivery Date:</span>
+                          <input
+                            type="date"
+                            value={deliveryDate}
+                            onChange={(e) => setDeliveryDate(e.target.value)}
+                            className="border rounded px-2 py-1 text-sm"
+                            min={new Date().toISOString().split('T')[0]}
+                          />
                         </div>
                       </div>
                     </div>
@@ -577,6 +681,25 @@ const CreateOrder = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                       </div>
+                    </div>
+
+                    {/* Section Filter */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Filter by Section
+                      </label>
+                      <select
+                        value={selectedSectionFilter}
+                        onChange={(e) => setSelectedSectionFilter(e.target.value)}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">All Sections</option>
+                        {allSections.map(section => (
+                          <option key={section._id} value={section._id}>
+                            {section.nameEn || section.name || 'Unknown Section'}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
 
@@ -782,20 +905,20 @@ const CreateOrder = () => {
                   <div className="flex space-x-3">
                     <button 
                       onClick={closeModal} 
-                      className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                      className="btn-gradient-secondary px-6 py-2"
                     >
                       Cancel
                     </button>
                     <button 
                       onClick={onSaveDraft} 
-                      className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium"
+                      className="btn-gradient-warning px-6 py-2"
                       disabled={selectedItemsCount === 0}
                     >
                       Save as Draft
                     </button>
                     <button 
                       onClick={onSubmitForApproval} 
-                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium disabled:opacity-50"
+                      className="btn-gradient-success px-6 py-2"
                       disabled={selectedItemsCount === 0}
                     >
                       Review Order
@@ -809,10 +932,15 @@ const CreateOrder = () => {
 
         {/* Confirmation Modal */}
         {showConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-y-auto">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-900">Order #{orderNo}</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9998] backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-y-auto relative">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 border-b border-gray-200 rounded-t-xl">
+                <h3 className="text-xl font-semibold text-white flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" clipRule="evenodd" />
+                  </svg>
+                  {pendingAction === 'draft' ? 'Confirm Save as Draft' : `Order #${orderNo}`}
+                </h3>
               </div>
               
               <div className="p-6">
@@ -840,6 +968,10 @@ const CreateOrder = () => {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Date & Time:</span>
                         <span className="font-medium">{new Date(dateTime).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Delivery Date:</span>
+                        <span className="font-medium">{deliveryDate ? new Date(deliveryDate).toLocaleDateString() : 'Not set'}</span>
                       </div>
                     </div>
                   </div>
@@ -972,9 +1104,13 @@ const CreateOrder = () => {
                   </button>
                   <button 
                     onClick={confirmAction} 
-                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                    className={`px-8 py-3 text-white rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
+                      pendingAction === 'draft' 
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl' 
+                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
+                    }`}
                   >
-                    Send to Central Kitchen (CK)
+                    {pendingAction === 'draft' ? 'Yes' : 'Send to Central Kitchen (CK)'}
                   </button>
                 </div>
               </div>
@@ -984,13 +1120,19 @@ const CreateOrder = () => {
 
         {/* Subcategory Selection Modal */}
         {showSubCategoryModal && selectedItemForSubCategory && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-              <div className="p-6 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Select Subcategory for {selectedItemForSubCategory?.nameEn || selectedItemForSubCategory?.name || 'Unknown Item'}
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-2xl">
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                  Select Subcategory
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-blue-100 mt-2">
+                  {selectedItemForSubCategory?.nameEn || selectedItemForSubCategory?.name || 'Unknown Item'}
+                </p>
+                <p className="text-blue-200 text-sm mt-1">
                   Category: {selectedItemForSubCategory?.category?.nameEn || selectedItemForSubCategory?.category?.name || 'Unknown'}
                 </p>
               </div>
@@ -1018,7 +1160,7 @@ const CreateOrder = () => {
                           setShowSubCategoryModal(false);
                           setSelectedItemForSubCategory(null);
                         }}
-                        className="w-full text-left p-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        className="w-full text-left p-4 border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-400 hover:shadow-md transition-all duration-200 transform hover:scale-105"
                       >
                         <div className="font-medium text-gray-900">
                           {subCategory.nameEn || subCategory.name}
@@ -1035,7 +1177,7 @@ const CreateOrder = () => {
                           console.log('Item category:', selectedItemForSubCategory?.category);
                           console.log('Fetched subcategories:', subCategoriesForModal);
                         }}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                        className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-200"
                       >
                         Debug: Show All Subcategories
                       </button>
@@ -1052,7 +1194,7 @@ const CreateOrder = () => {
                       setSelectedItemForSubCategory(null);
                       setSubCategoriesForModal([]);
                     }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all duration-200"
                   >
                     Cancel
                   </button>
@@ -1061,6 +1203,7 @@ const CreateOrder = () => {
             </div>
           </div>
         )}
+        </div>
       </div>
     </MasterAdminOnly>
   );

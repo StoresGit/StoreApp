@@ -22,6 +22,7 @@ const orderSchema = new mongoose.Schema({
   userName: { type: String, required: true },
   dateTime: { type: Date, required: true },
   scheduleDate: { type: Date },
+  deliveryDate: { type: Date, required: true }, // Add delivery date field
   items: [orderItemSchema],
 }, { timestamps: true });
 

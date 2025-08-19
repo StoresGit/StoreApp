@@ -118,8 +118,9 @@ const getWastageById = async (req, res) => {
   console.log('getWastageById function called');
   try {
     const wastage = await Wastage.findById(req.params.id)
-      .populate('branch', 'name')
-      .populate('section', 'name');
+      .populate('branches', 'name')
+      .populate('section', 'name')
+      .populate('itemName', 'nameEn name');
 
     if (!wastage) {
       return res.status(404).json({

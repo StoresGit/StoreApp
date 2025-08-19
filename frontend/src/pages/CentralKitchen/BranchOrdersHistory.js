@@ -168,7 +168,7 @@ const BranchOrdersHistory = () => {
       label: 'Status',
       render: (value) => (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(value)}`}>
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {typeof value === 'string' && value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value}
         </span>
       )
     },
@@ -177,7 +177,7 @@ const BranchOrdersHistory = () => {
       label: 'Urgency',
       render: (value) => (
         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getUrgencyColor(value)}`}>
-          {value.charAt(0).toUpperCase() + value.slice(1)}
+          {typeof value === 'string' && value.length > 0 ? value.charAt(0).toUpperCase() + value.slice(1) : value}
         </span>
       )
     },
@@ -400,7 +400,7 @@ const BranchOrdersHistory = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
                 <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
-                  {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
+                  {typeof selectedOrder.status === 'string' && selectedOrder.status.length > 0 ? selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1) : selectedOrder.status}
                 </span>
               </div>
               <div>
@@ -416,7 +416,7 @@ const BranchOrdersHistory = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700">Urgency</label>
                 <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-medium ${getUrgencyColor(selectedOrder.urgency)}`}>
-                  {selectedOrder.urgency?.charAt(0).toUpperCase() + selectedOrder.urgency?.slice(1) || 'Not Set'}
+                  {typeof selectedOrder.urgency === 'string' && selectedOrder.urgency.length > 0 ? selectedOrder.urgency.charAt(0).toUpperCase() + selectedOrder.urgency.slice(1) : 'Not Set'}
                 </span>
               </div>
               <div>

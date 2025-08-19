@@ -50,7 +50,7 @@ const UserManagement = () => {
         <div className="flex items-center">
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
             <span className="text-blue-600 font-medium text-sm">
-              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+              {typeof user.name === 'string' && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : 'U'}
             </span>
           </div>
           <div>
@@ -80,7 +80,7 @@ const UserManagement = () => {
             ? 'bg-blue-100 text-blue-800'
             : 'bg-gray-100 text-gray-800'
         }`}>
-          {user.role?.charAt(0)?.toUpperCase() + user.role?.slice(1) || 'User'}
+          {typeof user.role === 'string' && user.role.length > 0 ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
         </span>
       )
     },
@@ -114,7 +114,7 @@ const UserManagement = () => {
         <div className="flex items-center">
           <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3">
             <span className="text-blue-600 font-medium text-lg">
-              {user.name?.charAt(0)?.toUpperCase() || 'U'}
+              {typeof user.name === 'string' && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : 'U'}
             </span>
           </div>
           <div>
@@ -129,7 +129,7 @@ const UserManagement = () => {
             ? 'bg-blue-100 text-blue-800'
             : 'bg-gray-100 text-gray-800'
         }`}>
-          {user.role?.charAt(0)?.toUpperCase() + user.role?.slice(1) || 'User'}
+          {typeof user.role === 'string' && user.role.length > 0 ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
         </span>
       </div>
       
@@ -154,10 +154,10 @@ const UserManagement = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading users...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Loading users...</p>
         </div>
       </div>
     );
@@ -165,17 +165,17 @@ const UserManagement = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 mb-4">
-            <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="text-red-500 mb-6">
+            <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-lg font-medium">{error}</p>
+            <p className="text-xl font-medium">{error}</p>
           </div>
           <button
             onClick={fetchUsers}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             Try Again
           </button>
@@ -185,90 +185,33 @@ const UserManagement = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">
-            Manage and view all system users
-          </p>
+          <h1 className="text-2xl font-bold">User Management</h1>
+          <p className="text-gray-600">Manage and view all system users</p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">
-            Total Users: {users.length}
-          </span>
-        </div>
-      </div>
-
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <span className="text-blue-600 text-lg">👥</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <span className="text-green-600 text-lg">👑</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Admins</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(user => user.role === 'admin').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <span className="text-purple-600 text-lg">🔧</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Managers</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(user => user.role === 'manager').length}
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <span className="text-orange-600 text-lg">✅</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {users.filter(user => user.isActive !== false).length}
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="bg-gray-100 rounded-lg px-4 py-2">
+            <span className="font-semibold">
+              Total Users: {users.length}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Users Table */}
-      <ResponsiveTable
-        title="System Users"
-        columns={columns}
-        data={filteredUsers}
-        loading={loading}
-        searchQuery={searchQuery}
-        onSearch={handleSearch}
-        mobileCardRender={mobileCardRender}
-        showActions={false}
-      />
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <ResponsiveTable
+          title="System Users"
+          columns={columns}
+          data={filteredUsers}
+          loading={loading}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
+          mobileCardRender={mobileCardRender}
+          showActions={false}
+        />
+      </div>
     </div>
   );
 };

@@ -279,6 +279,12 @@ const Item = () => {
       render: (item) => item.subCategory?.nameEn || 'N/A'
     },
     {
+      key: 'section',
+      header: 'Section',
+      sortable: true,
+      render: (item) => item.assignSection?.nameEn || item.assignSection?.name || 'N/A'
+    },
+    {
       key: 'tax',
       header: 'Tax',
       sortable: true,
@@ -349,6 +355,17 @@ const Item = () => {
         </div>
       </div>
       
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <p className="text-xs text-gray-500">Section</p>
+          <p className="text-sm font-medium">{item.assignSection?.nameEn || item.assignSection?.name || 'N/A'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Status</p>
+          <p className="text-sm font-medium">{item.isActive ? 'Active' : 'Inactive'}</p>
+        </div>
+      </div>
+      
       {item.image?.url && (
         <div className="mb-4">
           <p className="text-xs text-gray-500 mb-2">Image</p>
@@ -389,32 +406,31 @@ const Item = () => {
 
   if (loading) {
     return (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">{loadingMessage}</p>
-            <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">{loadingMessage}</p>
+          <p className="text-sm text-gray-500 mt-2">This may take a moment due to server rate limiting...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Items</h1>
+    <div className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <h1 className="text-2xl font-bold">Items</h1>
         <button
           onClick={() => {
-            setFormData({ 
-              nameEn: '', 
-              nameAlt: '', 
-              baseUnit: '', 
-              category: '', 
-              tax: '', 
-              image: '', 
-              departments: [], 
-              name: '', 
+            setFormData({
+              nameEn: '',
+              nameAlt: '',
+              baseUnit: '',
+              category: '',
+              tax: '',
+              image: '',
+              departments: [],
+              name: '',
               subCategory: ''
             });
             setEditingId(null);
@@ -426,19 +442,19 @@ const Item = () => {
         </button>
       </div>
 
-      {/* Items Table */}
-      <ResponsiveTable
-        title="Items Management"
-        columns={columns}
-        data={searchQuery ? searchResults : items}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        customActions={customActions}
-        loading={loading}
-        searchQuery={searchQuery}
-        onSearch={handleSearch}
-        mobileCardRender={mobileCardRender}
-      />
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <ResponsiveTable
+          title="Items Management"
+          columns={columns}
+          data={searchQuery ? searchResults : items}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          loading={loading}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
+          mobileCardRender={mobileCardRender}
+        />
+      </div>
 
       {/* Form Modal */}
       <ResponsiveModal
@@ -458,7 +474,7 @@ const Item = () => {
                     subCategory: ''
                   });
                 }}
-        title={editingId ? 'Edit Item' : 'Add Item'}
+        title={editingId ? 'Edit Item' : 'Add New Item'}
         size="lg"
               >
         <ResponsiveForm
@@ -477,12 +493,12 @@ const Item = () => {
               />
             </FormField>
 
-            <FormField label="Item Name (Alternative)">
+            <FormField label="Item Name (Arabic)">
               <FormInput
                 name="nameAlt"
                 value={formData.nameAlt}
                 onChange={handleChange}
-                placeholder="Enter alternative name"
+                placeholder="Enter item name in Arabic"
               />
             </FormField>
           </FormGrid>
@@ -495,10 +511,10 @@ const Item = () => {
                 onChange={handleChange}
                 required
               >
-                <option value="">Select Base Unit</option>
+                <option value="">Select Unit</option>
                 {units.map(unit => (
                   <option key={unit._id} value={unit._id}>
-                    {unit.name}
+                    {unit.nameEn}
                   </option>
                 ))}
               </FormSelect>

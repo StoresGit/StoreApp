@@ -102,6 +102,61 @@ const Wastage = () => {
     }
   }, [formData.branch, sections]);
 
+  // Filter items based on selected branch and section
+  const getFilteredItems = () => {
+    if (!formData.branch && !formData.section) {
+      return items; // Show all items if no branch or section selected
+    }
+
+    return items.filter(item => {
+      let matchesBranch = false;
+      let matchesSection = false;
+
+      // Check branch matching
+      if (formData.branch) {
+        // Check assignBranch array
+        if (Array.isArray(item.assignBranch) && item.assignBranch.some(branch => {
+          if (typeof branch === 'string') return branch === formData.branch;
+          if (typeof branch === 'object' && branch) return branch._id === formData.branch;
+          return false;
+        })) {
+          matchesBranch = true;
+        }
+        // Check legacy branch field
+        else if (item.branch && item.branch._id === formData.branch) {
+          matchesBranch = true;
+        }
+        // Check legacy branches array
+        else if (Array.isArray(item.branches) && item.branches.some(branch => {
+          if (typeof branch === 'string') return branch === formData.branch;
+          if (typeof branch === 'object' && branch) return branch._id === formData.branch;
+          return false;
+        })) {
+          matchesBranch = true;
+        }
+      } else {
+        matchesBranch = true; // No branch filter applied
+      }
+
+      // Check section matching
+      if (formData.section) {
+        if (item.assignSection && item.assignSection._id === formData.section) {
+          matchesSection = true;
+        } else if (item.section && item.section._id === formData.section) {
+          matchesSection = true;
+        } else if (item.sectionId && item.sectionId === formData.section) {
+          matchesSection = true;
+        }
+      } else {
+        matchesSection = true; // No section filter applied
+      }
+
+      return matchesBranch && matchesSection;
+    });
+  };
+
+  const filteredItems = getFilteredItems();
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -165,7 +220,29 @@ const Wastage = () => {
 
       const response = await apiService.wastage.getAll();
       console.log('Fetched wastage records:', response);
-      setWastageList(Array.isArray(response.data) ? response.data : []);
+      console.log('Response structure:', {
+        hasResponse: !!response,
+        hasData: !!(response && response.data),
+        dataType: response && response.data ? typeof response.data : 'undefined',
+        isArray: response && response.data ? Array.isArray(response.data) : false,
+        dataKeys: response && response.data ? Object.keys(response.data) : []
+      });
+      
+      // Handle different response structures
+      let wastageData = [];
+      if (response && response.data) {
+        // Backend returns { success: true, data: wastageRecords }
+        if (response.data.success && response.data.data && Array.isArray(response.data.data)) {
+          wastageData = response.data.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          wastageData = response.data.data;
+        } else if (Array.isArray(response.data)) {
+          wastageData = response.data;
+        }
+      }
+      
+      console.log('Processed wastage data:', wastageData);
+      setWastageList(wastageData);
     } catch (error) {
       console.error('Error fetching wastage records:', error);
       setWastageList([]);
@@ -181,9 +258,9 @@ const Wastage = () => {
     // Auto-fill item code and unit when item is selected
     if (name === 'itemName') {
       console.log('Item selected:', value);
-      console.log('Available items:', items);
+      console.log('Available items:', filteredItems);
       
-      const selectedItem = items.find(item => item._id === value);
+      const selectedItem = filteredItems.find(item => item._id === value);
       console.log('Selected item:', selectedItem);
       
       if (selectedItem) {
@@ -309,30 +386,51 @@ const Wastage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Wastage</h1>
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 shadow-lg">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center">
+              <svg className="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+              </svg>
+              Wastage Management
+            </h1>
+            <p className="text-blue-100">Track and manage wastage records efficiently</p>
+          </div>
         </div>
 
         {/* Wastage Form - Grid Layout */}
-        <div className="bg-white border border-gray-300 rounded-lg shadow-sm">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg backdrop-blur-sm bg-white/90">
+          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-xl p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Wastage Record
+            </h2>
+          </div>
           <form onSubmit={handleSubmit}>
             {/* General Information Section */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-gray-300">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
               {/* Left Column */}
               <div className="space-y-0">
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
-                    <label className="text-sm font-medium text-gray-700">Select Branch</label>
+                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                   <div className="w-1/3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-r border-gray-200 flex items-center">
+                     <label className="text-sm font-medium text-gray-700 flex items-center">
+                       <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                       </svg>
+                       Select Branch
+                     </label>
                   </div>
-                  <div className="w-2/3 p-3">
+                   <div className="w-2/3 p-4">
                     <select
                       name="branch"
                       value={formData.branch}
                       onChange={handleInputChange}
-                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-gray-700 transition-all duration-200"
                       required
                     >
                       <option value="">Select Branch</option>
@@ -345,17 +443,22 @@ const Wastage = () => {
                   </div>
                 </div>
                 
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
-                    <label className="text-sm font-medium text-gray-700">Event Date</label>
+                                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                   <div className="w-1/3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-r border-gray-200 flex items-center">
+                     <label className="text-sm font-medium text-gray-700 flex items-center">
+                       <svg className="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                       </svg>
+                       Event Date
+                     </label>
                   </div>
-                  <div className="w-2/3 p-3">
+                   <div className="w-2/3 p-4">
                     <input
                       type="date"
                       name="eventDate"
                       value={formData.eventDate}
                       onChange={handleInputChange}
-                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-green-500 bg-transparent text-gray-700 transition-all duration-200"
                       required
                     />
                   </div>
@@ -364,16 +467,21 @@ const Wastage = () => {
 
               {/* Right Column */}
               <div className="space-y-0">
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
-                    <label className="text-sm font-medium text-gray-700">Select Section</label>
+                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
+                   <div className="w-1/3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-r border-gray-200 flex items-center">
+                     <label className="text-sm font-medium text-gray-700 flex items-center">
+                       <svg className="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                         <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+                       </svg>
+                       Select Section
+                     </label>
                   </div>
-                  <div className="w-2/3 p-3">
+                   <div className="w-2/3 p-4">
                     <select
                       name="section"
                       value={formData.section}
                       onChange={handleInputChange}
-                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
+                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-transparent text-gray-700 transition-all duration-200 disabled:opacity-50"
                       disabled={!formData.branch}
                       required
                     >
@@ -434,7 +542,14 @@ const Wastage = () => {
                   <label className="text-sm font-medium text-gray-700">Item Code</label>
                 </div>
                 <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                   <label className="text-sm font-medium text-gray-700">
+                     Item Name 
+                     {formData.branch && formData.section && (
+                       <span className="ml-2 text-xs text-gray-500">
+                         ({filteredItems.length} available)
+                       </span>
+                     )}
+                   </label>
                 </div>
                 <div className="p-3 border-r border-gray-300">
                   <label className="text-sm font-medium text-gray-700">Unit</label>
@@ -467,8 +582,13 @@ const Wastage = () => {
                     className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
                     required
                   >
-                    <option value="">Select Item</option>
-                    {items.map(item => (
+                                         <option value="">
+                       {formData.branch && formData.section 
+                         ? (filteredItems.length > 0 ? 'Select Item' : 'No items available for this branch/section')
+                         : 'Select Branch and Section First'
+                       }
+                     </option>
+                     {filteredItems.map(item => (
                       <option key={item._id} value={item._id}>
                         {item.nameEn || item.name}
                       </option>
@@ -533,8 +653,23 @@ const Wastage = () => {
         <div className="mt-8">
           <div className="bg-white border border-gray-300 rounded-lg shadow-sm">
             <div className="px-6 py-4 border-b border-gray-300">
+              <div className="flex justify-between items-center">
+                <div>
               <h2 className="text-lg font-semibold text-gray-900">Wastage Records</h2>
               <p className="text-sm text-gray-600 mt-1">Showing {Array.isArray(wastageList) ? wastageList.length : 0} records</p>
+                </div>
+                <button
+                  onClick={() => {
+                    console.log('Current wastage list:', wastageList);
+                    console.log('Wastage list length:', wastageList.length);
+                    console.log('Is array:', Array.isArray(wastageList));
+                    fetchWastageList();
+                  }}
+                  className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                >
+                  Debug: Refresh
+                </button>
+              </div>
             </div>
             
             {wastageLoading ? (
@@ -576,17 +711,19 @@ const Wastage = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {Array.isArray(wastage.branches) && wastage.branches.length > 0 
-                              ? wastage.branches[0]?.name || '-' 
+                              ? (wastage.branches[0]?.name || wastage.branches[0] || '-')
                               : '-'}
                           </div>
-                          <div className="text-sm text-gray-500">{wastage.section?.name || '-'}</div>
+                          <div className="text-sm text-gray-500">
+                            {wastage.section?.name || wastage.section || '-'}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {wastage.itemName?.nameEn || wastage.itemName?.name || wastage.itemName || '-'}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {wastage.itemCode} • {wastage.qty} {wastage.unit}
+                            {wastage.itemCode || '-'} • {wastage.qty || 0} {wastage.unit || ''}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">

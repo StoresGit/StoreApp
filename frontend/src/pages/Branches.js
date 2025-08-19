@@ -189,14 +189,11 @@ const Branches = () => {
   );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Branches</h1>
-          <p className="text-sm md:text-base text-gray-600 mt-1">
-            Manage your branch locations and codes
-          </p>
+          <h1 className="text-2xl font-bold">Branches</h1>
+          <p className="text-gray-600">Manage your branch locations and codes</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
@@ -206,59 +203,19 @@ const Branches = () => {
         </button>
       </div>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <span className="text-blue-600 text-lg">🏢</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Branches</p>
-              <p className="text-2xl font-bold text-gray-900">{branches.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <span className="text-green-600 text-lg">✅</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Active Branches</p>
-              <p className="text-2xl font-bold text-gray-900">{branches.length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <span className="text-purple-600 text-lg">📊</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Avg. per Month</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {Math.round(branches.length / 12) || 0}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <ResponsiveTable
+          title="Branch Management"
+          columns={columns}
+          data={filteredBranches}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          loading={loading}
+          searchQuery={searchQuery}
+          onSearch={handleSearch}
+          mobileCardRender={mobileCardRender}
+        />
       </div>
-
-      {/* Branches Table */}
-      <ResponsiveTable
-        title="Branch Management"
-        columns={columns}
-        data={filteredBranches}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        loading={loading}
-        searchQuery={searchQuery}
-        onSearch={handleSearch}
-        mobileCardRender={mobileCardRender}
-      />
 
       {/* Add/Edit Modal */}
       <FormModal

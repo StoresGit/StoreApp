@@ -233,7 +233,7 @@ useEffect(() => {
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
                           <span className="text-blue-600 font-medium text-sm">
-                            {user.name.charAt(0).toUpperCase()}
+                            {typeof user.name === 'string' && user.name.length > 0 ? user.name.charAt(0).toUpperCase() : 'U'}
                           </span>
                         </div>
                       </div>

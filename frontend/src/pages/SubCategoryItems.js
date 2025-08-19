@@ -25,6 +25,7 @@ const SubCategoryItems = () => {
                   <th className="p-2 border">Base Unit</th>
                   <th className="p-2 border">Category</th>
                   <th className="p-2 border">Sub Category</th>
+                  <th className="p-2 border">Section</th>
                   <th className="p-2 border">Tax</th>
                   <th className="p-2 border">Assign Branch</th>
                   <th className="p-2 border">Assign Brand</th>
@@ -40,6 +41,7 @@ const SubCategoryItems = () => {
                     <td className="p-2 border">{item.baseUnit?.name}</td>
                     <td className="p-2 border">{item.category?.nameEn}</td>
                     <td className="p-2 border">{item.subCategory}</td>
+                                         <td className="p-2 border">{item.assignSection?.nameEn || item.assignSection?.name || '-'}</td>
                     <td className="p-2 border">{item.tax?.name}</td>
                     <td className="p-2 border">{item.assignBranch?.name}</td>
                     <td className="p-2 border">{item.assignBrand?.name}</td>

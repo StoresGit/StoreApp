@@ -22,16 +22,12 @@ const CreateItem = () => {
   const [sections, setSections] = useState([]);
   const [filteredSections, setFilteredSections] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchCategory, setSearchCategory] = useState('');
-  const [filteredCategories, setFilteredCategories] = useState([]);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [items, setItems] = useState([]); // Added items state
   const [itemsLoading, setItemsLoading] = useState(true); // Added items loading state
   const [brands, setBrands] = useState([]); // Added brands state
   const [editingItem, setEditingItem] = useState(null); // Add editing state
   const [editFormData, setEditFormData] = useState({}); // Add edit form data
   
-
 
   // Fetch items
   const fetchItems = useCallback(async () => {
@@ -41,9 +37,6 @@ const CreateItem = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const response = await axios.get(`${backend_url}/items`, { headers });
-      console.log('Fetched items:', response.data); // Debug log
-      console.log('Sample item with brand:', response.data?.[0]); // Debug specific item
-      console.log('Brands available:', brands); // Debug brands state
       setItems(response.data || []);
     } catch (error) {
       console.error('Error fetching items:', error);
@@ -51,7 +44,7 @@ const CreateItem = () => {
     } finally {
       setItemsLoading(false);
     }
-  }, [brands]);
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -71,7 +64,6 @@ const CreateItem = () => {
       setBranches(branchesRes.data);
       setSections(sectionsRes.data);
       setBrands(brandsRes.data); // Set brands data
-      setFilteredCategories(categoriesRes.data); // Initialize filtered categories
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -81,166 +73,133 @@ const CreateItem = () => {
 
   useEffect(() => {
     fetchData();
-    fetchItems(); // Fetch items separately
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
   }, [fetchItems]);
 
   // Filter sections when branch changes
   useEffect(() => {
-    // Show all sections without filtering by branches
-    setFilteredSections(sections);
-  }, [sections]);
-
-  // Filter categories based on search
-  useEffect(() => {
-    if (searchCategory) {
-      const filtered = categories.filter(category =>
-        category.nameEn?.toLowerCase().includes(searchCategory.toLowerCase()) ||
-        category.name?.toLowerCase().includes(searchCategory.toLowerCase())
-      );
-      setFilteredCategories(filtered);
+    if (formData.assignBranch.length === 0) {
+      // If no branches selected, clear sections and section selection
+      setFilteredSections([]);
+      setFormData(prev => ({ ...prev, assignSection: '' }));
     } else {
-      setFilteredCategories(categories);
+      // Filter sections based on selected branches - only show sections that belong to selected branches
+      const branchIds = formData.assignBranch;
+      const filtered = sections.filter(section => {
+        // Check if section has a branch and if that branch is in the selected branches
+        if (!section.branch) return false;
+        
+        // Handle both populated and unpopulated branch references
+        const sectionBranchId = section.branch._id || section.branch;
+        return branchIds.includes(sectionBranchId);
+      });
+      
+      setFilteredSections(filtered);
+      
+      // Clear section selection if current section is not available for selected branches
+      if (formData.assignSection && !filtered.find(s => s._id === formData.assignSection)) {
+        setFormData(prev => ({ ...prev, assignSection: '' }));
+      }
     }
-  }, [searchCategory, categories]);
+  }, [formData.assignBranch, sections]);
 
-  // Fetch sub-categories when category changes
+  // Fetch subcategories when category changes
   useEffect(() => {
     if (formData.itemCategory) {
-      fetchSubCategories(formData.itemCategory);
+      fetchSubCategoriesForCategory(formData.itemCategory);
     } else {
       setSubCategories([]);
-      setFormData(prev => ({ ...prev, subCategory: '' }));
     }
   }, [formData.itemCategory]);
 
-  // Fetch sub-categories for selected category
-  const fetchSubCategories = async (categoryId) => {
+  const fetchSubCategoriesForCategory = async (categoryId) => {
     try {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
       const response = await axios.get(`${backend_url}/item-categories/subcategories/${categoryId}`, { headers });
-      setSubCategories(response.data);
+      setSubCategories(response.data || []);
     } catch (error) {
-      console.error('Error fetching sub-categories:', error);
+      console.error('Error fetching subcategories:', error);
       setSubCategories([]);
-    }
-  };
-
-  // Fetch sub-categories for a specific item (for editing)
-  const fetchItemSubCategories = async (itemId, categoryId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
-      const response = await axios.get(`${backend_url}/item-categories/subcategories/${categoryId}`, { headers });
-      setItemSubCategories(prev => ({
-        ...prev,
-        [itemId]: response.data
-      }));
-    } catch (error) {
-      console.error('Error fetching sub-categories for item:', error);
-      setItemSubCategories(prev => ({
-        ...prev,
-        [itemId]: []
-      }));
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    if (type === 'checkbox') {
       if (name === 'assignBranch') {
+      // Handle checkbox for branches
+      const branchId = value;
         setFormData(prev => ({
           ...prev,
-          [name]: checked 
-            ? [...prev[name], value]
-            : prev[name].filter(item => item !== value)
-        }));
-      }
+        assignBranch: checked 
+          ? [...prev.assignBranch, branchId]
+          : prev.assignBranch.filter(id => id !== branchId)
+      }));
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: value
+        [name]: type === 'checkbox' ? checked : value
       }));
     }
   };
 
   const handleCategorySelect = (categoryId, categoryName) => {
-    setFormData(prev => ({ ...prev, itemCategory: categoryId }));
-    setSearchCategory(categoryName);
-    setShowCategoryDropdown(false);
+    setFormData(prev => ({
+      ...prev,
+      itemCategory: categoryId
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Enhanced validation
-    const requiredFields = {
-      itemName: formData.itemName,
-      itemCategory: formData.itemCategory,
-      unit: formData.unit
-    };
-    
-    const missingFields = Object.keys(requiredFields).filter(field => !requiredFields[field]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
-      return;
-    }
-    
     try {
       const token = localStorage.getItem('token');
-      
-      // Ensure subcategory is properly set
-      let subCategoryValue = formData.subCategory;
-      if (!subCategoryValue || subCategoryValue === '') {
-        // If no subcategory is selected, use the main category as subcategory
-        subCategoryValue = formData.itemCategory;
-      }
+      const headers = { Authorization: `Bearer ${token}` };
       
       const itemData = {
-        nameEn: formData.itemName, // Changed from name to nameEn
-        name: formData.itemName, // Keep name for compatibility
+        nameEn: formData.itemName,
         category: formData.itemCategory,
-        subCategory: subCategoryValue, // Use the validated subcategory
+        subCategory: formData.subCategory,
+        baseUnit: formData.unit,
         unit: formData.unit,
-        baseUnit: formData.unit, // Add baseUnit field - backend expects this
-        assignBranch: formData.assignBranch.length > 0 ? formData.assignBranch : undefined, // Send all selected branches
-        assignBrand: formData.assignBrand || undefined, // Add assign brand
-        departments: formData.assignSection ? [formData.assignSection] : []
+        assignBranch: formData.assignBranch,
+        assignSection: formData.assignSection,
+        assignBrand: formData.assignBrand
       };
 
-      console.log('Submitting item data:', itemData); // Debug log
+      console.log('Submitting item data:', itemData);
 
-      await axios.post(`${backend_url}/items`, itemData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      if (editingItem) {
+        await axios.put(`${backend_url}/items/${editingItem._id}`, itemData, { headers });
+        alert('Item updated successfully!');
+      } else {
+        await axios.post(`${backend_url}/items`, itemData, { headers });
+        alert('Item created successfully!');
+      }
 
       // Reset form
       setFormData({
         itemCode: '',
         itemName: '',
         itemCategory: '',
-        subCategory: '', // Reset sub-category
+        subCategory: '',
         unit: '',
         assignBranch: [],
         assignSection: '',
-        assignBrand: '' // Reset assign brand
+        assignBrand: ''
       });
-      setSearchCategory('');
-      setSubCategories([]); // Reset sub-categories
       
-      // Refresh items list
-      fetchItems();
-      
-      // Show success message
-      alert('Item created successfully!');
+      setEditingItem(null);
+      fetchItems(); // Refresh items list
     } catch (error) {
-      console.error('Error creating item:', error);
-      console.error('Error response:', error.response?.data); // Debug log
-      alert('Error creating item: ' + (error.response?.data?.message || error.message));
+      console.error('Error saving item:', error);
+      alert('Error saving item. Please try again.');
     }
   };
 
@@ -261,34 +220,64 @@ const CreateItem = () => {
   };
 
   const handleEditItem = (item) => {
-    setEditingItem(item._id);
+    setEditingItem(item);
     setEditFormData({
-      nameEn: item.nameEn || item.name,
-      category: item.category?._id || item.category,
-      subCategory: item.subCategory?._id || item.subCategory,
-      unit: item.unit?._id || item.baseUnit?._id || item.unit,
-      assignBrand: item.assignBrand?._id || item.assignBrand,
-      assignBranch: item.assignBranch || [],
-      assignSection: item.departments?.[0] || item.assignSection
+      itemCode: item.itemCode || '',
+      nameEn: item.nameEn || item.name || '',
+      category: item.category?._id || '',
+      subCategory: item.subCategory?._id || '',
+      unit: item.unit?._id || item.baseUnit?._id || '',
+      assignBranch: item.assignBranch?.map(b => b._id || b) || [],
+      assignSection: item.assignSection?._id || '',
+      assignBrand: item.assignBrand?._id || '',
+      scheduledDate: item.scheduledDate || ''
     });
     
-    // Fetch subcategories for this specific item
-    const categoryId = item.category?._id || item.category;
-    if (categoryId) {
-      fetchItemSubCategories(item._id, categoryId);
+    // Fetch subcategories for the item's category
+    if (item.category?._id) {
+      fetchSubCategoriesForCategory(item.category._id);
     }
   };
 
   const handleCancelEdit = () => {
     setEditingItem(null);
-    setEditFormData({});
-    // Clean up item-specific subcategories for the cancelled edit
-    if (editingItem) {
-      setItemSubCategories(prev => {
-        const newState = { ...prev };
-        delete newState[editingItem];
-        return newState;
-      });
+    setFormData({
+      itemCode: '',
+      itemName: '',
+      itemCategory: '',
+      subCategory: '',
+      unit: '',
+      assignBranch: [],
+      assignSection: '',
+      assignBrand: '',
+      scheduledDate: ''
+    });
+  };
+
+  const handleScheduledDateChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      scheduledDate: e.target.value
+    }));
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    
+    if (name === 'assignBranch') {
+      // Handle checkbox for branches
+      const branchId = value;
+      setEditFormData(prev => ({
+        ...prev,
+        assignBranch: checked 
+          ? [...(prev.assignBranch || []), branchId]
+          : (prev.assignBranch || []).filter(id => id !== branchId)
+      }));
+    } else {
+      setEditFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
     }
   };
 
@@ -297,93 +286,62 @@ const CreateItem = () => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
       
-      const updateData = {
+      const itemData = {
         nameEn: editFormData.nameEn,
-        name: editFormData.nameEn, // Keep name for compatibility
         category: editFormData.category,
-        subCategory: editFormData.subCategory || editFormData.category,
-        unit: editFormData.unit,
+        subCategory: editFormData.subCategory,
         baseUnit: editFormData.unit,
+        unit: editFormData.unit,
+        assignBranch: editFormData.assignBranch,
+        assignSection: editFormData.assignSection,
         assignBrand: editFormData.assignBrand,
-        assignBranch: editFormData.assignBranch.length > 0 ? editFormData.assignBranch : undefined,
-        departments: editFormData.assignSection ? [editFormData.assignSection] : []
+        scheduledDate: editFormData.scheduledDate || null
       };
 
-      await axios.put(`${backend_url}/items/${itemId}`, updateData, { headers });
-      alert('Item updated successfully');
+      await axios.put(`${backend_url}/items/${itemId}`, itemData, { headers });
+      alert('Item updated successfully!');
+      
       setEditingItem(null);
       setEditFormData({});
-      // Clean up item-specific subcategories after saving
-      setItemSubCategories(prev => {
-        const newState = { ...prev };
-        delete newState[itemId];
-        return newState;
-      });
-      fetchItems(); // Refresh the list
+      fetchItems(); // Refresh items list
     } catch (error) {
       console.error('Error updating item:', error);
-      alert('Error updating item: ' + (error.response?.data?.message || error.message));
+      alert('Error updating item. Please try again.');
     }
   };
 
-  const handleEditInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    if (type === 'checkbox') {
-      if (name === 'assignBranch') {
-        setEditFormData(prev => ({
-          ...prev,
-          [name]: checked 
-            ? [...prev[name], value]
-            : prev[name].filter(item => item !== value)
-        }));
-      }
-    } else {
-      setEditFormData(prev => {
-        const newData = {
-          ...prev,
-          [name]: value
-        };
-        
-        // If category changed, fetch subcategories for this item and reset subcategory
-        if (name === 'category' && editingItem) {
-          if (value) {
-            fetchItemSubCategories(editingItem, value);
-          } else {
-            setItemSubCategories(prev => ({
-              ...prev,
-              [editingItem]: []
-            }));
-          }
-          newData.subCategory = ''; // Reset subcategory when category changes
-        }
-        
-        return newData;
-      });
-    }
-  };
+
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <span className="ml-2">Loading...</span>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="loading-spinner rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading item creation...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="bg-green-200 p-4 rounded-lg mb-6">
-          <h1 className="text-2xl font-bold text-black">Create Item</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 shadow-lg">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2 flex items-center">
+              <svg className="w-8 h-8 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              {editingItem ? 'Edit Item' : 'Create New Item'}
+            </h1>
+            <p className="text-blue-100">Manage your inventory items with ease</p>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-6 mb-8">
+        <div className="modern-card p-6">
+
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Item Code */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Item Code:</div>
@@ -393,9 +351,9 @@ const CreateItem = () => {
                 name="itemCode"
                 value={formData.itemCode}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-                placeholder="Auto generated"
-                disabled
+                  className="modern-input w-full"
+                  placeholder="Enter item code"
+                  required
               />
             </div>
           </div>
@@ -409,46 +367,31 @@ const CreateItem = () => {
                 name="itemName"
                 value={formData.itemName}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="modern-input w-full"
                 placeholder="Enter item name"
                 required
               />
             </div>
           </div>
 
-          {/* Item Category */}
+            {/* Item Category - Dropdown Only */}
           <div className="grid grid-cols-3 gap-4 items-center">
             <div className="font-medium text-gray-700">Item Category:</div>
-            <div className="col-span-2 relative">
-              <input
-                type="text"
-                placeholder="Search and select category..."
-                value={searchCategory}
-                onChange={(e) => {
-                  setSearchCategory(e.target.value);
-                  setShowCategoryDropdown(true);
-                }}
-                onFocus={() => setShowCategoryDropdown(true)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              <div className="col-span-2">
+                <select
+                  name="itemCategory"
+                  value={formData.itemCategory}
+                  onChange={handleInputChange}
+                  className="modern-select w-full"
                 required
-              />
-              {showCategoryDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                  {filteredCategories.length > 0 ? (
-                    filteredCategories.map((category) => (
-                      <div
-                        key={category._id}
-                        onClick={() => handleCategorySelect(category._id, category.nameEn || category.name)}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
-                      >
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option key={category._id} value={category._id}>
                         {category.nameEn || category.name}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-gray-500">No categories found</div>
-                  )}
-                </div>
-              )}
+                    </option>
+                  ))}
+                </select>
             </div>
           </div>
 
@@ -460,7 +403,7 @@ const CreateItem = () => {
                 name="subCategory"
                 value={formData.subCategory}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="modern-select w-full"
                 disabled={!formData.itemCategory}
               >
                 <option value="">Select Sub Category</option>
@@ -487,7 +430,7 @@ const CreateItem = () => {
                 name="unit"
                 value={formData.unit}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="modern-select w-full"
                 required
               >
                 <option value="">Select Unit</option>
@@ -508,7 +451,7 @@ const CreateItem = () => {
                 name="assignBrand"
                 value={formData.assignBrand}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="modern-select w-full"
               >
                 <option value="">Select Brand</option>
                 {brands.map((brand) => (
@@ -551,24 +494,57 @@ const CreateItem = () => {
                 value={formData.assignSection}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  disabled={formData.assignBranch.length === 0}
               >
-                <option value="">Select Section</option>
+                  <option value="">
+                    {formData.assignBranch.length === 0 ? 'Select Branch First' : 'Select Section'}
+                  </option>
                 {filteredSections.map((section) => (
                   <option key={section._id} value={section._id}>
                     {section.name}
                   </option>
                 ))}
               </select>
+                {formData.assignBranch.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">Please select at least one branch first</p>
+                )}
+                {formData.assignBranch.length > 0 && filteredSections.length === 0 && (
+                  <p className="text-sm text-gray-500 mt-1">No sections available for selected branches</p>
+                )}
+              </div>
+            </div>
+
+            {/* Scheduled Date */}
+            <div className="grid grid-cols-3 gap-4 items-center">
+              <div className="font-medium text-gray-700">Scheduled Date:</div>
+              <div className="col-span-2">
+                <input
+                  type="date"
+                  name="scheduledDate"
+                  value={formData.scheduledDate}
+                  onChange={handleScheduledDateChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  min={new Date().toISOString().split('T')[0]}
+                />
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end mt-6">
+            {/* Submit Buttons */}
+            <div className="flex justify-end space-x-3 mt-6">
+              {editingItem && (
+                <button 
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="btn-gradient-secondary px-6 py-2"
+                >
+                  Cancel Edit
+                </button>
+              )}
             <button 
               type="submit"
-              className="bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition-colors"
+                className="btn-gradient-success px-6 py-2"
             >
-              Create Item
+                {editingItem ? 'Update Item' : 'Create Item'}
             </button>
           </div>
         </form>
@@ -576,15 +552,20 @@ const CreateItem = () => {
         {/* Items List Section */}
         <div className="mt-8">
           <div className="border-t border-gray-200 pt-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Existing Items</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+                Existing Items
+              </h2>
             
             {itemsLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <span className="ml-2">Loading items...</span>
+                  <div className="loading-spinner rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-gray-600">Loading items...</span>
               </div>
             ) : (
-              <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                <div className="modern-card overflow-hidden">
                 {/* Mobile Cards View */}
                 <div className="block sm:hidden">
                   {items.map((item) => (
@@ -597,13 +578,13 @@ const CreateItem = () => {
                         <div className="flex space-x-2">
                           <button
                             onClick={() => handleEditItem(item)}
-                            className="text-blue-600 hover:text-blue-900 text-sm"
+                              className="btn-gradient-primary px-2 py-1 text-xs"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteItem(item._id)}
-                            className="text-red-600 hover:text-red-900 text-sm"
+                              className="btn-gradient-danger px-2 py-1 text-xs"
                           >
                             Delete
                           </button>
@@ -620,6 +601,10 @@ const CreateItem = () => {
                             {item.subCategory?.nameEn || item.subCategory?.name || (item.subCategory === item.category ? '-' : item.subCategory) || '-'}
                           </span>
                         </div>
+                          <div>
+                            <span className="text-gray-500">Section:</span>
+                            <span className="ml-1 text-gray-900">{item.assignSection?.nameEn || item.assignSection?.name || '-'}</span>
+                          </div>
                         <div>
                           <span className="text-gray-500">Unit:</span>
                           <span className="ml-1 text-gray-900">{item.unit?.name || item.baseUnit?.name || '-'}</span>
@@ -627,7 +612,15 @@ const CreateItem = () => {
                         <div>
                           <span className="text-gray-500">Brand:</span>
                           <span className="ml-1 text-gray-900">{item.assignBrand?.nameEn || '-'}</span>
-                        </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-500">Branch:</span>
+                            <span className="ml-1 text-gray-900">
+                              {Array.isArray(item.assignBranch) 
+                                ? item.assignBranch.map(branch => branch.name).join(', ') || '-'
+                                : item.assignBranch?.name || '-'}
+                            </span>
+                          </div>
                       </div>
                     </div>
                   ))}
@@ -640,8 +633,8 @@ const CreateItem = () => {
 
                 {/* Desktop Table View */}
                 <div className="hidden sm:block overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <table className="modern-table min-w-full">
+                      <thead className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Item Code
@@ -655,6 +648,9 @@ const CreateItem = () => {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Sub Category
                         </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Section
+                          </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Unit
                         </th>
@@ -671,7 +667,7 @@ const CreateItem = () => {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {items.map((item) => (
-                        <tr key={item._id} className="hover:bg-gray-50">
+                          <tr key={item._id} className="hover:bg-blue-50 transition-colors duration-200 border-b border-gray-100">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {item.itemCode}
                           </td>
@@ -714,7 +710,7 @@ const CreateItem = () => {
                                 disabled={!editFormData.category}
                               >
                                 <option value="">Select Sub Category</option>
-                                {(itemSubCategories[item._id] || []).map((subCategory) => (
+                                  {(itemSubCategories[item._id] || []).map((subCategory) => (
                                   <option key={subCategory._id} value={subCategory._id}>
                                     {subCategory.nameEn || subCategory.name}
                                   </option>
@@ -724,6 +720,24 @@ const CreateItem = () => {
                               item.subCategory?.nameEn || item.subCategory?.name || (item.subCategory === item.category ? '-' : item.subCategory) || '-'
                             )}
                           </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {editingItem === item._id ? (
+                                <select
+                                  value={editFormData.assignSection || ''}
+                                  onChange={(e) => handleEditInputChange({ target: { name: 'assignSection', value: e.target.value } })}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded"
+                                >
+                                  <option value="">Select Section</option>
+                                  {filteredSections.map((section) => (
+                                    <option key={section._id} value={section._id}>
+                                      {section.nameEn || section.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                item.assignSection?.nameEn || item.assignSection?.name || '-'
+                              )}
+                            </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {editingItem === item._id ? (
                               <select
@@ -792,13 +806,13 @@ const CreateItem = () => {
                               <div className="flex space-x-2">
                                 <button
                                   onClick={() => handleSaveEdit(item._id)}
-                                  className="text-green-600 hover:text-green-900"
+                                    className="btn-gradient-success px-2 py-1 text-xs"
                                 >
                                   Save
                                 </button>
                                 <button
                                   onClick={handleCancelEdit}
-                                  className="text-gray-600 hover:text-gray-900"
+                                    className="btn-gradient-secondary px-2 py-1 text-xs"
                                 >
                                   Cancel
                                 </button>
@@ -807,13 +821,13 @@ const CreateItem = () => {
                               <div className="flex space-x-2">
                                 <button
                                   onClick={() => handleEditItem(item)}
-                                  className="text-blue-600 hover:text-blue-900"
+                                    className="btn-gradient-primary px-2 py-1 text-xs"
                                 >
                                   Edit
                                 </button>
                                 <button
                                   onClick={() => handleDeleteItem(item._id)}
-                                  className="text-red-600 hover:text-red-900"
+                                    className="btn-gradient-danger px-2 py-1 text-xs"
                                 >
                                   Delete
                                 </button>
@@ -833,6 +847,7 @@ const CreateItem = () => {
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>

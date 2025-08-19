@@ -14,6 +14,7 @@ const itemSchema = new mongoose.Schema({
   tax: { type: mongoose.Schema.Types.ObjectId, ref: "Tax" },
   assignBranch: [{ type: mongoose.Schema.Types.ObjectId, ref: "Branch" }],
   assignBrand: { type: mongoose.Schema.Types.ObjectId, ref: "Brand" },
+  assignSection: { type: mongoose.Schema.Types.ObjectId, ref: "Section" }, // Added section field
   image: { type: mongoose.Schema.Types.ObjectId, ref: "Image" },
   departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "departments" }],
   unit: { type: mongoose.Schema.Types.ObjectId, ref: "Unit", required: true },
