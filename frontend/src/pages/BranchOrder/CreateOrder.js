@@ -36,7 +36,7 @@ const CreateOrder = () => {
 
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSectionFilter, setSelectedSectionFilter] = useState('');
+  const [selectedSectionFilter, setSelectedSectionFilter] = useState([]); // Changed to array for multiple selection
   const [branchSearchTerm, setBranchSearchTerm] = useState('');
 
   // Subcategory selection modal state
@@ -192,10 +192,10 @@ const CreateOrder = () => {
         }));
       
       // Section filter - show all items if no section selected, otherwise filter by section
-      const matchesSection = !selectedSectionFilter || selectedSectionFilter === '' || 
-        (item.assignSection && item.assignSection._id === selectedSectionFilter) ||
-        (item.section && item.section._id === selectedSectionFilter) ||
-        (item.sectionId && item.sectionId === selectedSectionFilter);
+      const matchesSection = !selectedSectionFilter || selectedSectionFilter.length === 0 || 
+        (item.assignSection && selectedSectionFilter.some(sectionId => sectionId === item.assignSection._id)) ||
+        (item.section && selectedSectionFilter.some(sectionId => sectionId === item.section._id)) ||
+        (item.sectionId && selectedSectionFilter.some(sectionId => sectionId === item.sectionId));
       
       // Search filter
       const matchesSearch = !searchTerm || 
@@ -225,14 +225,28 @@ const CreateOrder = () => {
     setShowOrderModal(true);
   };
 
-
-
+  // Helper function to handle section filter changes
+  const handleSectionFilterChange = (sectionId, checked) => {
+    if (sectionId === 'all') {
+      // "All Sections" checkbox
+      setSelectedSectionFilter([]); // Empty array means all sections
+    } else {
+      // Individual section checkbox
+      if (checked) {
+        setSelectedSectionFilter(prev => [...prev, sectionId]);
+      } else {
+        setSelectedSectionFilter(prev => prev.filter(id => id !== sectionId));
+      }
+    }
+  };
 
 
   const doSubmit = async (finalStatus) => {
+    console.log('doSubmit called with status:', finalStatus);
     try {
       // Additional validation
       if (!selectedBranch?.name) {
+        console.log('Validation failed: Missing branch information');
         throw new Error('Missing required branch information');
       }
       
@@ -263,6 +277,8 @@ const CreateOrder = () => {
 
       const response = await axios.post(`${backend_url}/orders`, payload, { headers });
       
+      console.log('Order submission response:', response.data);
+      
       if (response.data) {
         setSubmitSuccess(`Order ${finalStatus === 'Draft' ? 'saved as draft' : 'submitted for approval'} successfully!`);
         setTimeout(() => {
@@ -277,19 +293,24 @@ const CreateOrder = () => {
   };
 
   const onSaveDraft = () => {
+    console.log('Save as Draft button clicked');
     setPendingAction('draft');
     setShowConfirm(true);
   };
 
   const onSubmitForApproval = () => {
+    console.log('Review Order button clicked');
     setPendingAction('approval');
     setShowConfirm(true);
   };
 
   const confirmAction = () => {
+    console.log('Confirm action called with pendingAction:', pendingAction);
+    
     // Validate required data before submitting
     
     if (!selectedBranch) {
+      console.log('Validation failed: No branch selected');
       setSubmitError('Please ensure branch is selected.');
       setShowConfirm(false);
       setPendingAction('');
@@ -297,6 +318,7 @@ const CreateOrder = () => {
     }
     
     if (Object.keys(selectedItems).length === 0) {
+      console.log('Validation failed: No items selected');
       setSubmitError('Please select at least one item.');
       setShowConfirm(false);
       setPendingAction('');
@@ -306,6 +328,7 @@ const CreateOrder = () => {
     // Check if any items have quantity > 0
     const validItems = Object.values(selectedItems).filter(item => item && item.qty > 0);
     if (validItems.length === 0) {
+      console.log('Validation failed: No items with quantity > 0');
       setSubmitError('Please ensure at least one item has quantity greater than 0.');
       setShowConfirm(false);
       setPendingAction('');
@@ -314,12 +337,14 @@ const CreateOrder = () => {
     
     // Validate schedule date when order type is Schedule
     if (orderType === 'Schedule' && !scheduleDate) {
+      console.log('Validation failed: No schedule date for scheduled order');
       setSubmitError('Please select a schedule date for scheduled orders.');
       setShowConfirm(false);
       setPendingAction('');
       return;
     }
     
+    console.log('Validation passed, submitting order...');
     const finalStatus = pendingAction === 'draft' ? 'Draft' : 'Under Review';
     doSubmit(finalStatus);
     setShowConfirm(false);
@@ -346,7 +371,7 @@ const CreateOrder = () => {
         allSelected[item._id] = { 
           qty: 1, 
           item,
-          subCategory: '' // Initialize empty subcategory
+          subCategory: item?.subCategory?._id || item?.subCategory || '' // Automatically include the item's subcategory
         };
       });
       setSelectedItems(allSelected);
@@ -370,7 +395,7 @@ const CreateOrder = () => {
         [item._id]: { 
           qty: 1, 
           item: { ...item }, // Create a copy to ensure it's preserved
-          subCategory: '' // Initialize empty subcategory
+          subCategory: item?.subCategory?._id || item?.subCategory || '' // Automatically include the item's subcategory
         }
       }));
     }
@@ -394,7 +419,7 @@ const CreateOrder = () => {
             [itemId]: { 
               qty: newQty,
               item: { ...item },
-              subCategory: currentItem?.subCategory || '' // Preserve existing subcategory if any
+              subCategory: item?.subCategory?._id || item?.subCategory || '' // Automatically include the item's subcategory
             }
           };
         }
@@ -576,7 +601,7 @@ const CreateOrder = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden relative">
               {/* Header */}
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 border-b border-gray-200 rounded-t-xl">
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 border-b border-gray-200 rounded-t-xl relative z-20">
                 <div className="flex justify-between items-center">
                   <div>
                     <h2 className="text-2xl font-bold text-white flex items-center">
@@ -592,6 +617,7 @@ const CreateOrder = () => {
                   <button
                     onClick={closeModal}
                     className="text-white hover:text-blue-200 text-2xl font-bold transition-colors duration-200"
+                    type="button"
                   >
                     ×
                   </button>
@@ -688,18 +714,39 @@ const CreateOrder = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Filter by Section
                       </label>
-                      <select
-                        value={selectedSectionFilter}
-                        onChange={(e) => setSelectedSectionFilter(e.target.value)}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">All Sections</option>
-                        {allSections.map(section => (
-                          <option key={section._id} value={section._id}>
-                            {section.nameEn || section.name || 'Unknown Section'}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white">
+                        <div className="space-y-2">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedSectionFilter.length === 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSectionFilter([]); // Select all (empty array means all sections)
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700 font-medium">All Sections</span>
+                          </label>
+                          {allSections.map(section => (
+                            <label key={section._id} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedSectionFilter.includes(section._id)}
+                                onChange={(e) => handleSectionFilterChange(section._id, e.target.checked)}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{section.nameEn || section.name || 'Unknown Section'}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      {selectedSectionFilter.length > 0 && (
+                        <div className="mt-2 text-xs text-gray-500">
+                          Selected: {selectedSectionFilter.length} section{selectedSectionFilter.length !== 1 ? 's' : ''}
+                        </div>
+                      )}
                     </div>
 
 
@@ -720,7 +767,7 @@ const CreateOrder = () => {
                             allSelected[item._id] = { 
                               qty: 1, 
                               item,
-                              subCategory: '' // Initialize empty subcategory
+                              subCategory: item?.subCategory?._id || item?.subCategory || '' // Automatically include the item's subcategory
                             };
                           });
                           setSelectedItems(allSelected);
@@ -762,9 +809,9 @@ const CreateOrder = () => {
                   {/* Items Table */}
                   <div className="flex-1 overflow-y-auto">
                     <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50 sticky top-0">
+                      <thead className="bg-gradient-to-r from-blue-600 to-purple-600 sticky top-0">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12">
                             <input 
                               type="checkbox" 
                               onChange={handleSelectAll}
@@ -772,22 +819,22 @@ const CreateOrder = () => {
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Item Code
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Item Name
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Category
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Sub Category
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Unit
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                             Quantity
                           </th>
                         </tr>
@@ -814,32 +861,9 @@ const CreateOrder = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {item?.category?.nameEn || item?.category?.name || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                               <button
-                                 onClick={async () => {
-                                   setSelectedItemForSubCategory(item);
-                                   setShowSubCategoryModal(true);
-                                   
-                                   // Fetch subcategories for this item's category
-                                   const categoryId = item?.category?._id || item?.category;
-                                   if (categoryId) {
-                                     const subCategories = await fetchSubCategoriesForCategory(categoryId);
-                                     setSubCategoriesForModal(subCategories);
-                                   } else {
-                                     setSubCategoriesForModal([]);
-                                   }
-                                 }}
-                                 className="w-full bg-gray-200 text-gray-800 px-2 py-1 rounded-md text-sm font-medium hover:bg-gray-300"
-                               >
-                                 {(() => {
-                                   const selectedSubCategoryId = selectedItems[item._id]?.subCategory;
-                                   if (!selectedSubCategoryId) return 'Select Subcategory';
-                                   // Find the subcategory in all subcategories (not just modal's)
-                                   const subCategory = allSubCategories.find(sub => sub._id === selectedSubCategoryId);
-                                   return subCategory ? (subCategory.nameEn || subCategory.name) : 'Select Subcategory';
-                                 })()}
-                               </button>
-                             </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {item?.subCategory?.nameEn || item?.subCategory?.name || '-'}
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {item?.unit?.name || item?.baseUnit?.name || '-'}
                             </td>
@@ -896,7 +920,7 @@ const CreateOrder = () => {
               </div>
 
               {/* Footer */}
-              <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="p-6 border-t border-gray-200 bg-gray-50 relative z-10">
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-600">
                     {submitError && <div className="text-red-600">{submitError}</div>}
@@ -905,21 +929,24 @@ const CreateOrder = () => {
                   <div className="flex space-x-3">
                     <button 
                       onClick={closeModal} 
-                      className="btn-gradient-secondary px-6 py-2"
+                      className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
+                      type="button"
                     >
                       Cancel
                     </button>
                     <button 
                       onClick={onSaveDraft} 
-                      className="btn-gradient-warning px-6 py-2"
+                      className="px-6 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors font-medium"
                       disabled={selectedItemsCount === 0}
+                      type="button"
                     >
                       Save as Draft
                     </button>
                     <button 
                       onClick={onSubmitForApproval} 
-                      className="btn-gradient-success px-6 py-2"
+                      className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors font-medium"
                       disabled={selectedItemsCount === 0}
+                      type="button"
                     >
                       Review Order
                     </button>
@@ -932,7 +959,7 @@ const CreateOrder = () => {
 
         {/* Confirmation Modal */}
         {showConfirm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9998] backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] overflow-y-auto relative">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 border-b border-gray-200 rounded-t-xl">
                 <h3 className="text-xl font-semibold text-white flex items-center">
@@ -1005,14 +1032,14 @@ const CreateOrder = () => {
 
                   <div className="overflow-x-auto">
                     <table className="min-w-full border border-gray-200 rounded-lg">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Code</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Sub Category</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Order Qty</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Item Code</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Item Name</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Category</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Sub Category</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Unit</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-white uppercase">Order Qty</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1099,6 +1126,7 @@ const CreateOrder = () => {
                   <button 
                     onClick={() => setShowConfirm(false)} 
                     className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium"
+                    type="button"
                   >
                     Cancel
                   </button>
@@ -1106,9 +1134,10 @@ const CreateOrder = () => {
                     onClick={confirmAction} 
                     className={`px-8 py-3 text-white rounded-xl font-semibold text-lg transition-all duration-300 transform hover:scale-105 ${
                       pendingAction === 'draft' 
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl' 
-                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
+                        ? 'bg-blue-500 hover:bg-blue-600 shadow-lg hover:shadow-xl' 
+                        : 'bg-green-500 hover:bg-green-600 shadow-lg hover:shadow-xl'
                     }`}
+                    type="button"
                   >
                     {pendingAction === 'draft' ? 'Yes' : 'Send to Central Kitchen (CK)'}
                   </button>

@@ -82,16 +82,19 @@ const OrderSubmission = () => {
 
 
 
-  const sendToCK = async () => {
-    if (!activeOrder?._id) return;
+  const sendToCK = async (order = null) => {
+    const targetOrder = order || activeOrder;
+    if (!targetOrder?._id) return;
     try {
       setSaving(true);
       // Update straight to 'Shipped' so it appears in Receiving Orders page
-      const payload = { ...activeOrder, status: 'Shipped' };
-      await apiService.orders.update(activeOrder._id, payload);
+      const payload = { ...targetOrder, status: 'Shipped' };
+      await apiService.orders.update(targetOrder._id, payload);
       // Remove from current view since it's no longer Under Review
-      setOrders(prev => prev.filter(o => o._id !== activeOrder._id));
-      closeModal();
+      setOrders(prev => prev.filter(o => o._id !== targetOrder._id));
+      if (!order) {
+        closeModal(); // Only close modal if called from modal
+      }
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to send to CK');
     } finally {
@@ -183,12 +186,14 @@ const OrderSubmission = () => {
                         >
                           View
                         </button>
-                        <button
-                          onClick={() => openEditModal(order)}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                        >
-                          Edit
-                        </button>
+                        {order.status === 'Under Review' && (
+                          <button
+                            onClick={() => openEditModal(order)}
+                            className="px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 text-sm"
+                          >
+                            Edit
+                          </button>
+                        )}
                         {order.status === 'Draft' && (
                           <button
                             onClick={() => changeToUnderReview(order)}
@@ -196,6 +201,15 @@ const OrderSubmission = () => {
                             className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:bg-gray-400 text-sm"
                           >
                             {saving ? 'Processing...' : 'Send to Review'}
+                          </button>
+                        )}
+                        {order.status === 'Under Review' && (
+                          <button
+                            onClick={() => sendToCK(order)}
+                            disabled={saving}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 text-sm"
+                          >
+                            {saving ? 'Processing...' : 'Send to Central Kitchen'}
                           </button>
                         )}
                       </div>
