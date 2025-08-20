@@ -39,71 +39,9 @@ const CreateOrder = () => {
   const [selectedSectionFilter, setSelectedSectionFilter] = useState([]); // Changed to array for multiple selection
   const [branchSearchTerm, setBranchSearchTerm] = useState('');
 
-  // Subcategory selection modal state
-  const [showSubCategoryModal, setShowSubCategoryModal] = useState(false);
-  const [selectedItemForSubCategory, setSelectedItemForSubCategory] = useState(null);
-  const [subCategoriesForModal, setSubCategoriesForModal] = useState([]);
-  const [loadingSubCategories, setLoadingSubCategories] = useState(false);
-  const [allSubCategories, setAllSubCategories] = useState([]);
-
   const generateOrderNo = () => {
     const now = new Date();
     return `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${Math.floor(Math.random() * 900 + 100)}`;
-  };
-
-  // Function to fetch subcategories for a specific category
-  const fetchSubCategoriesForCategory = async (categoryId) => {
-    try {
-      setLoadingSubCategories(true);
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
-      const response = await axios.get(`${backend_url}/item-categories/subcategories/${categoryId}`, { headers });
-      console.log('Fetched subcategories for category:', categoryId, response.data);
-      
-      // Store subcategories globally
-      setAllSubCategories(prev => {
-        const existing = prev.filter(sub => sub.category !== categoryId);
-        return [...existing, ...response.data];
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching subcategories for category:', categoryId, error);
-      return [];
-    } finally {
-      setLoadingSubCategories(false);
-    }
-  };
-
-  // Function to fetch all subcategories
-  const fetchAllSubCategories = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
-      // Get all categories first
-      const categoriesResponse = await axios.get(`${backend_url}/item-categories`, { headers });
-      const categories = categoriesResponse.data || [];
-      
-      // Fetch subcategories for each category
-      const allSubs = [];
-      for (const category of categories) {
-        if (category._id) {
-          try {
-            const subResponse = await axios.get(`${backend_url}/item-categories/subcategories/${category._id}`, { headers });
-            allSubs.push(...(subResponse.data || []));
-          } catch (error) {
-            console.error('Error fetching subcategories for category:', category._id, error);
-          }
-        }
-      }
-      
-      setAllSubCategories(allSubs);
-      console.log('Loaded all subcategories:', allSubs);
-    } catch (error) {
-      console.error('Error fetching all subcategories:', error);
-    }
   };
 
   // Fetch reference data
@@ -134,9 +72,6 @@ const CreateOrder = () => {
         setAllBranches(Array.isArray(branchesRes.data) ? branchesRes.data : []);
         setAllSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
         setCategories(Array.isArray(categoriesRes.data) ? categoriesRes.data.filter(cat => cat && cat._id) : []);
-        
-        // Fetch all subcategories
-        await fetchAllSubCategories();
         
         // Debug logging
         console.log('Loaded categories:', categoriesRes.data);
@@ -466,19 +401,7 @@ const CreateOrder = () => {
   const getSubCategoryName = (subCategoryId) => {
     if (!subCategoryId) return '-';
     
-    // First try to find in the modal's subcategories (most recent)
-    const modalSubCategory = subCategoriesForModal.find(sub => sub._id === subCategoryId);
-    if (modalSubCategory) {
-      return modalSubCategory.nameEn || modalSubCategory.name;
-    }
-    
-    // Try to find in global subcategories
-    const globalSubCategory = allSubCategories.find(sub => sub._id === subCategoryId);
-    if (globalSubCategory) {
-      return globalSubCategory.nameEn || globalSubCategory.name;
-    }
-    
-    // If not found, return the ID as fallback
+    // For now, just return the ID as we're not using subcategory selection
     return subCategoryId;
   };
 
@@ -1140,92 +1063,6 @@ const CreateOrder = () => {
                     type="button"
                   >
                     {pendingAction === 'draft' ? 'Yes' : 'Send to Central Kitchen (CK)'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Subcategory Selection Modal */}
-        {showSubCategoryModal && selectedItemForSubCategory && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100">
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-2xl">
-                <h3 className="text-xl font-bold text-white flex items-center">
-                  <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                  Select Subcategory
-                </h3>
-                <p className="text-blue-100 mt-2">
-                  {selectedItemForSubCategory?.nameEn || selectedItemForSubCategory?.name || 'Unknown Item'}
-                </p>
-                <p className="text-blue-200 text-sm mt-1">
-                  Category: {selectedItemForSubCategory?.category?.nameEn || selectedItemForSubCategory?.category?.name || 'Unknown'}
-                </p>
-              </div>
-              
-              <div className="p-6">
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {loadingSubCategories ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      <p className="text-gray-500 mt-2">Loading subcategories...</p>
-                    </div>
-                  ) : subCategoriesForModal.length > 0 ? (
-                    subCategoriesForModal.map(subCategory => (
-                      <button
-                        key={subCategory._id}
-                        onClick={() => {
-                          if (!selectedItemForSubCategory?._id) return;
-                          setSelectedItems(prev => ({
-                            ...prev,
-                            [selectedItemForSubCategory._id]: { 
-                              ...prev[selectedItemForSubCategory._id], 
-                              subCategory: subCategory._id 
-                            }
-                          }));
-                          setShowSubCategoryModal(false);
-                          setSelectedItemForSubCategory(null);
-                        }}
-                        className="w-full text-left p-4 border-2 border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-400 hover:shadow-md transition-all duration-200 transform hover:scale-105"
-                      >
-                        <div className="font-medium text-gray-900">
-                          {subCategory.nameEn || subCategory.name}
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">No subcategories found for this category</p>
-                      <button
-                        onClick={() => {
-                          console.log('Debug: Show subcategories info');
-                          console.log('Item:', selectedItemForSubCategory);
-                          console.log('Item category:', selectedItemForSubCategory?.category);
-                          console.log('Fetched subcategories:', subCategoriesForModal);
-                        }}
-                        className="mt-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 text-sm font-medium shadow-lg hover:shadow-xl transition-all duration-200"
-                      >
-                        Debug: Show All Subcategories
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="p-6 border-t border-gray-200">
-                <div className="flex justify-end space-x-3">
-                  <button
-                    onClick={() => {
-                      setShowSubCategoryModal(false);
-                      setSelectedItemForSubCategory(null);
-                      setSubCategoriesForModal([]);
-                    }}
-                    className="px-6 py-3 border-2 border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-gray-400 font-medium transition-all duration-200"
-                  >
-                    Cancel
                   </button>
                 </div>
               </div>
