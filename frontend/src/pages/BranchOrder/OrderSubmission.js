@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import ResponsiveTable from '../../components/ResponsiveTable';
-import ResponsiveModal from '../../components/ResponsiveModal';
 import axios from 'axios';
 import backend_url from '../../config/config';
 
@@ -27,7 +25,6 @@ const OrderSubmission = () => {
   const [allBranches, setAllBranches] = useState([]);
   const [allSections, setAllSections] = useState([]);
   const [allItems, setAllItems] = useState([]);
-  const [filteredSections, setFilteredSections] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSectionFilter, setSelectedSectionFilter] = useState([]);
@@ -79,36 +76,7 @@ const OrderSubmission = () => {
     fetchFormData();
   }, []);
 
-  // Filter sections based on selected branch
-  useEffect(() => {
-    if (editingOrder?.selectedBranch) {
-      const branchSections = allSections.filter(section => {
-        const sectionBranch = section.branch;
-        const sectionBranchId = section.branchId;
-        const sectionBranches = section.branches;
-        
-        if (sectionBranch === editingOrder.selectedBranch._id || sectionBranch === editingOrder.selectedBranch) {
-          return true;
-        }
-        if (sectionBranchId === editingOrder.selectedBranch._id || sectionBranchId === editingOrder.selectedBranch) {
-          return true;
-        }
-        if (Array.isArray(sectionBranches) && sectionBranches.includes(editingOrder.selectedBranch._id || editingOrder.selectedBranch)) {
-          return true;
-        }
-        if (sectionBranch && typeof sectionBranch === 'object' && sectionBranch._id === editingOrder.selectedBranch._id) {
-          return true;
-        }
-        if (sectionBranchId && typeof sectionBranchId === 'object' && sectionBranchId._id === editingOrder.selectedBranch._id) {
-          return true;
-        }
-        return false;
-      });
-      setFilteredSections(branchSections);
-    } else {
-      setFilteredSections(allSections);
-    }
-  }, [editingOrder?.selectedBranch, allSections]);
+
 
   // Filter items for edit modal
   useEffect(() => {
@@ -322,7 +290,7 @@ const OrderSubmission = () => {
         setSelectedItems(newSelectedItems);
       }
     }
-  }, [editModalOpen, editingOrder?.items, filteredItems]);
+  }, [editModalOpen, editingOrder, editingOrder?.items, filteredItems, selectedItems]);
 
   const openModal = (order) => {
     setActiveOrder(order);

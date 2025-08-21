@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { MasterAdminOnly } from '../../components/PermissionGuard';
-import { useAuth } from '../../context/AuthContext';
 
 const OrderHistoryTracking = () => {
-  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,12 +13,8 @@ const OrderHistoryTracking = () => {
     dateTo: '',
     searchTerm: ''
   });
-  const [branches, setBranches] = useState([]);
   const [showOrderModal, setShowOrderModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-
-  // Check if user is master admin
-  const isMasterAdmin = user?.role === 'master admin';
+  const [selectedOrder] = useState(null);
 
   useEffect(() => {
     fetchOrders();
@@ -70,11 +64,6 @@ const OrderHistoryTracking = () => {
   }) : [];
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
-
-  const handleViewOrder = (order) => {
-    setSelectedOrder(order);
-    setShowOrderModal(true);
-  };
 
   if (loading) {
     return (
