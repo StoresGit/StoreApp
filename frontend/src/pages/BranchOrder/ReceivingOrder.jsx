@@ -234,7 +234,7 @@ const ReceivingOrder = () => {
             <div className="bg-white rounded-lg p-6 max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">Receive Order: {selectedOrder.orderNo}</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Receive Order: {selectedOrder.orderNo}</h2>
                   <p className="text-sm text-gray-600 mt-1">
                     Branch: {selectedOrder.branch || 'N/A'} • Delivery: {selectedOrder.deliveryDate ? new Date(selectedOrder.deliveryDate).toLocaleDateString() : 'Not set'}
                   </p>
@@ -298,7 +298,7 @@ const ReceivingOrder = () => {
                                 placeholder="Notes..."
                               />
                             </td>
-                          </tr>
+                        </tr>
                         );
                       })}
                     </tbody>

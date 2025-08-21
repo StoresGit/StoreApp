@@ -28,6 +28,7 @@ const CreateOrder = () => {
   const [allSections, setAllSections] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
@@ -350,7 +351,7 @@ const CreateOrder = () => {
           }
           
           return {
-            ...prev,
+        ...prev,
             [itemId]: { 
               qty: newQty,
               item: { ...item },
@@ -401,8 +402,33 @@ const CreateOrder = () => {
   const getSubCategoryName = (subCategoryId) => {
     if (!subCategoryId) return '-';
     
-    // For now, just return the ID as we're not using subcategory selection
-    return subCategoryId;
+    // If subCategoryId is already a string (name), return it
+    if (typeof subCategoryId === 'string' && !subCategoryId.includes('(')) {
+      return subCategoryId;
+    }
+    
+    // If it's an object with name properties, return the name
+    if (typeof subCategoryId === 'object' && subCategoryId !== null) {
+      return subCategoryId.nameEn || subCategoryId.name || subCategoryId._id || '-';
+    }
+    
+    // If it's an ID, try to find the subcategory in categories
+    if (typeof subCategoryId === 'string') {
+      // Look for subcategory in categories
+      for (const category of categories) {
+        if (category.subCategories && Array.isArray(category.subCategories)) {
+          const subCategory = category.subCategories.find(sub => sub._id === subCategoryId);
+          if (subCategory) {
+            return subCategory.nameEn || subCategory.name || subCategory._id || '-';
+          }
+        }
+      }
+      
+      // If not found in categories, return a cleaned version of the ID
+      return subCategoryId.replace(/[()]/g, '') || '-';
+    }
+    
+    return '-';
   };
 
 
@@ -456,7 +482,7 @@ const CreateOrder = () => {
             </div>
                           <div className="space-y-4">
                 {/* Search Bar */}
-                <div className="relative">
+            <div className="relative">
                   <input
                     type="text"
                     placeholder="Search branches..."
@@ -473,9 +499,9 @@ const CreateOrder = () => {
                 <div className="max-h-80 overflow-y-auto border-2 border-blue-200 rounded-xl bg-white shadow-sm">
                   {filteredBranches.length > 0 ? (
                     filteredBranches.map(branch => (
-                      <button
-                        key={branch._id}
-                        onClick={() => handleBranchSelect(branch)}
+                    <button
+                      key={branch._id}
+                      onClick={() => handleBranchSelect(branch)}
                         className={`w-full text-left p-4 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0 transition-all duration-200 ${
                           selectedBranch?._id === branch._id ? 'bg-blue-100 border-blue-300' : ''
                         }`}
@@ -486,21 +512,21 @@ const CreateOrder = () => {
                               <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                             </svg>
                             <span className="font-medium text-gray-900">{branch.name}</span>
-                          </div>
+                </div>
                           {selectedBranch?._id === branch._id && (
                             <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
-                          )}
-                        </div>
+              )}
+            </div>
                       </button>
                     ))
                   ) : (
                     <div className="p-6 text-center text-gray-500">
                       {branchSearchTerm ? 'No branches found matching your search.' : 'No branches available.'}
-                    </div>
+          </div>
                   )}
-                </div>
+        </div>
 
                 {/* Selected Branch Display */}
                 {selectedBranch && (
@@ -511,8 +537,8 @@ const CreateOrder = () => {
                       </svg>
                       <span className="font-semibold text-green-800">Selected: {selectedBranch.name}</span>
                     </div>
-                  </div>
-                )}
+          </div>
+        )}
               </div>
           </div>
         </div>
@@ -786,7 +812,7 @@ const CreateOrder = () => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {item?.subCategory?.nameEn || item?.subCategory?.name || '-'}
-                            </td>
+                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                               {item?.unit?.name || item?.baseUnit?.name || '-'}
                             </td>
@@ -987,56 +1013,56 @@ const CreateOrder = () => {
                             (selectedItem?.item?.subCategory?.nameEn || selectedItem?.item?.subCategory?.name || '-');
                           
                           return (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="px-4 py-2 text-sm text-gray-900">
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-4 py-2 text-sm text-gray-900">
                                 <input 
                                   type="text" 
                                   value={selectedItem?.item?.itemCode || selectedItem?.item?.code || '-'} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-900 text-sm"
                                 />
-                              </td>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                            </td>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
                                 <input 
                                   type="text" 
                                   value={selectedItem?.item?.nameEn || selectedItem?.item?.name || 'Unknown Item'} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-900 text-sm font-medium"
                                 />
-                              </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500">
                                 <input 
                                   type="text" 
                                   value={selectedItem?.item?.category?.nameEn || selectedItem?.item?.category?.name || '-'} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-500 text-sm"
                                 />
-                              </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500">
                                 <input 
                                   type="text" 
                                   value={subCategoryName} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-500 text-sm"
                                 />
-                              </td>
-                              <td className="px-4 py-2 text-sm text-gray-500">
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500">
                                 <input 
                                   type="text" 
                                   value={selectedItem?.item?.unit?.name || selectedItem?.item?.baseUnit?.name || '-'} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-500 text-sm"
                                 />
-                              </td>
-                              <td className="px-4 py-2 text-sm font-medium text-gray-900">
+                            </td>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-900">
                                 <input 
                                   type="number" 
                                   value={selectedItem.qty} 
                                   readOnly 
                                   className="w-full bg-gray-100 border-none text-gray-900 text-sm font-medium"
                                 />
-                              </td>
-                            </tr>
+                            </td>
+                          </tr>
                           );
                         })}
                       </tbody>
@@ -1062,14 +1088,14 @@ const CreateOrder = () => {
                     }`}
                     type="button"
                   >
-                    {pendingAction === 'draft' ? 'Yes' : 'Send to Central Kitchen (CK)'}
+                    {pendingAction === 'draft' ? 'Yes' : 'Submit Order'}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         )}
-        </div>
+              </div>
       </div>
     </MasterAdminOnly>
   );

@@ -20,9 +20,13 @@ const ResponsiveTable = ({
 
   // Sort data
   const sortedData = React.useMemo(() => {
-    if (!sortConfig.key) return data;
+    // Filter out undefined/null items first
+    const validData = data.filter(item => item != null);
     
-    return [...data].sort((a, b) => {
+    if (!sortConfig.key) return validData;
+    
+    return [...validData].sort((a, b) => {
+      if (!a || !b) return 0; // Handle undefined items
       const aValue = a[sortConfig.key];
       const bValue = b[sortConfig.key];
       
@@ -114,6 +118,8 @@ const ResponsiveTable = ({
   };
 
   const renderActions = (item) => {
+    if (!item) return []; // Return empty array if item is undefined
+    
     const actions = [];
     
     if (onView) {
@@ -121,10 +127,10 @@ const ResponsiveTable = ({
         <button
           key="view"
           onClick={() => onView(item)}
-          className="text-blue-600 hover:text-blue-800 p-1 rounded"
+          className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
           title="View"
         >
-          👁️
+          View
         </button>
       );
     }
@@ -134,10 +140,10 @@ const ResponsiveTable = ({
         <button
           key="edit"
           onClick={() => onEdit(item)}
-          className="text-green-600 hover:text-green-800 p-1 rounded"
+          className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors"
           title="Edit"
         >
-          ✏️
+          Edit
         </button>
       );
     }
@@ -147,10 +153,10 @@ const ResponsiveTable = ({
         <button
           key="delete"
           onClick={() => onDelete(item._id || item.id)}
-          className="text-red-600 hover:text-red-800 p-1 rounded"
+          className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
           title="Delete"
         >
-          🗑️
+          Delete
         </button>
       );
     }
@@ -160,7 +166,7 @@ const ResponsiveTable = ({
         <button
           key={`custom-${index}`}
           onClick={() => action.onClick(item)}
-          className={`${action.className || 'text-gray-600 hover:text-gray-800'} p-1 rounded`}
+          className={`${action.className || 'px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 transition-colors'} p-1 rounded`}
           title={action.title}
         >
           {action.icon}
@@ -172,6 +178,7 @@ const ResponsiveTable = ({
   };
 
   const renderMobileCard = (item, index) => {
+    if (!item) return null; // Skip undefined items
     if (mobileCardRender) {
       return mobileCardRender(item, index);
     }
@@ -180,9 +187,9 @@ const ResponsiveTable = ({
       <div key={item._id || item.id || index} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
         {columns.map((column, colIndex) => (
           <div key={colIndex} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
-            <span className="text-sm font-medium text-gray-600">{column.header}</span>
+            <span className="text-sm font-medium text-gray-600">{column.header || column.label}</span>
             <span className="text-sm text-gray-900">
-              {column.render ? column.render(item) : item[column.key]}
+              {column.render ? column.render(item) : (item[column.key] || 'N/A')}
             </span>
           </div>
         ))}
@@ -255,22 +262,25 @@ const ResponsiveTable = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedData.map((item, index) => (
-              <tr key={item._id || item.id || index} className="hover:bg-gray-50">
-                {columns.map((column, colIndex) => (
-                  <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {column.render ? column.render(item) : item[column.key]}
-                  </td>
-                ))}
-                {showActions && (
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex space-x-2">
-                      {renderActions(item)}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
+            {paginatedData.map((item, index) => {
+              if (!item) return null; // Skip undefined items
+              return (
+                <tr key={item._id || item.id || index} className="hover:bg-gray-50">
+                  {columns.map((column, colIndex) => (
+                    <td key={colIndex} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {column.render ? column.render(item) : (item[column.key] || 'N/A')}
+                    </td>
+                  ))}
+                  {showActions && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex space-x-2">
+                        {renderActions(item)}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -278,7 +288,10 @@ const ResponsiveTable = ({
       {/* Mobile Cards */}
       <div className="md:hidden p-4">
         {paginatedData.length > 0 ? (
-          paginatedData.map((item, index) => renderMobileCard(item, index))
+          paginatedData.map((item, index) => {
+            if (!item) return null; // Skip undefined items
+            return renderMobileCard(item, index);
+          })
         ) : (
           <div className="text-center py-8">
             <p className="text-gray-500">No data available</p>

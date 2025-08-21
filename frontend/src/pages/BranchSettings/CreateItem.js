@@ -81,39 +81,65 @@ const CreateItem = () => {
 
   // Filter sections when branch changes
   useEffect(() => {
-    if (formData.assignBranch.length === 0) {
+    const currentAssignBranch = editingItem ? editFormData.assignBranch : formData.assignBranch;
+    
+    console.log('Section filtering - editingItem:', editingItem);
+    console.log('Section filtering - currentAssignBranch:', currentAssignBranch);
+    console.log('Section filtering - all sections:', sections);
+    
+    if (!currentAssignBranch || currentAssignBranch.length === 0) {
       // If no branches selected, clear sections and section selection
+      console.log('No branches selected, clearing sections');
       setFilteredSections([]);
-      setFormData(prev => ({ ...prev, assignSection: '' }));
+      if (editingItem) {
+        setEditFormData(prev => ({ ...prev, assignSection: '' }));
+      } else {
+        setFormData(prev => ({ ...prev, assignSection: '' }));
+      }
     } else {
       // Filter sections based on selected branches - only show sections that belong to selected branches
-      const branchIds = formData.assignBranch;
+      const branchIds = currentAssignBranch;
+      console.log('Filtering sections for branch IDs:', branchIds);
+      
       const filtered = sections.filter(section => {
         // Check if section has a branch and if that branch is in the selected branches
-        if (!section.branch) return false;
+        if (!section.branch) {
+          console.log('Section has no branch:', section.name);
+          return false;
+        }
         
         // Handle both populated and unpopulated branch references
         const sectionBranchId = section.branch._id || section.branch;
-        return branchIds.includes(sectionBranchId);
+        const isMatch = branchIds.includes(sectionBranchId);
+        console.log(`Section ${section.name} branch ID: ${sectionBranchId}, matches: ${isMatch}`);
+        return isMatch;
       });
       
+      console.log('Filtered sections:', filtered);
       setFilteredSections(filtered);
       
       // Clear section selection if current section is not available for selected branches
-      if (formData.assignSection && !filtered.find(s => s._id === formData.assignSection)) {
-        setFormData(prev => ({ ...prev, assignSection: '' }));
+      const currentSection = editingItem ? editFormData.assignSection : formData.assignSection;
+      if (currentSection && !filtered.find(s => s._id === currentSection)) {
+        console.log('Current section not available, clearing selection');
+        if (editingItem) {
+          setEditFormData(prev => ({ ...prev, assignSection: '' }));
+        } else {
+          setFormData(prev => ({ ...prev, assignSection: '' }));
+        }
       }
     }
-  }, [formData.assignBranch, sections, formData.assignSection]);
+  }, [formData.assignBranch, editFormData.assignBranch, sections, editingItem, formData.assignSection, editFormData.assignSection]);
 
-  // Fetch subcategories when category changes
+  // Fetch subcategories when category changes (for both create and edit modes)
   useEffect(() => {
-    if (formData.itemCategory) {
-      fetchSubCategoriesForCategory(formData.itemCategory);
+    const currentCategory = editingItem ? editFormData.category : formData.itemCategory;
+    if (currentCategory) {
+      fetchSubCategoriesForCategory(currentCategory);
     } else {
       setSubCategories([]);
     }
-  }, [formData.itemCategory]);
+  }, [formData.itemCategory, editFormData.category, editingItem]);
 
   const fetchSubCategoriesForCategory = async (categoryId) => {
     try {
@@ -153,8 +179,11 @@ const CreateItem = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Use the appropriate data based on edit mode
+    const currentData = editingItem ? editFormData : formData;
+    
     // Client-side validation
-    if (!formData.itemName || !formData.itemCategory || !formData.unit || !formData.subCategory) {
+    if (!currentData.nameEn || !currentData.category || !currentData.unit || !currentData.subCategory) {
       alert('Please fill in all required fields: Item Name, Category, Unit, and Sub Category');
       return;
     }
@@ -164,14 +193,14 @@ const CreateItem = () => {
       const headers = { Authorization: `Bearer ${token}` };
       
       const itemData = {
-        nameEn: formData.itemName, // Backend expects nameEn
-        category: formData.itemCategory,
-        subCategory: formData.subCategory,
-        baseUnit: formData.unit, // Backend expects baseUnit
-        unit: formData.unit,
-        assignBranch: formData.assignBranch || [],
-        assignSection: formData.assignSection || null,
-        assignBrand: formData.assignBrand || null
+        nameEn: currentData.nameEn, // Backend expects nameEn
+        category: currentData.category,
+        subCategory: currentData.subCategory,
+        baseUnit: currentData.unit, // Backend expects baseUnit
+        unit: currentData.unit,
+        assignBranch: currentData.assignBranch || [],
+        assignSection: currentData.assignSection || null,
+        assignBrand: currentData.assignBrand || null
       };
 
       console.log('Submitting item data:', itemData);
@@ -199,6 +228,7 @@ const CreateItem = () => {
       });
       
       setEditingItem(null);
+      setEditFormData({});
       fetchItems(); // Refresh items list
     } catch (error) {
       console.error('Error saving item:', error);
@@ -224,8 +254,23 @@ const CreateItem = () => {
   };
 
   const handleEditItem = (item) => {
+    console.log('Editing item:', item);
+    console.log('Item branches:', item.assignBranch);
+    console.log('Item section:', item.assignSection);
+    
     setEditingItem(item);
     setEditFormData({
+      itemCode: item.itemCode || '',
+      nameEn: item.nameEn || item.name || '',
+      category: item.category?._id || '',
+      subCategory: item.subCategory?._id || '',
+      unit: item.unit?._id || item.baseUnit?._id || '',
+      assignBranch: item.assignBranch?.map(b => b._id || b) || [],
+      assignSection: item.assignSection?._id || '',
+      assignBrand: item.assignBrand?._id || ''
+    });
+    
+    console.log('Set edit form data:', {
       itemCode: item.itemCode || '',
       nameEn: item.nameEn || item.name || '',
       category: item.category?._id || '',
@@ -244,6 +289,7 @@ const CreateItem = () => {
 
   const handleCancelEdit = () => {
     setEditingItem(null);
+    setEditFormData({});
     setFormData({
       itemCode: '',
       itemName: '',
@@ -353,7 +399,7 @@ const CreateItem = () => {
               <input
                 type="text"
                 name="itemCode"
-                value="Auto-generated by system"
+                value={editingItem ? (editFormData.itemCode || 'Auto-generated by system') : 'Auto-generated by system'}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-600"
                 placeholder="Auto-generated by system"
                 readOnly
@@ -369,9 +415,9 @@ const CreateItem = () => {
               <input
                 type="text"
                 name="itemName"
-                value={formData.itemName}
-                onChange={handleInputChange}
-                  className="modern-input w-full"
+                value={editingItem ? editFormData.nameEn : formData.itemName}
+                onChange={editingItem ? handleEditInputChange : handleInputChange}
+                className="modern-input w-full"
                 placeholder="Enter item name"
                 required
               />
@@ -384,8 +430,8 @@ const CreateItem = () => {
               <div className="col-span-2">
                 <select
                   name="itemCategory"
-                  value={formData.itemCategory}
-                  onChange={handleInputChange}
+                  value={editingItem ? editFormData.category : formData.itemCategory}
+                  onChange={editingItem ? handleEditInputChange : handleInputChange}
                   className="modern-select w-full"
                 required
                 >
@@ -405,10 +451,10 @@ const CreateItem = () => {
             <div className="col-span-2">
               <select
                 name="subCategory"
-                value={formData.subCategory}
-                onChange={handleInputChange}
-                  className="modern-select w-full"
-                disabled={!formData.itemCategory}
+                value={editingItem ? editFormData.subCategory : formData.subCategory}
+                onChange={editingItem ? handleEditInputChange : handleInputChange}
+                className="modern-select w-full"
+                disabled={editingItem ? !editFormData.category : !formData.itemCategory}
               >
                 <option value="">Select Sub Category</option>
                 {subCategories.map((subCategory) => (
@@ -417,10 +463,10 @@ const CreateItem = () => {
                   </option>
                 ))}
               </select>
-              {!formData.itemCategory && (
+              {(editingItem ? !editFormData.category : !formData.itemCategory) && (
                 <p className="text-sm text-gray-500 mt-1">Please select a category first</p>
               )}
-              {formData.itemCategory && subCategories.length === 0 && (
+              {(editingItem ? editFormData.category : formData.itemCategory) && subCategories.length === 0 && (
                 <p className="text-sm text-gray-500 mt-1">No sub-categories available for this category</p>
               )}
             </div>
@@ -432,9 +478,9 @@ const CreateItem = () => {
             <div className="col-span-2">
               <select
                 name="unit"
-                value={formData.unit}
-                onChange={handleInputChange}
-                  className="modern-select w-full"
+                value={editingItem ? editFormData.unit : formData.unit}
+                onChange={editingItem ? handleEditInputChange : handleInputChange}
+                className="modern-select w-full"
                 required
               >
                 <option value="">Select Unit</option>
@@ -453,9 +499,9 @@ const CreateItem = () => {
             <div className="col-span-2">
               <select
                 name="assignBrand"
-                value={formData.assignBrand}
-                onChange={handleInputChange}
-                  className="modern-select w-full"
+                value={editingItem ? editFormData.assignBrand : formData.assignBrand}
+                onChange={editingItem ? handleEditInputChange : handleInputChange}
+                className="modern-select w-full"
               >
                 <option value="">Select Brand</option>
                 {brands.map((brand) => (
@@ -478,8 +524,8 @@ const CreateItem = () => {
                       type="checkbox"
                       name="assignBranch"
                       value={branch._id}
-                      checked={formData.assignBranch.includes(branch._id)}
-                      onChange={handleInputChange}
+                      checked={editingItem ? editFormData.assignBranch?.includes(branch._id) : formData.assignBranch.includes(branch._id)}
+                      onChange={editingItem ? handleEditInputChange : handleInputChange}
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-700">{branch.name}</span>
@@ -495,28 +541,28 @@ const CreateItem = () => {
             <div className="col-span-2">
               <select
                 name="assignSection"
-                value={formData.assignSection}
-                onChange={handleInputChange}
+                value={editingItem ? editFormData.assignSection : formData.assignSection}
+                onChange={editingItem ? handleEditInputChange : handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  disabled={formData.assignBranch.length === 0}
+                disabled={editingItem ? (editFormData.assignBranch?.length === 0) : (formData.assignBranch.length === 0)}
               >
-                  <option value="">
-                    {formData.assignBranch.length === 0 ? 'Select Branch First' : 'Select Section'}
-                  </option>
+                <option value="">
+                  {(editingItem ? editFormData.assignBranch?.length === 0 : formData.assignBranch.length === 0) ? 'Select Branch First' : 'Select Section'}
+                </option>
                 {filteredSections.map((section) => (
                   <option key={section._id} value={section._id}>
                     {section.name}
                   </option>
                 ))}
               </select>
-                {formData.assignBranch.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-1">Please select at least one branch first</p>
-                )}
-                {formData.assignBranch.length > 0 && filteredSections.length === 0 && (
-                  <p className="text-sm text-gray-500 mt-1">No sections available for selected branches</p>
-                )}
-              </div>
+              {(editingItem ? editFormData.assignBranch?.length === 0 : formData.assignBranch.length === 0) && (
+                <p className="text-sm text-gray-500 mt-1">Please select at least one branch first</p>
+              )}
+              {(editingItem ? editFormData.assignBranch?.length > 0 : formData.assignBranch.length > 0) && filteredSections.length === 0 && (
+                <p className="text-sm text-gray-500 mt-1">No sections available for selected branches</p>
+              )}
             </div>
+          </div>
 
             {/* Submit Buttons */}
             <div className="flex justify-end space-x-3 mt-6">
@@ -524,7 +570,7 @@ const CreateItem = () => {
                 <button 
                   type="button"
                   onClick={handleCancelEdit}
-                  className="btn-gradient-secondary px-6 py-2"
+                  className="px-6 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors font-medium"
                 >
                   Cancel Edit
                 </button>
@@ -593,7 +639,7 @@ const CreateItem = () => {
                           <div>
                             <span className="text-gray-500">Section:</span>
                             <span className="ml-1 text-gray-900">{item.assignSection?.nameEn || item.assignSection?.name || '-'}</span>
-                          </div>
+                        </div>
                         <div>
                           <span className="text-gray-500">Unit:</span>
                           <span className="ml-1 text-gray-900">{item.unit?.name || item.baseUnit?.name || '-'}</span>
@@ -601,7 +647,7 @@ const CreateItem = () => {
                         <div>
                           <span className="text-gray-500">Brand:</span>
                           <span className="ml-1 text-gray-900">{item.assignBrand?.nameEn || '-'}</span>
-                          </div>
+                        </div>
                           <div>
                             <span className="text-gray-500">Branch:</span>
                             <span className="ml-1 text-gray-900">
@@ -725,8 +771,8 @@ const CreateItem = () => {
                                 </select>
                               ) : (
                                 item.assignSection?.nameEn || item.assignSection?.name || '-'
-                              )}
-                            </td>
+                            )}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {editingItem === item._id ? (
                               <select

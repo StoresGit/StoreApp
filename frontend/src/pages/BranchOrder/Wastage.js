@@ -401,247 +401,236 @@ const Wastage = () => {
           </div>
         </div>
 
-        {/* Wastage Form - Grid Layout */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-lg backdrop-blur-sm bg-white/90">
-          <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-t-xl p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              <svg className="w-5 h-5 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+        {/* Wastage Form - Clean Layout */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-lg">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-xl p-6">
+            <h2 className="text-xl font-semibold text-white flex items-center">
+              <svg className="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
               Add New Wastage Record
             </h2>
           </div>
-          <form onSubmit={handleSubmit}>
+          
+          <form onSubmit={handleSubmit} className="p-6">
             {/* General Information Section */}
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
-              {/* Left Column */}
-              <div className="space-y-0">
-                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
-                   <div className="w-1/3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-r border-gray-200 flex items-center">
-                     <label className="text-sm font-medium text-gray-700 flex items-center">
-                       <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                         <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                       </svg>
-                       Select Branch
-                     </label>
-                  </div>
-                   <div className="w-2/3 p-4">
-                    <select
-                      name="branch"
-                      value={formData.branch}
-                      onChange={handleInputChange}
-                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-transparent text-gray-700 transition-all duration-200"
-                      required
-                    >
-                      <option value="">Select Branch</option>
-                      {branches.map(branch => (
-                        <option key={branch._id} value={branch._id}>
-                          {branch.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-                                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
-                   <div className="w-1/3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-r border-gray-200 flex items-center">
-                     <label className="text-sm font-medium text-gray-700 flex items-center">
-                       <svg className="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                       </svg>
-                       Event Date
-                     </label>
-                  </div>
-                   <div className="w-2/3 p-4">
-                    <input
-                      type="date"
-                      name="eventDate"
-                      value={formData.eventDate}
-                      onChange={handleInputChange}
-                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-green-500 bg-transparent text-gray-700 transition-all duration-200"
-                      required
-                    />
-                  </div>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* Branch Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  Select Branch
+                </label>
+                <select
+                  name="branch"
+                  value={formData.branch}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  required
+                >
+                  <option value="">Select Branch</option>
+                  {branches.map(branch => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Right Column */}
-              <div className="space-y-0">
-                 <div className="flex border-b border-gray-200 hover:bg-gray-50 transition-colors duration-200">
-                   <div className="w-1/3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border-r border-gray-200 flex items-center">
-                     <label className="text-sm font-medium text-gray-700 flex items-center">
-                       <svg className="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                         <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
-                       </svg>
-                       Select Section
-                     </label>
-                  </div>
-                   <div className="w-2/3 p-4">
-                    <select
-                      name="section"
-                      value={formData.section}
-                      onChange={handleInputChange}
-                       className="w-full border-0 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-transparent text-gray-700 transition-all duration-200 disabled:opacity-50"
-                      disabled={!formData.branch}
-                      required
-                    >
-                      <option value="">
-                        {formData.branch ? 'Select Section' : 'Select Branch First'}
-                      </option>
-                      {filteredSections.map(section => (
-                        <option key={section._id} value={section._id}>
-                          {section.name}
-                        </option>
-                      ))}
-                    </select>
-                    {formData.branch && filteredSections.length === 0 && (
-                      <p className="text-xs text-red-500 mt-1">No sections available for this branch</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex border-b border-gray-300">
-                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
-                    <label className="text-sm font-medium text-gray-700">Event Name</label>
-                  </div>
-                  <div className="w-2/3 p-3">
-                    <input
-                      type="text"
-                      name="eventName"
-                      value={formData.eventName}
-                      onChange={handleInputChange}
-                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
-                      placeholder="Enter event name"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex">
-                  <div className="w-1/3 p-3 bg-gray-50 border-r border-gray-300 flex items-center">
-                    <label className="text-sm font-medium text-gray-700">Media</label>
-                  </div>
-                  <div className="w-2/3 p-3">
-                    <input
-                      type="file"
-                      name="media"
-                      onChange={handleFileChange}
-                      accept="image/*"
-                      className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent file:border-0 file:bg-transparent file:text-sm"
-                    />
-                  </div>
-                </div>
+              {/* Section Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clipRule="evenodd" />
+                  </svg>
+                  Select Section
+                </label>
+                <select
+                  name="section"
+                  value={formData.section}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  disabled={!formData.branch}
+                  required
+                >
+                  <option value="">
+                    {formData.branch ? 'Select Section' : 'Select Branch First'}
+                  </option>
+                  {filteredSections.map(section => (
+                    <option key={section._id} value={section._id}>
+                      {section.name}
+                    </option>
+                  ))}
+                </select>
+                {formData.branch && filteredSections.length === 0 && (
+                  <p className="text-sm text-red-500">No sections available for this branch</p>
+                )}
+              </div>
+
+              {/* Event Date */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                  Event Date
+                </label>
+                <input
+                  type="date"
+                  name="eventDate"
+                  value={formData.eventDate}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                  required
+                />
+              </div>
+
+              {/* Event Name */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 flex items-center">
+                  <svg className="w-4 h-4 mr-2 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                  Event Name
+                </label>
+                <input
+                  type="text"
+                  name="eventName"
+                  value={formData.eventName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  placeholder="Enter event name"
+                  required
+                />
               </div>
             </div>
 
-            {/* Item Wastage Details Section */}
-            <div className="border-b border-gray-300">
-              {/* Headers */}
-              <div className="grid grid-cols-5 bg-gray-50 border-b border-gray-300">
-                <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Item Code</label>
-                </div>
-                <div className="p-3 border-r border-gray-300">
-                   <label className="text-sm font-medium text-gray-700">
-                     Item Name 
-                     {formData.branch && formData.section && (
-                       <span className="ml-2 text-xs text-gray-500">
-                         ({filteredItems.length} available)
-                       </span>
-                     )}
-                   </label>
-                </div>
-                <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Unit</label>
-                </div>
-                <div className="p-3 border-r border-gray-300">
-                  <label className="text-sm font-medium text-gray-700">Qty</label>
-                </div>
-                <div className="p-3">
-                  <label className="text-sm font-medium text-gray-700">Wastage Type</label>
-                </div>
-              </div>
+            {/* Media Upload */}
+            <div className="mb-8">
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                </svg>
+                Media Upload
+              </label>
+              <input
+                type="file"
+                name="media"
+                onChange={handleFileChange}
+                accept="image/*"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+            </div>
 
-              {/* Input Fields */}
-              <div className="grid grid-cols-5">
-                <div className="p-3 border-r border-gray-300">
-                  <input
-                    type="text"
-                    name="itemCode"
-                    value={formData.itemCode}
-                    readOnly
-                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
-                  />
-                </div>
-                
-                <div className="p-3 border-r border-gray-300">
-                  <select
-                    name="itemName"
-                    value={formData.itemName}
-                    onChange={handleInputChange}
-                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
-                    required
-                  >
-                                         <option value="">
-                       {formData.branch && formData.section 
-                         ? (filteredItems.length > 0 ? 'Select Item' : 'No items available for this branch/section')
-                         : 'Select Branch and Section First'
-                       }
-                     </option>
-                     {filteredItems.map(item => (
-                      <option key={item._id} value={item._id}>
-                        {item.nameEn || item.name}
+            {/* Item Wastage Details Section */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Item Wastage Details
+                  {formData.branch && formData.section && (
+                    <span className="ml-2 text-sm text-gray-500">
+                      ({filteredItems.length} items available)
+                    </span>
+                  )}
+                </h3>
+              </div>
+              
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {/* Item Code */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Item Code</label>
+                    <input
+                      type="text"
+                      name="itemCode"
+                      value={formData.itemCode}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                  </div>
+                  
+                  {/* Item Name */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Item Name</label>
+                    <select
+                      name="itemName"
+                      value={formData.itemName}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      required
+                    >
+                      <option value="">
+                        {formData.branch && formData.section 
+                          ? (filteredItems.length > 0 ? 'Select Item' : 'No items available')
+                          : 'Select Branch and Section First'
+                        }
                       </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="p-3 border-r border-gray-300">
-                  <input
-                    type="text"
-                    name="unit"
-                    value={formData.unit}
-                    readOnly
-                    className="w-full border-0 focus:outline-none bg-transparent text-gray-500"
-                  />
-                </div>
-                
-                <div className="p-3 border-r border-gray-300">
-                  <input
-                    type="number"
-                    name="qty"
-                    value={formData.qty}
-                    onChange={handleInputChange}
-                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
-                    min="0.01"
-                    step="0.01"
-                    placeholder="Enter quantity"
-                    required
-                  />
-                </div>
-                
-                <div className="p-3">
-                  <select
-                    name="wastageType"
-                    value={formData.wastageType}
-                    onChange={handleInputChange}
-                    className="w-full border-0 focus:outline-none focus:ring-0 bg-transparent"
-                    required
-                  >
-                    <option value="">Select Type</option>
-                    <option value="Expired">Expired</option>
-                    <option value="Unsold">Unsold</option>
-                    <option value="Spill Over">Spill Over</option>
-                  </select>
+                      {filteredItems.map(item => (
+                        <option key={item._id} value={item._id}>
+                          {item.nameEn || item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Unit */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Unit</label>
+                    <input
+                      type="text"
+                      name="unit"
+                      value={formData.unit}
+                      readOnly
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500"
+                    />
+                  </div>
+                  
+                  {/* Quantity */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Quantity</label>
+                    <input
+                      type="number"
+                      name="qty"
+                      value={formData.qty}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors"
+                      min="0.01"
+                      step="0.01"
+                      placeholder="Enter quantity"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Wastage Type */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Wastage Type</label>
+                    <select
+                      name="wastageType"
+                      value={formData.wastageType}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+                      required
+                    >
+                      <option value="">Select Type</option>
+                      <option value="Expired">Expired</option>
+                      <option value="Unsold">Unsold</option>
+                      <option value="Spill Over">Spill Over</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Submit Button */}
-            <div className="p-4 flex justify-end">
+            <div className="mt-8 flex justify-end">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 font-medium"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Submit Wastage
               </button>

@@ -13,8 +13,8 @@ const Packaging = require('../models/Packaging');
 exports.getItems = async (req, res) => {
   try {
     const items = await Item.find()
-      .populate('category', 'nameEn')
-      .populate('subCategory', 'nameEn')
+      .populate('category', 'nameEn name')
+      .populate('subCategory', 'nameEn name')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')
@@ -217,8 +217,8 @@ exports.deleteItem = async (req, res) => {
 exports.getItemById = async (req, res) => {
   try {
     const item = await Item.findById(req.params.id)
-      .populate('category', 'nameEn')
-      .populate('subCategory', 'nameEn')
+      .populate('category', 'nameEn name')
+      .populate('subCategory', 'nameEn name')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')
@@ -258,8 +258,8 @@ exports.searchItems = async (req, res) => {
     };
     
     const items = await Item.find(searchCriteria)
-      .populate('category', 'nameEn')
-      .populate('subCategory', 'nameEn')
+      .populate('category', 'nameEn name')
+      .populate('subCategory', 'nameEn name')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')
@@ -284,8 +284,8 @@ exports.getItemByCode = async (req, res) => {
     const { itemCode } = req.params;
     
     const item = await Item.findOne({ itemCode })
-      .populate('category', 'nameEn')
-      .populate('subCategory', 'nameEn')
+      .populate('category', 'nameEn name')
+      .populate('subCategory', 'nameEn name')
       .populate('departments', 'name')
       .populate('unit', 'name')
       .populate('baseUnit', 'name')

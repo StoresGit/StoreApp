@@ -18,10 +18,15 @@ const PickList = () => {
       const response = await apiService.orders.getAll();
       const allOrders = response.data || [];
       
+      console.log('All orders fetched:', allOrders.length);
+      console.log('Order statuses:', allOrders.map(o => o.status));
+      
       // Filter orders that are accepted and under process
       const acceptedOrders = allOrders.filter(order => 
         order.status === 'Under Process'
       );
+      
+      console.log('Accepted orders (Under Process):', acceptedOrders.length);
       
       setOrders(acceptedOrders);
     } catch (err) {
@@ -164,7 +169,7 @@ const PickList = () => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="bg-blue-200 p-4 rounded-lg mb-6">
           <h1 className="text-2xl font-bold text-black">Pick List</h1>
-          <p className="text-gray-700 mt-1">Orders accepted and ready for picking</p>
+          <p className="text-gray-700 mt-1">Only accepted orders ready for picking</p>
         </div>
 
         {error && (

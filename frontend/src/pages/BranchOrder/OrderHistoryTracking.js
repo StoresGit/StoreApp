@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { MasterAdminOnly } from '../../components/PermissionGuard';
+import { useAuth } from '../../context/AuthContext';
 
 const OrderHistoryTracking = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,6 +17,13 @@ const OrderHistoryTracking = () => {
     branch: '',
     orderNumber: ''
   });
+
+  // Modal state for viewing order details
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Check if user is master admin
+  const isMasterAdmin = user?.role === 'master admin';
 
   useEffect(() => {
     fetchOrders();
@@ -38,11 +47,19 @@ const OrderHistoryTracking = () => {
     switch (status) {
       case 'Draft': return 'bg-gray-100 text-gray-800';
       case 'Under Review': return 'bg-blue-100 text-blue-800';
-      case 'Sent to CK': return 'bg-purple-100 text-purple-800';
+      case 'Sent to Central Kitchen': return 'bg-purple-100 text-purple-800';
+      case 'Under Process': return 'bg-green-100 text-green-800';
       case 'Shipped': return 'bg-yellow-100 text-yellow-800';
       case 'Received': return 'bg-green-100 text-green-800';
       case 'Rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusDisplayText = (status) => {
+    switch (status) {
+      case 'Under Process': return 'Accepted from Central Kitchen';
+      default: return status;
     }
   };
 
@@ -58,10 +75,17 @@ const OrderHistoryTracking = () => {
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
   const deleteHistory = async () => {
-    if (!window.confirm('This will permanently delete all orders in the current view (excluding "Sent to CK" orders). Continue?')) return;
+    if (!isMasterAdmin) {
+      alert('Only Master Admin can delete orders');
+      return;
+    }
+    
+    if (!window.confirm('This will permanently delete all orders in the current view (excluding "Sent to Central Kitchen" orders). Continue?')) return;
     try {
       setDeleting(true);
-      const toDelete = (filteredOrders.length > 0 ? filteredOrders : orders).filter(order => order.status !== 'Sent to CK');
+      const toDelete = (filteredOrders.length > 0 ? filteredOrders : orders).filter(order => 
+        order.status !== 'Sent to Central Kitchen'
+      );
       await Promise.all(toDelete.map(o => apiService.orders.delete(o._id)));
       setOrders(prev => prev.filter(o => !toDelete.some(d => d._id === o._id)));
     } catch (err) {
@@ -72,9 +96,14 @@ const OrderHistoryTracking = () => {
   };
 
   const deleteOne = async (id) => {
+    if (!isMasterAdmin) {
+      alert('Only Master Admin can delete orders');
+      return;
+    }
+    
     const order = orders.find(o => o._id === id);
-    if (order && order.status === 'Sent to CK') {
-      alert('Cannot delete orders with "Sent to CK" status');
+    if (order && order.status === 'Sent to Central Kitchen') {
+      alert('Cannot delete orders with "Sent to Central Kitchen" status');
       return;
     }
     
@@ -93,9 +122,8 @@ const OrderHistoryTracking = () => {
 
 
   const handleViewOrder = (order) => {
-    // For now, just show an alert with order details
-    // In a real implementation, this could open a modal or navigate to a detail page
-    alert(`Order Details:\nOrder No: ${order.orderNo}\nStatus: ${order.status}\nSection: ${order.section}\nItems: ${order.items?.length || 0} items`);
+    setSelectedOrder(order);
+    setViewModalOpen(true);
   };
 
   if (loading) {
@@ -126,13 +154,6 @@ const OrderHistoryTracking = () => {
                   </h1>
                   <p className="text-blue-100 text-lg">Monitor order status and track delivery progress</p>
                 </div>
-                <button 
-                  onClick={deleteHistory} 
-                  disabled={deleting} 
-                  className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 disabled:bg-gray-400 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                >
-                  {deleting ? 'Deleting...' : 'Delete History (Clean)'}
-                </button>
               </div>
             </div>
           </div>
@@ -165,7 +186,7 @@ const OrderHistoryTracking = () => {
                   <option value="">All Status</option>
                   <option value="Draft">Draft</option>
                   <option value="Under Review">Under Review</option>
-                  <option value="Sent to CK">Sent to CK</option>
+                  <option value="Sent to Central Kitchen">Sent to Central Kitchen</option>
                   <option value="Shipped">Shipped</option>
                   <option value="Received">Received</option>
                   <option value="Rejected">Rejected</option>
@@ -232,7 +253,6 @@ const OrderHistoryTracking = () => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -249,7 +269,7 @@ const OrderHistoryTracking = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status}
+                          {getStatusDisplayText(order.status)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -267,20 +287,6 @@ const OrderHistoryTracking = () => {
                           {Array.isArray(order.items) && order.items.length > 2 && '...'}
                         </div>
                       </td>
-                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                         {order.status === 'Sent to CK' ? (
-                           <button 
-                             onClick={() => handleViewOrder(order)} 
-                             className="px-3 py-1 rounded text-white bg-blue-600 hover:bg-blue-700"
-                           >
-                             View
-                           </button>
-                         ) : (
-                           <button onClick={() => deleteOne(order._id)} className={`px-3 py-1 rounded text-white ${deletingId === order._id ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'}`} disabled={!!deletingId && deletingId === order._id}>
-                             {deletingId === order._id ? 'Deleting...' : 'Delete'}
-                           </button>
-                         )}
-                       </td>
                     </tr>
                   ))}
                 </tbody>
@@ -301,6 +307,61 @@ const OrderHistoryTracking = () => {
           )}
         </div>
       </div>
+
+      {/* Order Details Modal */}
+      {viewModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full max-h-full overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Order Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Order Number:</p>
+                <p className="text-lg font-bold text-gray-900">{selectedOrder.orderNo}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Status:</p>
+                <p className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedOrder.status)}`}>
+                  {getStatusDisplayText(selectedOrder.status)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Section:</p>
+                <p className="text-lg text-gray-900">{selectedOrder.section}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Order Date:</p>
+                <p className="text-lg text-gray-900">{formatDate(selectedOrder.dateTime)}</p>
+              </div>
+              {selectedOrder.scheduleDate && (
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Schedule Date:</p>
+                  <p className="text-lg text-gray-900">{formatDate(selectedOrder.scheduleDate)}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Total Items:</p>
+                <p className="text-lg text-gray-900">{Array.isArray(selectedOrder.items) ? selectedOrder.items.length : 0}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Items:</p>
+                <ul className="list-disc list-inside text-gray-800 text-lg">
+                  {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item, index) => (
+                    <li key={index}>{item.itemName} ({item.quantity})</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setViewModalOpen(false)}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MasterAdminOnly>
   );
 };

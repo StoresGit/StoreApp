@@ -270,7 +270,7 @@ const Items = () => {
                    <div>
                      <span className="text-gray-500">Section:</span>
                      <span className="ml-1 text-gray-900">{item.assignSection?.nameEn || item.assignSection?.name || '-'}</span>
-                   </div>
+                  </div>
                   <div>
                     <span className="text-gray-500">Unit:</span>
                     <span className="ml-1 text-gray-900">{item.unit?.name || item.baseUnit?.name || '-'}</span>

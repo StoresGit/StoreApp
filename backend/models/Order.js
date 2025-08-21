@@ -10,10 +10,11 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
-  status: { 
-    type: String, 
-    enum: ['Draft', 'Under Review', 'Sent to CK', 'Shipped', 'Received', 'Rejected'], 
-    default: 'Draft' 
+  status: {
+    type: String,
+    required: true,
+    default: 'Draft',
+    enum: ['Draft', 'Under Review', 'Sent to Central Kitchen', 'Shipped', 'Received', 'Rejected'],
   },
   orderNo: { type: String, required: true, unique: true },
   orderType: { type: String, default: 'Urgent' }, // Add order type field
