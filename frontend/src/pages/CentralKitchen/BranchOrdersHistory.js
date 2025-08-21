@@ -18,7 +18,6 @@ const BranchOrdersHistory = () => {
   const [branches, setBranches] = useState([]);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [viewMode, setViewMode] = useState('all'); // all, pending, processing, completed
 
   useEffect(() => {
     fetchOrders();
@@ -113,31 +112,11 @@ const BranchOrdersHistory = () => {
     setShowOrderModal(true);
   };
 
-  const handleUpdateStatus = async (orderId, newStatus) => {
-    try {
-      await apiService.put(`/orders/${orderId}`, { status: newStatus });
-      fetchOrders(); // Refresh the list
-      setShowOrderModal(false);
-    } catch (err) {
-      console.error('Error updating order status:', err);
-      setError('Failed to update order status');
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'Under Process':
       case 'Accepted': return 'bg-green-100 text-green-800';
       case 'Rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getUrgencyColor = (urgency) => {
-    switch (urgency) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-orange-100 text-orange-800';
-      case 'low': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -189,15 +168,6 @@ const BranchOrdersHistory = () => {
     }
   ];
 
-  const getViewModeStats = () => {
-    const stats = {
-      all: orders.length,
-      accepted: orders.filter(o => o.status === 'Under Process').length,
-      rejected: orders.filter(o => o.status === 'Rejected').length
-    };
-    return stats;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -208,8 +178,6 @@ const BranchOrdersHistory = () => {
       </div>
     );
   }
-
-  const stats = getViewModeStats();
 
   return (
     <div className="p-6">

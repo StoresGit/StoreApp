@@ -8,18 +8,15 @@ const OrderHistoryTracking = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [deleting, setDeleting] = useState(false);
-  const [deletingId, setDeletingId] = useState('');
   const [filters, setFilters] = useState({
+    branch: '',
     status: '',
     dateFrom: '',
     dateTo: '',
-    branch: '',
-    orderNumber: ''
+    searchTerm: ''
   });
-
-  // Modal state for viewing order details
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [showOrderModal, setShowOrderModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Check if user is master admin
@@ -66,7 +63,7 @@ const OrderHistoryTracking = () => {
   const filteredOrders = Array.isArray(orders) ? orders.filter(order => {
     if (filters.status && order.status !== filters.status) return false;
     if (filters.branch && !order.section.toLowerCase().includes(filters.branch.toLowerCase())) return false;
-    if (filters.orderNumber && !order.orderNo.includes(filters.orderNumber)) return false;
+    if (filters.searchTerm && !order.orderNo.includes(filters.searchTerm)) return false;
     if (filters.dateFrom && new Date(order.dateTime) < new Date(filters.dateFrom)) return false;
     if (filters.dateTo && new Date(order.dateTime) > new Date(filters.dateTo)) return false;
     return true;
@@ -74,56 +71,9 @@ const OrderHistoryTracking = () => {
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
-  const deleteHistory = async () => {
-    if (!isMasterAdmin) {
-      alert('Only Master Admin can delete orders');
-      return;
-    }
-    
-    if (!window.confirm('This will permanently delete all orders in the current view (excluding "Sent to Central Kitchen" orders). Continue?')) return;
-    try {
-      setDeleting(true);
-      const toDelete = (filteredOrders.length > 0 ? filteredOrders : orders).filter(order => 
-        order.status !== 'Sent to Central Kitchen'
-      );
-      await Promise.all(toDelete.map(o => apiService.orders.delete(o._id)));
-      setOrders(prev => prev.filter(o => !toDelete.some(d => d._id === o._id)));
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete history');
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  const deleteOne = async (id) => {
-    if (!isMasterAdmin) {
-      alert('Only Master Admin can delete orders');
-      return;
-    }
-    
-    const order = orders.find(o => o._id === id);
-    if (order && order.status === 'Sent to Central Kitchen') {
-      alert('Cannot delete orders with "Sent to Central Kitchen" status');
-      return;
-    }
-    
-    if (!window.confirm('Delete this order permanently?')) return;
-    try {
-      setDeletingId(id);
-      await apiService.orders.delete(id);
-      setOrders(prev => prev.filter(o => o._id !== id));
-    } catch (err) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete order');
-    } finally {
-      setDeletingId('');
-    }
-  };
-
-
-
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
-    setViewModalOpen(true);
+    setShowOrderModal(true);
   };
 
   if (loading) {
@@ -207,8 +157,8 @@ const OrderHistoryTracking = () => {
                 <input
                   type="text"
                   placeholder="Search order number..."
-                  value={filters.orderNumber}
-                  onChange={(e) => setFilters({...filters, orderNumber: e.target.value})}
+                  value={filters.searchTerm}
+                  onChange={(e) => setFilters({...filters, searchTerm: e.target.value})}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-200 focus:border-blue-500 font-medium"
                 />
               </div>
@@ -298,7 +248,7 @@ const OrderHistoryTracking = () => {
             <div className="text-center py-12">
               <div className="text-gray-500 text-lg">No orders found matching your criteria</div>
               <button 
-                onClick={() => setFilters({status: '', dateFrom: '', dateTo: '', branch: '', orderNumber: ''})}
+                onClick={() => setFilters({status: '', dateFrom: '', dateTo: '', branch: '', searchTerm: ''})}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 Clear Filters
@@ -309,7 +259,7 @@ const OrderHistoryTracking = () => {
       </div>
 
       {/* Order Details Modal */}
-      {viewModalOpen && selectedOrder && (
+      {showOrderModal && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-2xl w-full max-h-full overflow-y-auto">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Order Details</h2>
@@ -353,7 +303,7 @@ const OrderHistoryTracking = () => {
             </div>
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => setViewModalOpen(false)}
+                onClick={() => setShowOrderModal(false)}
                 className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
               >
                 Close

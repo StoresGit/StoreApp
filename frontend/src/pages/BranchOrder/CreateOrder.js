@@ -28,7 +28,6 @@ const CreateOrder = () => {
   const [allSections, setAllSections] = useState([]);
   const [allItems, setAllItems] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
